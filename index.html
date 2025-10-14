@@ -22,14 +22,7 @@
         ::-webkit-scrollbar-thumb:hover { background: #4a5568; }
         .tab-active { border-color: #3b82f6; color: #eff6ff; }
         
-        /* Styles for the football pitch */
-        .football-pitch {
-            background-color: #0d5c2d; /* Dark green */
-            border: 2px solid #fff;
-            position: relative;
-            width: 100%;
-            aspect-ratio: 7 / 5; /* Common pitch aspect ratio */
-        }
+        .football-pitch { background-color: #0d5c2d; border: 2px solid #fff; position: relative; width: 100%; aspect-ratio: 7 / 5; }
         .pitch-line { position: absolute; background-color: #fff; opacity: 0.5; }
         .center-line { top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%); }
         .center-circle { top: 50%; left: 50%; width: 25%; height: 35%; border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); }
@@ -37,26 +30,10 @@
         .home-box { top: 20%; bottom: 20%; left: 0; right: 83%; border-left: 0; }
         .away-box { top: 20%; bottom: 20%; right: 0; left: 83%; border-right: 0; }
 
-        .player-marker {
-            position: absolute;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
-            border: 2px solid rgba(255, 255, 255, 0.7);
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .player-marker:hover {
-            transform: scale(1.15);
-        }
-        .home-player { background-color: #b91c1c; /* red-700 */ }
-        .away-player { background-color: #1d4ed8; /* blue-700 */ }
+        .player-marker { position: absolute; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; border: 2px solid rgba(255, 255, 255, 0.7); cursor: pointer; transition: transform 0.2s; }
+        .player-marker:hover { transform: scale(1.15); }
+        .home-player { background-color: #b91c1c; }
+        .away-player { background-color: #1d4ed8; }
     </style>
 </head>
 <body class="bg-black text-white antialiased">
@@ -124,7 +101,8 @@
         import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        // --- FIREBASE CONFIG ---
+        // --- API & FIREBASE CONFIG ---
+        const API_SPORTS_KEY = "160002c02e969ea355717b6ec7267fa7";
         const firebaseConfig = {
             apiKey: "AIza...",
             authDomain: "your-project.firebaseapp.com",
@@ -137,42 +115,20 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         signInAnonymously(auth).catch(console.error);
-
-        // --- MOCK DATA ---
-        const teams = {
-            1: { id: 1, name: 'River Plate', shortName: 'RIV', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/1.png', formation: '4-3-3', lineup: [
-                {id: 101, name: 'F. Armani', dorsal: 1, commentCount: 0, isCaptain: true, pos: {x: 5, y: 50}},   // GK
-                {id: 102, name: 'M. Casco', dorsal: 20, commentCount: 0, pos: {x: 18, y: 85}},  // RB
-                {id: 103, name: 'P. Díaz', dorsal: 17, commentCount: 0, pos: {x: 18, y: 60}},  // CB
-                {id: 104, name: 'G. Pírez', dorsal: 14, commentCount: 0, pos: {x: 18, y: 40}},  // CB
-                {id: 105, name: 'E. Díaz', dorsal: 13, commentCount: 0, pos: {x: 18, y: 15}},  // LB
-                {id: 106, name: 'E. Pérez', dorsal: 24, commentCount: 0, pos: {x: 33, y: 50}},  // CM
-                {id: 107, name: 'N. De La Cruz', dorsal: 11, commentCount: 0, pos: {x: 35, y: 75}},  // RCM
-                {id: 108, name: 'I. Fernández', dorsal: 26, commentCount: 0, pos: {x: 35, y: 25}},  // LCM
-                {id: 109, name: 'E. Barco', dorsal: 21, commentCount: 0, pos: {x: 46, y: 80}},  // RW
-                {id: 110, name: 'P. Solari', dorsal: 16, commentCount: 0, pos: {x: 46, y: 20}},  // LW
-                {id: 111, name: 'M. Borja', dorsal: 9, commentCount: 0, pos: {x: 48, y: 50}},   // ST
-            ]},
-            2: { id: 2, name: 'Boca Juniors', shortName: 'BOC', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/2.png', formation: '4-3-3', lineup: [
-                {id: 201, name: 'S. Romero', dorsal: 1, commentCount: 0, pos: {x: 5, y: 50}},   // GK
-                {id: 202, name: 'L. Advíncula', dorsal: 17, commentCount: 0, pos: {x: 18, y: 85}},  // RB
-                {id: 203, name: 'N. Figal', dorsal: 4, commentCount: 0, pos: {x: 18, y: 60}},  // CB
-                {id: 204, name: 'M. Rojo', dorsal: 6, commentCount: 0, isCaptain: true, pos: {x: 18, y: 40}},  // CB
-                {id: 205, name: 'F. Fabra', dorsal: 18, commentCount: 0, pos: {x: 18, y: 15}},  // LB
-                {id: 206, name: 'P. Fernández', dorsal: 8, commentCount: 0, pos: {x: 33, y: 50}},  // CM
-                {id: 207, name: 'A. Varela', dorsal: 5, commentCount: 0, pos: {x: 35, y: 75}},  // RCM
-                {id: 208, name: 'C. Medina', dorsal: 36, commentCount: 0, pos: {x: 35, y: 25}},  // LCM
-                {id: 209, name: 'V. Barco', dorsal: 19, commentCount: 0, pos: {x: 46, y: 80}},  // RW
-                {id: 210, name: 'M. Merentiel', dorsal: 16, commentCount: 0, pos: {x: 46, y: 20}},  // LW
-                {id: 211, name: 'E. Cavani', dorsal: 10, commentCount: 0, pos: {x: 48, y: 50}},   // ST
-            ]},
-            3: { id: 3, name: 'Racing Club', shortName: 'RAC', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/13.png', lineup: [{id: 301, name: 'G. Arias', dorsal: 1, commentCount: 0, isCaptain: true}, {id: 302, name: 'F. Mura', dorsal: 34, commentCount: 0}, {id: 303, name: 'L. Sigali', dorsal: 30, commentCount: 0}] },
-            4: { id: 4, name: 'Independiente', shortName: 'IND', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/10.png', lineup: [{id: 401, name: 'R. Rey', dorsal: 1, commentCount: 0}, {id: 402, name: 'M. Isla', dorsal: 4, commentCount: 0, isCaptain: true}, {id: 403, name: 'J. Laso', dorsal: 2, commentCount: 0}] },
-        };
-        const matches = [ { id: 102, time: '19:15', status: 'EN VIVO', minute: 78, homeTeamId: 1, awayTeamId: 2, homeScore: 1, awayScore: 1, stats: { homePossession: 62, awayPossession: 38, homeShots: 14, awayShots: 8, homeOnGoal: 5, awayOnGoal: 3, homePasses: 450, awayPasses: 280, homeAccuracy: 88, awayAccuracy: 75, homeXG: 1.8, awayXG: 0.9 }, events: [ { minute: 23, type: 'goal', teamId: 1, player: 'M. Borja', description: '¡Gol de River! Borja define con clase.' }, { minute: 45, type: 'yellow_card', teamId: 2, player: 'M. Rojo', description: 'Tarjeta amarilla para Rojo por una fuerte entrada.'}, { minute: 61, type: 'goal', teamId: 2, player: 'E. Cavani', description: 'Cavani empata el partido de cabeza.' }, { minute: 75, type: 'substitution', teamId: 1, player: 'Sale: P. Solari, Entra: M. Kranevitter', description: 'Cambio en River para reforzar el mediocampo.'}, ] }, { id: 103, time: '21:30', status: 'FINALIZADO', minute: 90, homeTeamId: 3, awayTeamId: 4, homeScore: 2, awayScore: 1, stats: { homePossession: 55, awayPossession: 45, homeShots: 10, awayShots: 12, homeOnGoal: 6, awayOnGoal: 4, homePasses: 350, awayPasses: 310, homeAccuracy: 82, awayAccuracy: 79, homeXG: 2.1, awayXG: 1.5 }, events: [ { minute: 88, type: 'goal', teamId: 3, player: 'G. Hauche', description: 'Gol agónico de Hauche para la victoria.' } ] }, ];
         
-        // --- APP STATE, DOM ELEMENTS, etc. ---
-        let state = { currentView: 'match-list', selectedMatchId: null, selectedPlayerId: null, selectedPlayerName: null, activeTab: 'timeline', unsubscribeComments: null, unsubscribePlayerComments: null };
+        // --- APP STATE ---
+        let state = {
+            currentView: 'match-list',
+            matches: [],
+            selectedMatchId: null,
+            selectedPlayerId: null,
+            selectedPlayerName: null,
+            activeTab: 'timeline',
+            unsubscribeComments: null,
+            unsubscribePlayerComments: null
+        };
+        
+        // --- DOM ELEMENTS ---
         const views = { 'match-list': document.getElementById('view-match-list'), 'match-detail': document.getElementById('view-match-detail') };
         const headerTitle = document.getElementById('header-title');
         const backButton = document.getElementById('back-button');
@@ -182,67 +138,105 @@
         const tabPanes = { timeline: document.getElementById('tab-timeline'), lineups: document.getElementById('tab-lineups'), stats: document.getElementById('tab-stats'), comments: document.getElementById('tab-comments') };
         const playerCommentModal = document.getElementById('player-comment-modal');
 
+        // --- API FUNCTIONS ---
+        async function getMatchesFromApi(date) {
+            const url = `https://v3.football.api-sports.io/fixtures?date=${date}`;
+            const response = await fetch(url, {
+                method: "GET",
+                headers: { "x-apisports-key": API_SPORTS_KEY }
+            });
+            if (!response.ok) {
+                throw new Error(`La API devolvió un error (${response.status})`);
+            }
+            const data = await response.json();
+            if (data.errors && Object.keys(data.errors).length > 0) {
+                const errorMsg = Object.values(data.errors).join(', ');
+                throw new Error(`Error de la API: ${errorMsg}`);
+            }
+            return data.response;
+        }
+
+        function transformApiData(apiMatches) {
+            return apiMatches.map(match => {
+                const homeLineup = generateMockLineup(1, '4-3-3');
+                const awayLineup = generateMockLineup(2, '4-3-3');
+                return {
+                    id: match.fixture.id,
+                    homeTeam: { id: match.teams.home.id, name: match.teams.home.name, logo: match.teams.home.logo, lineup: homeLineup, formation: '4-3-3' },
+                    awayTeam: { id: match.teams.away.id, name: match.teams.away.name, logo: match.teams.away.logo, lineup: awayLineup, formation: '4-3-3' },
+                    homeScore: match.goals.home,
+                    awayScore: match.goals.away,
+                    status: match.fixture.status.long,
+                    minute: match.fixture.status.elapsed,
+                    stats: generateMockStats(),
+                    events: match.events ? match.events.map(e => ({ minute: e.time.elapsed, type: e.type.toLowerCase().replace(' ', '_'), player: e.player.name, description: e.detail })) : [{ minute: 1, type: 'start', player: 'Árbitro', description: 'Comienzo del partido.' }],
+                };
+            });
+        }
+        
+        function generateMockLineup(teamIdPrefix, formation) {
+             const lineup = [];
+             const positions = [
+                { id: 1, name: 'Portero', dorsal: 1, isCaptain: false, pos: {x: 5, y: 50}},
+                { id: 2, name: 'Lateral Der.', dorsal: 2, isCaptain: false, pos: {x: 18, y: 85}},
+                { id: 3, name: 'Central', dorsal: 4, isCaptain: true, pos: {x: 18, y: 60}},
+                { id: 4, name: 'Central', dorsal: 5, isCaptain: false, pos: {x: 18, y: 40}},
+                { id: 5, name: 'Lateral Izq.', dorsal: 3, isCaptain: false, pos: {x: 18, y: 15}},
+                { id: 6, name: 'Pivote', dorsal: 6, isCaptain: false, pos: {x: 33, y: 50}},
+                { id: 7, name: 'Interior Der.', dorsal: 8, isCaptain: false, pos: {x: 35, y: 75}},
+                { id: 8, name: 'Interior Izq.', dorsal: 10, isCaptain: false, pos: {x: 35, y: 25}},
+                { id: 9, name: 'Extremo Der.', dorsal: 7, isCaptain: false, pos: {x: 46, y: 80}},
+                { id: 10, name: 'Extremo Izq.', dorsal: 11, isCaptain: false, pos: {x: 46, y: 20}},
+                { id: 11, name: 'Delantero', dorsal: 9, isCaptain: false, pos: {x: 48, y: 50}},
+             ];
+             positions.forEach(p => lineup.push({...p, id: `${teamIdPrefix}${p.id}`, name: `${p.name} #${p.dorsal}`, commentCount: 0}));
+             return lineup;
+        }
+
+        function generateMockStats() {
+            const homePossession = Math.floor(Math.random() * 40) + 30; // 30-70
+            return {
+                homePossession: homePossession, awayPossession: 100 - homePossession,
+                homeShots: Math.floor(Math.random() * 15) + 5, awayShots: Math.floor(Math.random() * 15) + 5,
+                homeOnGoal: Math.floor(Math.random() * 7) + 1, awayOnGoal: Math.floor(Math.random() * 7) + 1,
+                homePasses: Math.floor(Math.random() * 300) + 200, awayPasses: Math.floor(Math.random() * 300) + 200,
+                homeAccuracy: Math.floor(Math.random() * 20) + 70, awayAccuracy: Math.floor(Math.random() * 20) + 70,
+                homeXG: (Math.random() * 2 + 0.5).toFixed(1), awayXG: (Math.random() * 2 + 0.5).toFixed(1),
+            };
+        }
+
         // --- RENDER FUNCTIONS ---
         const renderMatchList = () => {
-             document.getElementById('loading-indicator').style.display = 'none';
-             matchListContainer.innerHTML = matches.map(match => {
-                 const homeTeam = teams[match.homeTeamId];
-                 const awayTeam = teams[match.awayTeamId];
-                 let statusHtml = match.status === 'EN VIVO' ? `<span class="text-xs font-bold text-red-400 animate-pulse">${match.minute}'</span>` : `<span class="text-xs font-semibold text-gray-400">${match.status === 'POR JUGAR' ? match.time : 'FIN'}</span>`;
-                 return `<div class="bg-gray-900 p-4 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors" data-match-id="${match.id}"><div class="flex items-center justify-between"><div class="space-y-2 flex-grow"><div class="flex items-center space-x-3"><img src="${homeTeam.logo}" alt="${homeTeam.name}" class="w-6 h-6 object-contain"><span class="font-medium">${homeTeam.name}</span></div><div class="flex items-center space-x-3"><img src="${awayTeam.logo}" alt="${awayTeam.name}" class="w-6 h-6 object-contain"><span class="font-medium">${awayTeam.name}</span></div></div><div class="flex flex-col items-center w-16"><span class="font-bold text-lg">${match.homeScore}</span><span class="font-bold text-lg">${match.awayScore}</span></div><div class="flex flex-col items-end w-20">${statusHtml}</div></div></div>`;
+             const loadingIndicator = document.getElementById('loading-indicator');
+             if (state.matches.length === 0) {
+                 loadingIndicator.textContent = 'No se encontraron partidos para hoy.';
+                 return;
+             }
+             loadingIndicator.style.display = 'none';
+             matchListContainer.innerHTML = state.matches.map(match => {
+                 return `<div class="bg-gray-900 p-4 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors" data-match-id="${match.id}"><div class="flex items-center justify-between"><div class="space-y-2 flex-grow"><div class="flex items-center space-x-3"><img src="${match.homeTeam.logo}" alt="${match.homeTeam.name}" class="w-6 h-6 object-contain"><span class="font-medium">${match.homeTeam.name}</span></div><div class="flex items-center space-x-3"><img src="${match.awayTeam.logo}" alt="${match.awayTeam.name}" class="w-6 h-6 object-contain"><span class="font-medium">${match.awayTeam.name}</span></div></div><div class="flex flex-col items-center w-16"><span class="font-bold text-lg">${match.homeScore ?? '-'}</span><span class="font-bold text-lg">${match.awayScore ?? '-'}</span></div><div class="flex flex-col items-end w-20"><span class="text-xs font-semibold text-gray-400">${match.status}</span></div></div></div>`;
              }).join('');
          };
         const renderMatchDetail = (matchId) => {
-             const match = matches.find(m => m.id === Number(matchId));
+             const match = state.matches.find(m => m.id === Number(matchId));
              if (!match) return;
-             state.selectedMatchId = matchId;
-             const homeTeam = teams[match.homeTeamId];
-             const awayTeam = teams[match.awayTeamId];
-             matchDetailHeader.innerHTML = `<div class="flex justify-around items-center text-center"><div class="flex flex-col items-center space-y-2 w-1/3"><img src="${homeTeam.logo}" class="w-16 h-16 object-contain"><span class="font-bold text-lg">${homeTeam.name}</span></div><div class="w-1/3"><p class="text-4xl font-bold">${match.homeScore} - ${match.awayScore}</p><p class="text-sm font-semibold mt-1 ${match.status === 'EN VIVO' ? 'text-red-400 animate-pulse' : 'text-gray-400'}">${match.status === 'EN VIVO' ? `${match.minute}'` : match.status}</p></div><div class="flex flex-col items-center space-y-2 w-1/3"><img src="${awayTeam.logo}" class="w-16 h-16 object-contain"><span class="font-bold text-lg">${awayTeam.name}</span></div></div>`;
+             matchDetailHeader.innerHTML = `<div class="flex justify-around items-center text-center"><div class="flex flex-col items-center space-y-2 w-1/3"><img src="${match.homeTeam.logo}" class="w-16 h-16 object-contain"><span class="font-bold text-lg">${match.homeTeam.name}</span></div><div class="w-1/3"><p class="text-4xl font-bold">${match.homeScore ?? '-'} - ${match.awayScore ?? '-'}</p><p class="text-sm font-semibold mt-1 ${match.minute > 0 ? 'text-red-400 animate-pulse' : 'text-gray-400'}">${match.minute ? `${match.minute}'` : match.status}</p></div><div class="flex flex-col items-center space-y-2 w-1/3"><img src="${match.awayTeam.logo}" class="w-16 h-16 object-contain"><span class="font-bold text-lg">${match.awayTeam.name}</span></div></div>`;
              renderTimeline(match);
              renderLineups(match);
              renderStats(match);
              listenForComments(matchId);
          };
         const renderTimeline = (match) => {
-            const getIcon = (type) => ({'goal': '<svg class="w-5 h-5 text-yellow-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg>', 'yellow_card': '<div class="w-3 h-4 bg-yellow-400 rounded-sm"></div>', 'red_card': '<div class="w-3 h-4 bg-red-500 rounded-sm"></div>', 'substitution': '<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>'})[type] || '';
+            const getIcon = (type) => ({'goal': '<svg class="w-5 h-5 text-yellow-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg>', 'card': '<div class="w-3 h-4 bg-yellow-400 rounded-sm"></div>', 'subst': '<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>'})[type] || '';
              if (!match.events || match.events.length === 0) { tabPanes.timeline.innerHTML = '<p class="text-gray-500 text-center py-8">No hay eventos destacados todavía.</p>'; return; }
              tabPanes.timeline.innerHTML = `<div class="border-l-2 border-gray-700 ml-4 pl-6 space-y-8 py-4">${match.events.sort((a,b) => b.minute - a.minute).map(event => `<div class="relative"><div class="absolute -left-[35px] top-1.5 h-4 w-4 rounded-full bg-gray-600 border-2 border-black"></div><div class="flex items-start space-x-4"><div class="font-mono text-gray-400">${event.minute}'</div><div class="flex items-center space-x-2 text-gray-200">${getIcon(event.type)}<span>${event.player}</span></div></div><p class="text-sm text-gray-400 mt-1 ml-10">${event.description}</p></div>`).join('')}</div>`;
         };
         const renderLineups = (match) => {
-             const homeTeam = teams[match.homeTeamId];
-             const awayTeam = teams[match.awayTeamId];
-             
-             const formationHtml = `
-                <div class="football-pitch rounded-lg mb-6">
-                    <div class="pitch-line center-line"></div>
-                    <div class="pitch-line center-circle"></div>
-                    <div class="penalty-box home-box"></div>
-                    <div class="penalty-box away-box"></div>
-                    ${homeTeam.lineup.map(p => `<div class="player-marker home-player" style="left: ${p.pos.x}%; top: ${p.pos.y}%; transform: translate(-50%, -50%);" data-player-id="${p.id}" data-player-name="${p.name}" title="${p.name}">${p.dorsal}</div>`).join('')}
-                    ${awayTeam.lineup.map(p => `<div class="player-marker away-player" style="left: ${100 - p.pos.x}%; top: ${p.pos.y}%; transform: translate(-50%, -50%);" data-player-id="${p.id}" data-player-name="${p.name}" title="${p.name}">${p.dorsal}</div>`).join('')}
-                </div>
-             `;
-             
-             const playerToHtml = (p) => `
-                <li class="flex items-center justify-between cursor-pointer hover:bg-gray-800 p-2 rounded-md transition-colors" data-player-id="${p.id}" data-player-name="${p.name}">
-                    <div class="flex items-center">
-                        <svg class="w-6 h-6 mr-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
-                        <span class="font-semibold w-8 text-center mr-2">${p.dorsal}</span>
-                        <span>${p.name}</span>
-                        ${p.isCaptain ? '<span class="ml-2 text-xs font-bold bg-yellow-500 text-black rounded-full w-5 h-5 flex items-center justify-center">C</span>' : ''}
-                    </div>
-                    <div class="flex items-center text-xs text-blue-400 font-semibold">
-                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.083-3.083A7.002 7.002 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM4.832 14.168L5.92 11.2A5.003 5.003 0 004 10c0-2.761 2.686-5 6-5s6 2.239 6 5-2.686 5-6 5a6.8 6.8 0 01-2.92-.707l-2.248 2.247z" clip-rule="evenodd"></path></svg>
-                        <span>${p.commentCount}</span>
-                    </div>
-                </li>`;
-
-            tabPanes.lineups.innerHTML = formationHtml + `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                    <div><h3 class="font-bold mb-3 text-lg">${homeTeam.name} (${homeTeam.formation})</h3><ul class="space-y-1">${homeTeam.lineup.map(playerToHtml).join('')}</ul></div>
-                    <div><h3 class="font-bold mb-3 text-lg">${awayTeam.name} (${awayTeam.formation})</h3><ul class="space-y-1">${awayTeam.lineup.map(playerToHtml).join('')}</ul></div>
-                </div>`;
+             const homeTeam = match.homeTeam;
+             const awayTeam = match.awayTeam;
+             const formationHtml = `<div class="football-pitch rounded-lg mb-6"><div class="pitch-line center-line"></div><div class="pitch-line center-circle"></div><div class="penalty-box home-box"></div><div class="penalty-box away-box"></div>${homeTeam.lineup.map(p => `<div class="player-marker home-player" style="left: ${p.pos.x}%; top: ${p.pos.y}%; transform: translate(-50%, -50%);" data-player-id="${p.id}" data-player-name="${p.name}" title="${p.name}">${p.dorsal}</div>`).join('')}${awayTeam.lineup.map(p => `<div class="player-marker away-player" style="left: ${100 - p.pos.x}%; top: ${p.pos.y}%; transform: translate(-50%, -50%);" data-player-id="${p.id}" data-player-name="${p.name}" title="${p.name}">${p.dorsal}</div>`).join('')}</div>`;
+             const playerToHtml = (p) => `<li class="flex items-center justify-between cursor-pointer hover:bg-gray-800 p-2 rounded-md transition-colors" data-player-id="${p.id}" data-player-name="${p.name}"><div class="flex items-center"><svg class="w-6 h-6 mr-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg><span class="font-semibold w-8 text-center mr-2">${p.dorsal}</span><span>${p.name}</span>${p.isCaptain ? '<span class="ml-2 text-xs font-bold bg-yellow-500 text-black rounded-full w-5 h-5 flex items-center justify-center">C</span>' : ''}</div><div class="flex items-center text-xs text-blue-400 font-semibold"><svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.083-3.083A7.002 7.002 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM4.832 14.168L5.92 11.2A5.003 5.003 0 004 10c0-2.761 2.686-5 6-5s6 2.239 6 5-2.686 5-6 5a6.8 6.8 0 01-2.92-.707l-2.248 2.247z" clip-rule="evenodd"></path></svg><span>${p.commentCount}</span></div></li>`;
+            tabPanes.lineups.innerHTML = formationHtml + `<div class="grid grid-cols-1 md:grid-cols-2 gap-x-6"><div><h3 class="font-bold mb-3 text-lg">${homeTeam.name} (${homeTeam.formation})</h3><ul class="space-y-1">${homeTeam.lineup.map(playerToHtml).join('')}</ul></div><div><h3 class="font-bold mb-3 text-lg">${awayTeam.name} (${awayTeam.formation})</h3><ul class="space-y-1">${awayTeam.lineup.map(playerToHtml).join('')}</ul></div></div>`;
         };
         const renderStats = (match) => {
              const s = match.stats;
@@ -256,7 +250,7 @@
               container.scrollTop = container.scrollHeight;
         };
         
-        // --- NAVIGATION & FIREBASE (functions remain the same) ---
+        // --- NAVIGATION & FIREBASE ---
         const navigateTo = (view, data = {}) => {
             if (state.unsubscribeComments) state.unsubscribeComments();
             if (state.unsubscribePlayerComments) state.unsubscribePlayerComments();
@@ -269,11 +263,9 @@
                 backButton.classList.add('hidden');
             } else if (view === 'match-detail') {
                 backButton.classList.remove('hidden');
-                const match = matches.find(m => m.id === Number(data.matchId));
+                const match = state.matches.find(m => m.id === Number(data.matchId));
                 if (match) {
-                    const homeTeam = teams[match.homeTeamId];
-                    const awayTeam = teams[match.awayTeamId];
-                    headerTitle.textContent = `${homeTeam.shortName} vs ${awayTeam.shortName}`;
+                    headerTitle.textContent = `${match.homeTeam.name} vs ${match.awayTeam.name}`;
                     renderMatchDetail(data.matchId);
                 }
             }
@@ -289,38 +281,24 @@
             });
         };
         const addComment = async (matchId, username, text) => {
-            const usernameInput = document.getElementById('comment-username');
-            const textInput = document.getElementById('comment-text');
+            const usernameInput = document.getElementById('comment-username'); const textInput = document.getElementById('comment-text');
             if (!text.trim() || !username.trim()) return;
-            try {
-                await addDoc(collection(db, "comments", String(matchId), "messages"), { username, text, timestamp: serverTimestamp() });
-                usernameInput.value = '';
-                textInput.value = '';
-            } catch (error) { console.error("Error adding comment: ", error); }
+            try { await addDoc(collection(db, "comments", String(matchId), "messages"), { username, text, timestamp: serverTimestamp() }); usernameInput.value = ''; textInput.value = ''; } catch (error) { console.error("Error adding comment: ", error); }
         };
         const listenForPlayerComments = (matchId, playerId) => {
             const commentsRef = collection(db, `comments/${matchId}/players/${playerId}/messages`);
             const q = query(commentsRef, orderBy("timestamp"));
-            state.unsubscribePlayerComments = onSnapshot(q, (snapshot) => {
-                const comments = snapshot.docs.map(doc => doc.data());
-                renderPlayerComments(comments);
-            });
+            state.unsubscribePlayerComments = onSnapshot(q, (snapshot) => { renderPlayerComments(snapshot.docs.map(doc => doc.data())); });
         };
         const addPlayerComment = async (matchId, playerId, username, text) => {
-            const usernameInput = document.getElementById('player-comment-username');
-            const textInput = document.getElementById('player-comment-text');
+            const usernameInput = document.getElementById('player-comment-username'); const textInput = document.getElementById('player-comment-text');
              if (!text.trim() || !username.trim()) return;
-             try {
-                await addDoc(collection(db, `comments/${matchId}/players/${playerId}/messages`), { username, text, timestamp: serverTimestamp() });
-                usernameInput.value = '';
-                textInput.value = '';
-            } catch (error) { console.error("Error adding player comment: ", error); }
+             try { await addDoc(collection(db, `comments/${matchId}/players/${playerId}/messages`), { username, text, timestamp: serverTimestamp() }); usernameInput.value = ''; textInput.value = ''; } catch (error) { console.error("Error adding player comment: ", error); }
         };
         
         // --- MODAL LOGIC ---
         const openPlayerModal = (playerId, playerName) => {
-            state.selectedPlayerId = playerId;
-            state.selectedPlayerName = playerName;
+            state.selectedPlayerId = playerId; state.selectedPlayerName = playerName;
             document.getElementById('player-modal-name').textContent = playerName;
             playerCommentModal.classList.remove('hidden');
             playerCommentModal.querySelector('#player-comment-modal-content').classList.add('modal-enter');
@@ -328,21 +306,18 @@
         };
         const closePlayerModal = () => {
             const content = playerCommentModal.querySelector('#player-comment-modal-content');
-            content.classList.remove('modal-enter');
-            content.classList.add('modal-leave');
-            setTimeout(() => {
-                playerCommentModal.classList.add('hidden');
-                content.classList.remove('modal-leave');
-                if(state.unsubscribePlayerComments) state.unsubscribePlayerComments();
-                state.selectedPlayerId = null;
-            }, 200);
+            content.classList.remove('modal-enter'); content.classList.add('modal-leave');
+            setTimeout(() => { playerCommentModal.classList.add('hidden'); content.classList.remove('modal-leave'); if(state.unsubscribePlayerComments) state.unsubscribePlayerComments(); state.selectedPlayerId = null; }, 200);
         };
         
         // --- EVENT LISTENERS ---
         backButton.addEventListener('click', () => navigateTo('match-list'));
         matchListContainer.addEventListener('click', (e) => {
             const matchCard = e.target.closest('[data-match-id]');
-            if (matchCard) navigateTo('match-detail', { matchId: matchCard.dataset.matchId });
+            if (matchCard) { 
+                state.selectedMatchId = Number(matchCard.dataset.matchId); 
+                navigateTo('match-detail', { matchId: state.selectedMatchId }); 
+            }
         });
         matchTabs.addEventListener('click', (e) => {
             if (e.target.matches('.tab-button')) {
@@ -355,26 +330,26 @@
                 tabPanes[tabName].classList.remove('hidden');
             }
         });
-        document.getElementById('submit-comment').addEventListener('click', () => {
-            const username = document.getElementById('comment-username').value || 'Anónimo';
-            const text = document.getElementById('comment-text').value;
-            addComment(state.selectedMatchId, username, text);
-        });
-        tabPanes.lineups.addEventListener('click', (e) => {
-            const playerEl = e.target.closest('[data-player-id]');
-            if (playerEl) { openPlayerModal(playerEl.dataset.playerId, playerEl.dataset.playerName); }
-        });
+        document.getElementById('submit-comment').addEventListener('click', () => { addComment(state.selectedMatchId, document.getElementById('comment-username').value || 'Anónimo', document.getElementById('comment-text').value); });
+        tabPanes.lineups.addEventListener('click', (e) => { const playerEl = e.target.closest('[data-player-id]'); if (playerEl) { openPlayerModal(playerEl.dataset.playerId, playerEl.dataset.playerName); } });
         document.getElementById('close-modal-button').addEventListener('click', closePlayerModal);
-        document.getElementById('submit-player-comment').addEventListener('click', () => {
-             const username = document.getElementById('player-comment-username').value || 'Anónimo';
-             const text = document.getElementById('player-comment-text').value;
-             addPlayerComment(state.selectedMatchId, state.selectedPlayerId, username, text);
-        });
+        document.getElementById('submit-player-comment').addEventListener('click', () => { addPlayerComment(state.selectedMatchId, state.selectedPlayerId, document.getElementById('player-comment-username').value || 'Anónimo', document.getElementById('player-comment-text').value); });
 
         // --- INITIALIZATION ---
-        const initApp = () => {
-            setTimeout(() => renderMatchList(), 500);
+        const initApp = async () => {
+            const loadingIndicator = document.getElementById('loading-indicator');
+            try {
+                const today = new Date().toISOString().split("T")[0];
+                const apiMatches = await getMatchesFromApi(today);
+                state.matches = transformApiData(apiMatches);
+                renderMatchList();
+            } catch (error) {
+                console.error("Initialization failed:", error);
+                loadingIndicator.textContent = `Error: ${error.message}`;
+                loadingIndicator.classList.add('text-red-400');
+            }
         };
+
         initApp();
 
     </script>
