@@ -9,102 +9,122 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            -webkit-tap-highlight-color: transparent;
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-enter { animation: modalIn 0.2s ease-out; }
+        .modal-leave { animation: modalOut 0.2s ease-in; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes modalOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000000; }
+        ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a5568; }
+        .tab-active { border-color: #3b82f6; color: #eff6ff; }
+        
+        /* Styles for the football pitch */
+        .football-pitch {
+            background-color: #0d5c2d; /* Dark green */
+            border: 2px solid #fff;
+            position: relative;
+            width: 100%;
+            aspect-ratio: 7 / 5; /* Common pitch aspect ratio */
         }
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-in-out;
+        .pitch-line { position: absolute; background-color: #fff; opacity: 0.5; }
+        .center-line { top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%); }
+        .center-circle { top: 50%; left: 50%; width: 25%; height: 35%; border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); }
+        .penalty-box { position: absolute; border: 2px solid rgba(255,255,255,0.5); }
+        .home-box { top: 20%; bottom: 20%; left: 0; right: 83%; border-left: 0; }
+        .away-box { top: 20%; bottom: 20%; right: 0; left: 83%; border-right: 0; }
+
+        .player-marker {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: transform 0.2s;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .player-marker:hover {
+            transform: scale(1.15);
         }
-        /* Scrollbar styles */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1a202c; /* bg-gray-800 */
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #4a5568; /* bg-gray-600 */
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #718096; /* bg-gray-500 */
-        }
+        .home-player { background-color: #b91c1c; /* red-700 */ }
+        .away-player { background-color: #1d4ed8; /* blue-700 */ }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 antialiased">
+<body class="bg-black text-white antialiased">
 
-    <div id="app" class="max-w-md mx-auto min-h-screen bg-gray-900 shadow-lg">
-
-        <!-- App Header -->
-        <header class="sticky top-0 bg-gray-900 bg-opacity-80 backdrop-blur-md z-10 p-4 flex items-center justify-between border-b border-gray-700">
-            <button id="back-button" class="hidden text-gray-400 hover:text-white transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
+    <div id="app" class="max-w-md mx-auto min-h-screen bg-black shadow-lg">
+        <header class="sticky top-0 bg-black bg-opacity-80 backdrop-blur-md z-20 p-4 flex items-center justify-between border-b border-gray-800">
+            <button id="back-button" class="hidden text-gray-300 hover:text-white transition-colors">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
             <h1 id="header-title" class="text-xl font-bold text-white text-center flex-grow">Partidos del Día</h1>
-            <div class="w-6"></div> <!-- Spacer for centering title -->
+            <div class="w-6"></div>
         </header>
 
-        <!-- Main Content Area -->
         <main class="p-4">
-            <!-- View: Match List -->
             <div id="view-match-list" class="animate-fade-in">
-                <!-- Date Selector -->
-                <div class="flex justify-center items-center text-center space-x-4 mb-6">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-                    <div class="text-center">
-                        <p class="font-semibold text-white">Hoy</p>
-                        <p class="text-xs text-gray-400">13 Octubre</p>
-                    </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                <div id="match-list-container" class="space-y-3">
+                    <p id="loading-indicator" class="text-center text-gray-400">Cargando partidos...</p>
                 </div>
-                <!-- Match list will be rendered here -->
-                <div id="match-list-container" class="space-y-3"></div>
             </div>
 
-            <!-- View: Match Detail -->
             <div id="view-match-detail" class="hidden animate-fade-in">
-                <div id="match-detail-header" class="mb-6"></div>
-                <div class="space-y-6">
-                    <!-- Event Feed -->
-                    <div>
-                        <h2 class="text-lg font-semibold mb-3 text-gray-300">Feed de Eventos</h2>
-                        <div id="event-feed-container" class="space-y-4"></div>
-                    </div>
-                    <!-- Comments -->
-                    <div>
-                        <h2 class="text-lg font-semibold mb-3 text-gray-300">Comentarios</h2>
+                <div id="match-detail-header" class="mb-4"></div>
+                <div id="match-tabs" class="mb-4 border-b border-gray-700 flex">
+                    <button data-tab="timeline" class="tab-button flex-1 py-2 text-sm font-semibold border-b-2 tab-active">Cronología</button>
+                    <button data-tab="lineups" class="tab-button flex-1 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-400">Alineaciones</button>
+                    <button data-tab="stats" class="tab-button flex-1 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-400">Estadísticas</button>
+                    <button data-tab="comments" class="tab-button flex-1 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-400">Comentarios</button>
+                </div>
+                <div id="match-tab-content">
+                    <div id="tab-timeline" class="tab-pane"></div>
+                    <div id="tab-lineups" class="tab-pane hidden"></div>
+                    <div id="tab-stats" class="tab-pane hidden"></div>
+                    <div id="tab-comments" class="tab-pane hidden">
                         <div id="comments-container" class="space-y-3 max-h-96 overflow-y-auto pr-2 mb-4"></div>
                         <div id="comments-form" class="mt-4 space-y-3">
-                            <input type="text" id="comment-username" placeholder="Tu nombre temporal" class="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <textarea id="comment-text" placeholder="Escribe un comentario..." rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                            <input type="text" id="comment-username" placeholder="Tu nombre temporal" class="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <textarea id="comment-text" placeholder="Escribe un comentario del partido..." rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
                             <button id="submit-comment" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors">Enviar</button>
                         </div>
                     </div>
                 </div>
             </div>
-
-             <!-- View: Team/Player Profile (Simplified) -->
-            <div id="view-profile" class="hidden animate-fade-in">
-                 <div id="profile-content"></div>
-            </div>
         </main>
     </div>
 
+    <!-- Player Comments Modal -->
+    <div id="player-comment-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-30 flex items-center justify-center p-4">
+        <div id="player-comment-modal-content" class="bg-gray-900 rounded-lg p-6 w-full max-w-sm border border-gray-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold">Comentarios para <span id="player-modal-name"></span></h2>
+                <button id="close-modal-button" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            <div id="player-comments-container" class="space-y-3 max-h-60 overflow-y-auto pr-2 mb-4"></div>
+            <div class="space-y-3">
+                <input type="text" id="player-comment-username" placeholder="Tu nombre temporal" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <textarea id="player-comment-text" placeholder="Escribe un comentario..." rows="2" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                <button id="submit-player-comment" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+
     <script type="module">
-        // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        // TODO: CONFIGURACIÓN DE FIREBASE
-        // REEMPLAZA ESTO CON LA CONFIGURACIÓN DE TU PROYECTO DE FIREBASE
+        // --- FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIza...",
             authDomain: "your-project.firebaseapp.com",
@@ -113,323 +133,252 @@
             messagingSenderId: "...",
             appId: "..."
         };
-
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        signInAnonymously(auth).catch(console.error);
 
-        // --- MOCK DATA (Fútbol Argentino) ---
+        // --- MOCK DATA ---
         const teams = {
-            1: { name: 'River Plate', shortName: 'RIV', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/1.png' },
-            2: { name: 'Boca Juniors', shortName: 'BOC', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/2.png' },
-            3: { name: 'Racing Club', shortName: 'RAC', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/13.png' },
-            4: { name: 'Independiente', shortName: 'IND', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/10.png' },
-            5: { name: 'San Lorenzo', shortName: 'SLO', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/15.png' },
-            6: { name: 'Estudiantes LP', shortName: 'EST', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/7.png' },
+            1: { id: 1, name: 'River Plate', shortName: 'RIV', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/1.png', formation: '4-3-3', lineup: [
+                {id: 101, name: 'F. Armani', dorsal: 1, commentCount: 0, isCaptain: true, pos: {x: 5, y: 50}},   // GK
+                {id: 102, name: 'M. Casco', dorsal: 20, commentCount: 0, pos: {x: 18, y: 85}},  // RB
+                {id: 103, name: 'P. Díaz', dorsal: 17, commentCount: 0, pos: {x: 18, y: 60}},  // CB
+                {id: 104, name: 'G. Pírez', dorsal: 14, commentCount: 0, pos: {x: 18, y: 40}},  // CB
+                {id: 105, name: 'E. Díaz', dorsal: 13, commentCount: 0, pos: {x: 18, y: 15}},  // LB
+                {id: 106, name: 'E. Pérez', dorsal: 24, commentCount: 0, pos: {x: 33, y: 50}},  // CM
+                {id: 107, name: 'N. De La Cruz', dorsal: 11, commentCount: 0, pos: {x: 35, y: 75}},  // RCM
+                {id: 108, name: 'I. Fernández', dorsal: 26, commentCount: 0, pos: {x: 35, y: 25}},  // LCM
+                {id: 109, name: 'E. Barco', dorsal: 21, commentCount: 0, pos: {x: 46, y: 80}},  // RW
+                {id: 110, name: 'P. Solari', dorsal: 16, commentCount: 0, pos: {x: 46, y: 20}},  // LW
+                {id: 111, name: 'M. Borja', dorsal: 9, commentCount: 0, pos: {x: 48, y: 50}},   // ST
+            ]},
+            2: { id: 2, name: 'Boca Juniors', shortName: 'BOC', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/2.png', formation: '4-3-3', lineup: [
+                {id: 201, name: 'S. Romero', dorsal: 1, commentCount: 0, pos: {x: 5, y: 50}},   // GK
+                {id: 202, name: 'L. Advíncula', dorsal: 17, commentCount: 0, pos: {x: 18, y: 85}},  // RB
+                {id: 203, name: 'N. Figal', dorsal: 4, commentCount: 0, pos: {x: 18, y: 60}},  // CB
+                {id: 204, name: 'M. Rojo', dorsal: 6, commentCount: 0, isCaptain: true, pos: {x: 18, y: 40}},  // CB
+                {id: 205, name: 'F. Fabra', dorsal: 18, commentCount: 0, pos: {x: 18, y: 15}},  // LB
+                {id: 206, name: 'P. Fernández', dorsal: 8, commentCount: 0, pos: {x: 33, y: 50}},  // CM
+                {id: 207, name: 'A. Varela', dorsal: 5, commentCount: 0, pos: {x: 35, y: 75}},  // RCM
+                {id: 208, name: 'C. Medina', dorsal: 36, commentCount: 0, pos: {x: 35, y: 25}},  // LCM
+                {id: 209, name: 'V. Barco', dorsal: 19, commentCount: 0, pos: {x: 46, y: 80}},  // RW
+                {id: 210, name: 'M. Merentiel', dorsal: 16, commentCount: 0, pos: {x: 46, y: 20}},  // LW
+                {id: 211, name: 'E. Cavani', dorsal: 10, commentCount: 0, pos: {x: 48, y: 50}},   // ST
+            ]},
+            3: { id: 3, name: 'Racing Club', shortName: 'RAC', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/13.png', lineup: [{id: 301, name: 'G. Arias', dorsal: 1, commentCount: 0, isCaptain: true}, {id: 302, name: 'F. Mura', dorsal: 34, commentCount: 0}, {id: 303, name: 'L. Sigali', dorsal: 30, commentCount: 0}] },
+            4: { id: 4, name: 'Independiente', shortName: 'IND', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/10.png', lineup: [{id: 401, name: 'R. Rey', dorsal: 1, commentCount: 0}, {id: 402, name: 'M. Isla', dorsal: 4, commentCount: 0, isCaptain: true}, {id: 403, name: 'J. Laso', dorsal: 2, commentCount: 0}] },
         };
-
-        const players = {
-            101: { name: 'Miguel Borja', teamId: 1 },
-            102: { name: 'Facundo Colidio', teamId: 1 },
-            201: { name: 'Edinson Cavani', teamId: 2 },
-            202: { name: 'Kevin Zenón', teamId: 2 },
-            301: { name: 'Adrián Martínez', teamId: 3 },
-            401: { name: 'Gabriel Ávalos', teamId: 4 },
-        };
-
-        const matches = [
-            {
-                id: 1,
-                time: '19:00',
-                status: 'POR JUGAR',
-                homeTeamId: 1,
-                awayTeamId: 2,
-                homeScore: 0,
-                awayScore: 0,
-                events: []
-            },
-            {
-                id: 2,
-                time: '21:30',
-                status: 'EN VIVO',
-                minute: 78,
-                homeTeamId: 3,
-                awayTeamId: 4,
-                homeScore: 1,
-                awayScore: 1,
-                events: [
-                    { minute: 23, type: 'GOL', player: 'Adrián Martínez', teamId: 3, icon: '⚽' },
-                    { minute: 45, type: 'AMARILLA', player: 'Iván Marcone', teamId: 4, icon: '🟨' },
-                    { minute: 61, type: 'GOL', player: 'Gabriel Ávalos', teamId: 4, icon: '⚽' },
-                ]
-            },
-            {
-                id: 3,
-                time: '17:00',
-                status: 'FINALIZADO',
-                homeTeamId: 5,
-                awayTeamId: 6,
-                homeScore: 0,
-                awayScore: 2,
-                events: [
-                     { minute: 55, type: 'GOL', player: 'Guido Carrillo', teamId: 6, icon: '⚽' },
-                     { minute: 89, type: 'GOL', player: 'Edwuin Cetré', teamId: 6, icon: '⚽' },
-                ]
-            },
-        ];
-
-        // --- APP STATE ---
-        const state = {
-            currentView: 'match-list',
-            selectedMatchId: null,
-            unsubscribeComments: null,
-        };
-
-        // --- DOM ELEMENTS ---
-        const views = {
-            'match-list': document.getElementById('view-match-list'),
-            'match-detail': document.getElementById('view-match-detail'),
-            'profile': document.getElementById('view-profile'),
-        };
+        const matches = [ { id: 102, time: '19:15', status: 'EN VIVO', minute: 78, homeTeamId: 1, awayTeamId: 2, homeScore: 1, awayScore: 1, stats: { homePossession: 62, awayPossession: 38, homeShots: 14, awayShots: 8, homeOnGoal: 5, awayOnGoal: 3, homePasses: 450, awayPasses: 280, homeAccuracy: 88, awayAccuracy: 75, homeXG: 1.8, awayXG: 0.9 }, events: [ { minute: 23, type: 'goal', teamId: 1, player: 'M. Borja', description: '¡Gol de River! Borja define con clase.' }, { minute: 45, type: 'yellow_card', teamId: 2, player: 'M. Rojo', description: 'Tarjeta amarilla para Rojo por una fuerte entrada.'}, { minute: 61, type: 'goal', teamId: 2, player: 'E. Cavani', description: 'Cavani empata el partido de cabeza.' }, { minute: 75, type: 'substitution', teamId: 1, player: 'Sale: P. Solari, Entra: M. Kranevitter', description: 'Cambio en River para reforzar el mediocampo.'}, ] }, { id: 103, time: '21:30', status: 'FINALIZADO', minute: 90, homeTeamId: 3, awayTeamId: 4, homeScore: 2, awayScore: 1, stats: { homePossession: 55, awayPossession: 45, homeShots: 10, awayShots: 12, homeOnGoal: 6, awayOnGoal: 4, homePasses: 350, awayPasses: 310, homeAccuracy: 82, awayAccuracy: 79, homeXG: 2.1, awayXG: 1.5 }, events: [ { minute: 88, type: 'goal', teamId: 3, player: 'G. Hauche', description: 'Gol agónico de Hauche para la victoria.' } ] }, ];
+        
+        // --- APP STATE, DOM ELEMENTS, etc. ---
+        let state = { currentView: 'match-list', selectedMatchId: null, selectedPlayerId: null, selectedPlayerName: null, activeTab: 'timeline', unsubscribeComments: null, unsubscribePlayerComments: null };
+        const views = { 'match-list': document.getElementById('view-match-list'), 'match-detail': document.getElementById('view-match-detail') };
         const headerTitle = document.getElementById('header-title');
         const backButton = document.getElementById('back-button');
         const matchListContainer = document.getElementById('match-list-container');
         const matchDetailHeader = document.getElementById('match-detail-header');
-        const eventFeedContainer = document.getElementById('event-feed-container');
-        const commentsContainer = document.getElementById('comments-container');
-        const commentUsernameInput = document.getElementById('comment-username');
-        const commentTextInput = document.getElementById('comment-text');
-        const submitCommentButton = document.getElementById('submit-comment');
-        const profileContent = document.getElementById('profile-content');
+        const matchTabs = document.getElementById('match-tabs');
+        const tabPanes = { timeline: document.getElementById('tab-timeline'), lineups: document.getElementById('tab-lineups'), stats: document.getElementById('tab-stats'), comments: document.getElementById('tab-comments') };
+        const playerCommentModal = document.getElementById('player-comment-modal');
 
         // --- RENDER FUNCTIONS ---
         const renderMatchList = () => {
-            matchListContainer.innerHTML = '';
-            matches.forEach(match => {
-                const homeTeam = teams[match.homeTeamId];
-                const awayTeam = teams[match.awayTeamId];
-
-                let statusHtml = '';
-                if (match.status === 'EN VIVO') {
-                    statusHtml = `<span class="text-xs font-bold text-red-400">${match.minute}'</span>`;
-                } else {
-                    statusHtml = `<span class="text-xs font-semibold text-gray-400">${match.status === 'POR JUGAR' ? match.time : 'FIN'}</span>`;
-                }
-
-                const matchElement = document.createElement('div');
-                matchElement.className = 'bg-gray-800 p-4 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors';
-                matchElement.dataset.matchId = match.id;
-                matchElement.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <!-- Teams Column -->
-                        <div class="space-y-2 flex-grow">
-                            <div class="flex items-center space-x-3">
-                                <img src="${homeTeam.logo}" alt="${homeTeam.name}" class="w-6 h-6">
-                                <span class="font-medium text-white">${homeTeam.name}</span>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <img src="${awayTeam.logo}" alt="${awayTeam.name}" class="w-6 h-6">
-                                <span class="font-medium text-white">${awayTeam.name}</span>
-                            </div>
-                        </div>
-                        <!-- Score/Status Column -->
-                        <div class="flex flex-col items-center text-center w-16">
-                            <span class="font-bold text-lg text-white">${match.homeScore}</span>
-                            <span class="font-bold text-lg text-white">${match.awayScore}</span>
-                        </div>
-                         <!-- Time/Live Column -->
-                        <div class="flex flex-col items-end text-right w-20">
-                           ${statusHtml}
-                        </div>
-                    </div>
-                `;
-                matchElement.addEventListener('click', () => navigateTo('match-detail', { matchId: match.id }));
-                matchListContainer.appendChild(matchElement);
-            });
-        };
-
+             document.getElementById('loading-indicator').style.display = 'none';
+             matchListContainer.innerHTML = matches.map(match => {
+                 const homeTeam = teams[match.homeTeamId];
+                 const awayTeam = teams[match.awayTeamId];
+                 let statusHtml = match.status === 'EN VIVO' ? `<span class="text-xs font-bold text-red-400 animate-pulse">${match.minute}'</span>` : `<span class="text-xs font-semibold text-gray-400">${match.status === 'POR JUGAR' ? match.time : 'FIN'}</span>`;
+                 return `<div class="bg-gray-900 p-4 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors" data-match-id="${match.id}"><div class="flex items-center justify-between"><div class="space-y-2 flex-grow"><div class="flex items-center space-x-3"><img src="${homeTeam.logo}" alt="${homeTeam.name}" class="w-6 h-6 object-contain"><span class="font-medium">${homeTeam.name}</span></div><div class="flex items-center space-x-3"><img src="${awayTeam.logo}" alt="${awayTeam.name}" class="w-6 h-6 object-contain"><span class="font-medium">${awayTeam.name}</span></div></div><div class="flex flex-col items-center w-16"><span class="font-bold text-lg">${match.homeScore}</span><span class="font-bold text-lg">${match.awayScore}</span></div><div class="flex flex-col items-end w-20">${statusHtml}</div></div></div>`;
+             }).join('');
+         };
         const renderMatchDetail = (matchId) => {
-            const match = matches.find(m => m.id === matchId);
-            if (!match) return;
-
-            state.selectedMatchId = matchId;
-            const homeTeam = teams[match.homeTeamId];
-            const awayTeam = teams[match.awayTeamId];
-            
-            // Render Header
-            matchDetailHeader.innerHTML = `
-                <div class="flex justify-around items-center text-center">
-                    <div class="flex flex-col items-center space-y-2 w-1/3">
-                        <img src="${homeTeam.logo}" alt="${homeTeam.name}" class="w-16 h-16">
-                        <span class="font-bold text-lg text-white">${homeTeam.name}</span>
-                    </div>
-                    <div class="w-1/3">
-                        <p class="text-4xl font-bold text-white">${match.homeScore} - ${match.awayScore}</p>
-                        <p class="text-sm font-semibold mt-1 ${match.status === 'EN VIVO' ? 'text-red-400' : 'text-gray-400'}">
-                            ${match.status === 'EN VIVO' ? `${match.minute}'` : match.status}
-                        </p>
-                    </div>
-                    <div class="flex flex-col items-center space-y-2 w-1/3">
-                        <img src="${awayTeam.logo}" alt="${awayTeam.name}" class="w-16 h-16">
-                        <span class="font-bold text-lg text-white">${awayTeam.name}</span>
-                    </div>
+             const match = matches.find(m => m.id === Number(matchId));
+             if (!match) return;
+             state.selectedMatchId = matchId;
+             const homeTeam = teams[match.homeTeamId];
+             const awayTeam = teams[match.awayTeamId];
+             matchDetailHeader.innerHTML = `<div class="flex justify-around items-center text-center"><div class="flex flex-col items-center space-y-2 w-1/3"><img src="${homeTeam.logo}" class="w-16 h-16 object-contain"><span class="font-bold text-lg">${homeTeam.name}</span></div><div class="w-1/3"><p class="text-4xl font-bold">${match.homeScore} - ${match.awayScore}</p><p class="text-sm font-semibold mt-1 ${match.status === 'EN VIVO' ? 'text-red-400 animate-pulse' : 'text-gray-400'}">${match.status === 'EN VIVO' ? `${match.minute}'` : match.status}</p></div><div class="flex flex-col items-center space-y-2 w-1/3"><img src="${awayTeam.logo}" class="w-16 h-16 object-contain"><span class="font-bold text-lg">${awayTeam.name}</span></div></div>`;
+             renderTimeline(match);
+             renderLineups(match);
+             renderStats(match);
+             listenForComments(matchId);
+         };
+        const renderTimeline = (match) => {
+            const getIcon = (type) => ({'goal': '<svg class="w-5 h-5 text-yellow-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg>', 'yellow_card': '<div class="w-3 h-4 bg-yellow-400 rounded-sm"></div>', 'red_card': '<div class="w-3 h-4 bg-red-500 rounded-sm"></div>', 'substitution': '<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>'})[type] || '';
+             if (!match.events || match.events.length === 0) { tabPanes.timeline.innerHTML = '<p class="text-gray-500 text-center py-8">No hay eventos destacados todavía.</p>'; return; }
+             tabPanes.timeline.innerHTML = `<div class="border-l-2 border-gray-700 ml-4 pl-6 space-y-8 py-4">${match.events.sort((a,b) => b.minute - a.minute).map(event => `<div class="relative"><div class="absolute -left-[35px] top-1.5 h-4 w-4 rounded-full bg-gray-600 border-2 border-black"></div><div class="flex items-start space-x-4"><div class="font-mono text-gray-400">${event.minute}'</div><div class="flex items-center space-x-2 text-gray-200">${getIcon(event.type)}<span>${event.player}</span></div></div><p class="text-sm text-gray-400 mt-1 ml-10">${event.description}</p></div>`).join('')}</div>`;
+        };
+        const renderLineups = (match) => {
+             const homeTeam = teams[match.homeTeamId];
+             const awayTeam = teams[match.awayTeamId];
+             
+             const formationHtml = `
+                <div class="football-pitch rounded-lg mb-6">
+                    <div class="pitch-line center-line"></div>
+                    <div class="pitch-line center-circle"></div>
+                    <div class="penalty-box home-box"></div>
+                    <div class="penalty-box away-box"></div>
+                    ${homeTeam.lineup.map(p => `<div class="player-marker home-player" style="left: ${p.pos.x}%; top: ${p.pos.y}%; transform: translate(-50%, -50%);" data-player-id="${p.id}" data-player-name="${p.name}" title="${p.name}">${p.dorsal}</div>`).join('')}
+                    ${awayTeam.lineup.map(p => `<div class="player-marker away-player" style="left: ${100 - p.pos.x}%; top: ${p.pos.y}%; transform: translate(-50%, -50%);" data-player-id="${p.id}" data-player-name="${p.name}" title="${p.name}">${p.dorsal}</div>`).join('')}
                 </div>
-            `;
-            
-            // Render Event Feed
-            eventFeedContainer.innerHTML = '';
-            if (match.events.length === 0) {
-                 eventFeedContainer.innerHTML = `<p class="text-gray-500 text-center">Sin eventos por ahora.</p>`;
-            } else {
-                match.events.slice().reverse().forEach(event => {
-                    const eventElement = document.createElement('div');
-                    eventElement.className = 'flex items-center space-x-4';
-                    const eventTeam = teams[event.teamId];
-                    eventElement.innerHTML = `
-                        <span class="text-sm font-semibold text-gray-400 w-8">${event.minute}'</span>
-                        <span class="text-2xl">${event.icon}</span>
-                        <div class="flex-grow">
-                            <p class="font-semibold text-white">${event.type}</p>
-                            <p class="text-sm text-gray-300">${event.player} (${eventTeam.shortName})</p>
-                        </div>
-                    `;
-                    eventFeedContainer.appendChild(eventElement);
-                });
-            }
+             `;
+             
+             const playerToHtml = (p) => `
+                <li class="flex items-center justify-between cursor-pointer hover:bg-gray-800 p-2 rounded-md transition-colors" data-player-id="${p.id}" data-player-name="${p.name}">
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                        <span class="font-semibold w-8 text-center mr-2">${p.dorsal}</span>
+                        <span>${p.name}</span>
+                        ${p.isCaptain ? '<span class="ml-2 text-xs font-bold bg-yellow-500 text-black rounded-full w-5 h-5 flex items-center justify-center">C</span>' : ''}
+                    </div>
+                    <div class="flex items-center text-xs text-blue-400 font-semibold">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.083-3.083A7.002 7.002 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM4.832 14.168L5.92 11.2A5.003 5.003 0 004 10c0-2.761 2.686-5 6-5s6 2.239 6 5-2.686 5-6 5a6.8 6.8 0 01-2.92-.707l-2.248 2.247z" clip-rule="evenodd"></path></svg>
+                        <span>${p.commentCount}</span>
+                    </div>
+                </li>`;
 
-            // Listen for comments
-            listenForComments(matchId);
+            tabPanes.lineups.innerHTML = formationHtml + `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    <div><h3 class="font-bold mb-3 text-lg">${homeTeam.name} (${homeTeam.formation})</h3><ul class="space-y-1">${homeTeam.lineup.map(playerToHtml).join('')}</ul></div>
+                    <div><h3 class="font-bold mb-3 text-lg">${awayTeam.name} (${awayTeam.formation})</h3><ul class="space-y-1">${awayTeam.lineup.map(playerToHtml).join('')}</ul></div>
+                </div>`;
+        };
+        const renderStats = (match) => {
+             const s = match.stats;
+             const statRow = (label, valA, valB, isPercent = false) => `<div class="text-center"><div class="flex justify-between items-center font-bold text-lg px-2"><span>${valA}${isPercent ? '%' : ''}</span><span>${valB}${isPercent ? '%' : ''}</span></div><div class="w-full bg-gray-700 rounded-full h-2.5 my-1"><div class="bg-blue-500 h-2.5 rounded-l-full" style="width: ${valA / (valA + valB) * 100}%"></div></div><p class="text-sm text-gray-400">${label}</p></div>`;
+             tabPanes.stats.innerHTML = `<div class="space-y-4">${statRow('Posesión', s.homePossession, s.awayPossession, true)}${statRow('Tiros Totales', s.homeShots, s.awayShots)}${statRow('Tiros al Arco', s.homeOnGoal, s.awayOnGoal)}${statRow('Total de Pases', s.homePasses, s.awayPasses)}${statRow('Efectividad de Pases', s.homeAccuracy, s.awayAccuracy, true)}${statRow('Goles Esperados (xG)', s.homeXG, s.awayXG)}</div>`;
+        };
+        const renderPlayerComments = (comments) => {
+              const container = document.getElementById('player-comments-container');
+              if (comments.length === 0) { container.innerHTML = '<p class="text-gray-500 text-center text-sm py-4">Sé el primero en comentar sobre este jugador.</p>'; return; }
+              container.innerHTML = comments.map(c => `<div class="bg-gray-800 p-2 rounded-lg"><p class="font-semibold text-sm text-blue-400">${c.username}</p><p class="text-white text-sm">${c.text}</p></div>`).join('');
+              container.scrollTop = container.scrollHeight;
         };
         
-        const renderProfile = (data) => {
-            profileContent.innerHTML = '';
-            if (data.teamId) {
-                const team = teams[data.teamId];
-                profileContent.innerHTML = `
-                    <div class="text-center space-y-4">
-                         <img src="${team.logo}" alt="${team.name}" class="w-24 h-24 mx-auto">
-                         <h2 class="text-2xl font-bold">${team.name}</h2>
-                         <p class="text-gray-400">Plantel Principal (Ejemplo)</p>
-                         <ul class="text-left max-w-xs mx-auto">
-                            ${Object.values(players).filter(p => p.teamId === data.teamId).map(p => `<li class="py-2 border-b border-gray-700">${p.name}</li>`).join('')}
-                         </ul>
-                    </div>
-                `;
-            }
-        };
-
-        // --- NAVIGATION ---
+        // --- NAVIGATION & FIREBASE (functions remain the same) ---
         const navigateTo = (view, data = {}) => {
-            // Detach old listeners
-            if (state.unsubscribeComments) {
-                state.unsubscribeComments();
-                state.unsubscribeComments = null;
-            }
-
+            if (state.unsubscribeComments) state.unsubscribeComments();
+            if (state.unsubscribePlayerComments) state.unsubscribePlayerComments();
+            state.unsubscribeComments = state.unsubscribePlayerComments = null;
             Object.values(views).forEach(v => v.classList.add('hidden'));
             views[view].classList.remove('hidden');
             state.currentView = view;
-
             if (view === 'match-list') {
                 headerTitle.textContent = 'Partidos del Día';
                 backButton.classList.add('hidden');
-            } else {
+            } else if (view === 'match-detail') {
                 backButton.classList.remove('hidden');
-                if (view === 'match-detail') {
-                    const match = matches.find(m => m.id === data.matchId);
-                    headerTitle.textContent = `${teams[match.homeTeamId].shortName} vs ${teams[match.awayTeamId].shortName}`;
+                const match = matches.find(m => m.id === Number(data.matchId));
+                if (match) {
+                    const homeTeam = teams[match.homeTeamId];
+                    const awayTeam = teams[match.awayTeamId];
+                    headerTitle.textContent = `${homeTeam.shortName} vs ${awayTeam.shortName}`;
                     renderMatchDetail(data.matchId);
-                } else if (view === 'profile') {
-                    if (data.teamId) {
-                       headerTitle.textContent = `Perfil de Equipo`;
-                       renderProfile(data);
-                    }
                 }
             }
         };
-
-        // --- FIREBASE FUNCTIONS ---
         const listenForComments = (matchId) => {
             const commentsRef = collection(db, "comments", String(matchId), "messages");
             const q = query(commentsRef, orderBy("timestamp"));
-
             state.unsubscribeComments = onSnapshot(q, (snapshot) => {
-                commentsContainer.innerHTML = '';
-                if (snapshot.empty) {
-                    commentsContainer.innerHTML = '<p class="text-gray-500 text-center">Sé el primero en comentar.</p>';
-                    return;
-                }
-                snapshot.forEach(doc => {
-                    const comment = doc.data();
-                    const commentElement = document.createElement('div');
-                    commentElement.className = 'bg-gray-800 p-3 rounded-lg';
-                    commentElement.innerHTML = `
-                        <p class="font-semibold text-blue-400">${comment.username || 'Anónimo'}</p>
-                        <p class="text-gray-300">${comment.text}</p>
-                    `;
-                    commentsContainer.appendChild(commentElement);
-                });
-                commentsContainer.scrollTop = commentsContainer.scrollHeight; // Auto-scroll to bottom
-            }, (error) => {
-                console.error("Error al cargar comentarios:", error);
-                commentsContainer.innerHTML = '<p class="text-red-400 text-center">No se pudieron cargar los comentarios.</p>';
+                const container = document.getElementById('comments-container');
+                if (snapshot.empty) { container.innerHTML = '<p class="text-gray-500 text-center">Sé el primero en comentar.</p>'; return; }
+                container.innerHTML = snapshot.docs.map(doc => { const comment = doc.data(); return `<div class="bg-gray-900 p-3 rounded-lg"><p class="font-semibold text-blue-400">${comment.username}</p><p>${comment.text}</p></div>`; }).join('');
+                container.scrollTop = container.scrollHeight;
             });
         };
-
         const addComment = async (matchId, username, text) => {
-            if (!auth.currentUser) {
-                console.error("Usuario no autenticado.");
-                return;
-            }
-            if (!text.trim() || !username.trim()) {
-                alert("El nombre y el comentario no pueden estar vacíos.");
-                return;
-            }
+            const usernameInput = document.getElementById('comment-username');
+            const textInput = document.getElementById('comment-text');
+            if (!text.trim() || !username.trim()) return;
             try {
-                const commentsRef = collection(db, "comments", String(matchId), "messages");
-                await addDoc(commentsRef, {
-                    username: username,
-                    text: text,
-                    timestamp: serverTimestamp()
-                });
-                commentTextInput.value = '';
-            } catch (error) {
-                console.error("Error al agregar comentario: ", error);
-            }
+                await addDoc(collection(db, "comments", String(matchId), "messages"), { username, text, timestamp: serverTimestamp() });
+                usernameInput.value = '';
+                textInput.value = '';
+            } catch (error) { console.error("Error adding comment: ", error); }
         };
-
+        const listenForPlayerComments = (matchId, playerId) => {
+            const commentsRef = collection(db, `comments/${matchId}/players/${playerId}/messages`);
+            const q = query(commentsRef, orderBy("timestamp"));
+            state.unsubscribePlayerComments = onSnapshot(q, (snapshot) => {
+                const comments = snapshot.docs.map(doc => doc.data());
+                renderPlayerComments(comments);
+            });
+        };
+        const addPlayerComment = async (matchId, playerId, username, text) => {
+            const usernameInput = document.getElementById('player-comment-username');
+            const textInput = document.getElementById('player-comment-text');
+             if (!text.trim() || !username.trim()) return;
+             try {
+                await addDoc(collection(db, `comments/${matchId}/players/${playerId}/messages`), { username, text, timestamp: serverTimestamp() });
+                usernameInput.value = '';
+                textInput.value = '';
+            } catch (error) { console.error("Error adding player comment: ", error); }
+        };
+        
+        // --- MODAL LOGIC ---
+        const openPlayerModal = (playerId, playerName) => {
+            state.selectedPlayerId = playerId;
+            state.selectedPlayerName = playerName;
+            document.getElementById('player-modal-name').textContent = playerName;
+            playerCommentModal.classList.remove('hidden');
+            playerCommentModal.querySelector('#player-comment-modal-content').classList.add('modal-enter');
+            listenForPlayerComments(state.selectedMatchId, playerId);
+        };
+        const closePlayerModal = () => {
+            const content = playerCommentModal.querySelector('#player-comment-modal-content');
+            content.classList.remove('modal-enter');
+            content.classList.add('modal-leave');
+            setTimeout(() => {
+                playerCommentModal.classList.add('hidden');
+                content.classList.remove('modal-leave');
+                if(state.unsubscribePlayerComments) state.unsubscribePlayerComments();
+                state.selectedPlayerId = null;
+            }, 200);
+        };
+        
         // --- EVENT LISTENERS ---
-        backButton.addEventListener('click', () => {
-             // A simple history logic for this MVP
-            if (state.currentView === 'match-detail') {
-                 navigateTo('match-list');
-            } else if (state.currentView === 'profile') {
-                navigateTo('match-detail', { matchId: state.selectedMatchId });
+        backButton.addEventListener('click', () => navigateTo('match-list'));
+        matchListContainer.addEventListener('click', (e) => {
+            const matchCard = e.target.closest('[data-match-id]');
+            if (matchCard) navigateTo('match-detail', { matchId: matchCard.dataset.matchId });
+        });
+        matchTabs.addEventListener('click', (e) => {
+            if (e.target.matches('.tab-button')) {
+                const tabName = e.target.dataset.tab;
+                state.activeTab = tabName;
+                matchTabs.querySelectorAll('.tab-button').forEach(btn => { btn.classList.remove('tab-active'); btn.classList.add('border-transparent', 'text-gray-400'); });
+                e.target.classList.add('tab-active');
+                e.target.classList.remove('border-transparent', 'text-gray-400');
+                Object.values(tabPanes).forEach(pane => pane.classList.add('hidden'));
+                tabPanes[tabName].classList.remove('hidden');
             }
         });
-
-        submitCommentButton.addEventListener('click', () => {
-            const username = commentUsernameInput.value || 'Anónimo';
-            const text = commentTextInput.value;
+        document.getElementById('submit-comment').addEventListener('click', () => {
+            const username = document.getElementById('comment-username').value || 'Anónimo';
+            const text = document.getElementById('comment-text').value;
             addComment(state.selectedMatchId, username, text);
+        });
+        tabPanes.lineups.addEventListener('click', (e) => {
+            const playerEl = e.target.closest('[data-player-id]');
+            if (playerEl) { openPlayerModal(playerEl.dataset.playerId, playerEl.dataset.playerName); }
+        });
+        document.getElementById('close-modal-button').addEventListener('click', closePlayerModal);
+        document.getElementById('submit-player-comment').addEventListener('click', () => {
+             const username = document.getElementById('player-comment-username').value || 'Anónimo';
+             const text = document.getElementById('player-comment-text').value;
+             addPlayerComment(state.selectedMatchId, state.selectedPlayerId, username, text);
         });
 
         // --- INITIALIZATION ---
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                console.log("Signed in anonymously:", user.uid);
-            } else {
-                signInAnonymously(auth).catch((error) => {
-                    console.error("Anonymous sign-in failed:", error);
-                });
-            }
-        });
+        const initApp = () => {
+            setTimeout(() => renderMatchList(), 500);
+        };
+        initApp();
 
-        // Initial render
-        renderMatchList();
     </script>
-
 </body>
 </html>
+
 
