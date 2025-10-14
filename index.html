@@ -21,20 +21,6 @@
         ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #718096; }
         .tab-active { border-color: #3b82f6; color: #eff6ff; }
-        
-        .football-pitch { background-color: #0d5c2d; border: 2px solid #fff; position: relative; width: 100%; aspect-ratio: 7 / 5; }
-        .pitch-line { position: absolute; background-color: #fff; opacity: 0.5; }
-        .center-line { top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%); }
-        .center-circle { top: 50%; left: 50%; width: 25%; height: 35%; border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); }
-        .penalty-box { position: absolute; border: 2px solid rgba(255,255,255,0.5); }
-        .home-box { top: 20%; bottom: 20%; left: 0; right: 83%; border-left: 0; }
-        .away-box { top: 20%; bottom: 20%; right: 0; left: 83%; border-right: 0; }
-
-        .player-marker { position: absolute; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; border: 2px solid rgba(255, 255, 255, 0.7); cursor: pointer; transition: transform 0.2s; }
-        .player-marker:hover { transform: scale(1.15); }
-        .home-player { background-color: #b91c1c; }
-        .away-player { background-color: #1d4ed8; }
-
         .day-selected { background-color: #2563eb; color: white; font-weight: bold; }
     </style>
 </head>
@@ -45,9 +31,9 @@
             <button id="back-button" class="hidden text-gray-300 hover:text-white transition-colors">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <h1 id="header-title" class="text-xl font-bold text-white text-center flex-grow">
-    <img src="https://i.postimg.cc/q7Z5b8md/IMG-4424.png" alt="Fútbol Argentino" class="h-20 mx-auto w-auto">
-</h1>
+            <div id="header-title" class="flex-grow flex justify-center">
+                <img src="https://i.postimg.cc/q7Z5b8md/IMG-4424.png" alt="RealFutbol Logo" class="h-20 mx-auto w-auto">
+            </div>
             <div class="w-6"></div>
         </header>
 
@@ -68,53 +54,20 @@
             </div>
 
             <div id="view-match-detail" class="hidden animate-fade-in p-4">
-                 <!-- El contenido del detalle del partido no ha cambiado -->
+                 <!-- El contenido del detalle del partido se podría agregar aquí si se desea -->
             </div>
         </main>
     </div>
 
-     <!-- El modal de comentarios del jugador no ha cambiado -->
-
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
         // --- CONFIG ---
         const API_SPORTS_KEY = "160002c02e969ea355717b6ec7267fa7";
         
-        // IDs de las Ligas y Copas Argentinas a mostrar
-        const ARGENTINIAN_LEAGUE_IDS = [
-            128,  // Liga Profesional Argentina
-            1032, // Copa de la Liga Profesional
-            130,  // Copa Argentina
-            129,  // Primera Nacional
-            132,  // Primera B Metropolitana
-            133,  // Torneo Federal A
-            134,  // Primera C
-            906,  // Liga de Reserva (CORREGIDO)
-            131,  // Super Copa
-            975,  // Super Copa International
-            520,  // Trofeo de Campeones
-            483,  // Copa de la Superliga (Discontinuada)
-            135,  // Primera D (Discontinuada)
-        ];
-
-        const firebaseConfig = {
-            apiKey: "AIza...", authDomain: "your-project.firebaseapp.com", projectId: "your-project",
-            storageBucket: "your-project.appspot.com", messagingSenderId: "...", appId: "..."
-        };
-        try {
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-            signInAnonymously(auth).catch(console.error);
-        } catch (e) {
-            console.error("Error inicializando Firebase. Los comentarios no funcionarán.", e);
-        }
+        const ARGENTINIAN_LEAGUE_IDS = [ 128, 1032, 130, 129, 132, 133, 134, 906, 131, 975, 520, 483, 135 ];
+        const ARGENTINIAN_NATIONAL_TEAM_IDS = [ 26, 1118 ];
         
         // --- APP STATE ---
-        let state = { currentDate: new Date(), selectedDate: new Date(), matches: [], };
+        let state = { currentDate: new Date(), selectedDate: new Date(), matches: [] };
         
         // --- DOM ELEMENTS ---
         const matchListContainer = document.getElementById('match-list-container');
@@ -160,8 +113,8 @@
                 
                 dayWrapper.addEventListener('click', (event) => {
                     const selectedDateStr = event.currentTarget.dataset.date;
-                    const parts = selectedDateStr.split('-').map(Number);
-                    state.selectedDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+                    // FIX: Crear la fecha con T00:00:00 para evitar problemas de zona horaria
+                    state.selectedDate = new Date(`${selectedDateStr}T00:00:00`);
                     renderCalendar(); 
                     loadMatchesForSelectedDate();
                 });
@@ -173,8 +126,7 @@
         async function getMatchesFromApi(date) {
             const url = `https://v3.football.api-sports.io/fixtures?date=${date}`;
             const response = await fetch(url, {
-                method: "GET",
-                headers: { "x-apisports-key": API_SPORTS_KEY }
+                method: "GET", headers: { "x-apisports-key": API_SPORTS_KEY }
             });
             const data = await response.json();
             if (!response.ok || (data.errors && Object.keys(data.errors).length > 0)) {
@@ -185,6 +137,7 @@
         }
 
         function transformApiData(apiMatches) {
+            // Se añaden statusShort y minute para la lógica de partidos en vivo
             return apiMatches.map(match => ({
                 id: match.fixture.id,
                 leagueName: match.league.name,
@@ -193,6 +146,8 @@
                 homeScore: match.goals.home,
                 awayScore: match.goals.away,
                 status: match.fixture.status.long,
+                statusShort: match.fixture.status.short,
+                minute: match.fixture.status.elapsed,
             }));
         }
 
@@ -200,11 +155,18 @@
         function renderMatchList() {
              matchListContainer.innerHTML = '';
              if (state.matches.length === 0) {
-                 matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">No hay partidos de ligas argentinas programados para este día.</p>`;
+                 matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">No hay partidos de equipos argentinos programados para este día.</p>`;
                  return;
              }
-             const html = state.matches.map(match => 
-                `<div class="bg-gray-900 p-4 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors" data-match-id="${match.id}">
+             const html = state.matches.map(match => {
+                // FIX: Lógica para mostrar el minuto en partidos en vivo
+                const liveStatusCodes = ['1H', 'HT', '2H', 'ET', 'P'];
+                const isLive = liveStatusCodes.includes(match.statusShort) && match.minute;
+                const statusDisplay = isLive
+                    ? `<span class="font-bold text-red-400 animate-pulse">${match.minute}'</span>`
+                    : `<span class="text-xs font-semibold text-gray-400">${match.status}</span>`;
+
+                return `<div class="bg-gray-900 p-4 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors" data-match-id="${match.id}">
                     <div class="text-xs text-blue-400 font-semibold mb-2">${match.leagueName}</div>
                     <div class="flex items-center justify-between">
                         <div class="space-y-2 flex-grow">
@@ -216,35 +178,33 @@
                             <span class="font-bold text-lg">${match.awayScore ?? '-'}</span>
                         </div>
                         <div class="flex flex-col items-end w-24 text-right">
-                            <span class="text-xs font-semibold text-gray-400">${match.status}</span>
+                            ${statusDisplay}
                         </div>
                     </div>
-                </div>`
-            ).join('');
+                </div>`;
+            }).join('');
             matchListContainer.innerHTML = html;
         }
 
         // --- INITIALIZATION ---
         async function loadMatchesForSelectedDate() {
-            matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">Buscando partidos del fútbol argentino...</p>`;
-            
+            matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">Buscando partidos del fútbol argentino y la Selección...</p>`;
             try {
                 const dateString = formatDate(state.selectedDate);
                 const apiMatches = await getMatchesFromApi(dateString);
                 
-                const filteredMatches = apiMatches.filter(match => 
-                    ARGENTINIAN_LEAGUE_IDS.includes(match.league.id)
-                );
+                // FIX: Filtro para incluir Ligas locales O partidos de la Selección
+                const filteredMatches = apiMatches.filter(match => {
+                    const isArgentinianLeague = ARGENTINIAN_LEAGUE_IDS.includes(match.league.id);
+                    const isNationalTeamMatch = ARGENTINIAN_NATIONAL_TEAM_IDS.includes(match.teams.home.id) || ARGENTINIAN_NATIONAL_TEAM_IDS.includes(match.teams.away.id);
+                    return isArgentinianLeague || isNationalTeamMatch;
+                });
 
                 state.matches = transformApiData(filteredMatches);
                 renderMatchList();
             } catch (error) {
                 console.error("Falló la carga de partidos:", error);
-                matchListContainer.innerHTML = `
-                    <div class="text-center text-red-400 bg-red-900/20 p-4 rounded-lg">
-                        <p class="font-bold">Error al cargar los partidos</p>
-                        <p class="text-sm mt-1">${error.message}</p>
-                    </div>`;
+                matchListContainer.innerHTML = `<div class="text-center text-red-400 bg-red-900/20 p-4 rounded-lg"><p class="font-bold">Error al cargar los partidos</p><p class="text-sm mt-1">${error.message}</p></div>`;
             }
         }
         
