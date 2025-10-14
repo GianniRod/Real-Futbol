@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RealFutbol</title>
+    <title>RealFutbol - Solo Fútbol Argentino</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,7 +45,7 @@
             <button id="back-button" class="hidden text-gray-300 hover:text-white transition-colors">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <h1 id="header-title" class="text-xl font-bold text-white text-center flex-grow">Partidos</h1>
+            <h1 id="header-title" class="text-xl font-bold text-white text-center flex-grow">Fútbol Argentino</h1>
             <div class="w-6"></div>
         </header>
 
@@ -79,9 +79,25 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         // --- CONFIG ---
-        // CLAVE DE PRUEBA FUNCIONAL. Reemplázala por tu propia clave para uso prolongado.
         const API_SPORTS_KEY = "160002c02e969ea355717b6ec7267fa7";
-        // RECUERDA: La configuración de Firebase debe ser válida para que los comentarios funcionen.
+        
+        // IDs de las Ligas y Copas Argentinas a mostrar
+        const ARGENTINIAN_LEAGUE_IDS = [
+            128,  // Liga Profesional Argentina
+            1032, // Copa de la Liga Profesional
+            130,  // Copa Argentina
+            129,  // Primera Nacional
+            132,  // Primera B Metropolitana
+            133,  // Torneo Federal A
+            134,  // Primera C
+            906,  // Liga de Reserva (CORREGIDO)
+            131,  // Super Copa
+            975,  // Super Copa International
+            520,  // Trofeo de Campeones
+            483,  // Copa de la Superliga (Discontinuada)
+            135,  // Primera D (Discontinuada)
+        ];
+
         const firebaseConfig = {
             apiKey: "AIza...", authDomain: "your-project.firebaseapp.com", projectId: "your-project",
             storageBucket: "your-project.appspot.com", messagingSenderId: "...", appId: "..."
@@ -96,22 +112,15 @@
         }
         
         // --- APP STATE ---
-        let state = {
-            currentDate: new Date(),
-            selectedDate: new Date(),
-            matches: [],
-            // ... (el resto del estado no ha cambiado)
-        };
+        let state = { currentDate: new Date(), selectedDate: new Date(), matches: [], };
         
         // --- DOM ELEMENTS ---
         const matchListContainer = document.getElementById('match-list-container');
         const monthYearTitle = document.getElementById('month-year-title');
         const daysContainer = document.getElementById('days-container');
-        // ... (el resto de elementos del DOM no han cambiado)
 
         // --- DATE & CALENDAR FUNCTIONS ---
         function formatDate(date) {
-            // Esta función es más robusta y evita problemas de zona horaria.
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
@@ -120,8 +129,8 @@
 
         function renderCalendar() {
             const firstDayOfWeek = new Date(state.currentDate);
-            const dayIndex = firstDayOfWeek.getDay(); // Domingo = 0, Lunes = 1
-            const offset = (dayIndex === 0) ? -6 : 1; // Ajuste para que la semana empiece en Lunes
+            const dayIndex = firstDayOfWeek.getDay();
+            const offset = (dayIndex === 0) ? -6 : 1;
             firstDayOfWeek.setDate(firstDayOfWeek.getDate() - dayIndex + offset);
 
             monthYearTitle.textContent = state.currentDate.toLocaleString('es-AR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase());
@@ -150,7 +159,7 @@
                 dayWrapper.addEventListener('click', (event) => {
                     const selectedDateStr = event.currentTarget.dataset.date;
                     const parts = selectedDateStr.split('-').map(Number);
-                    state.selectedDate = new Date(parts[0], parts[1] - 1, parts[2]);
+                    state.selectedDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
                     renderCalendar(); 
                     loadMatchesForSelectedDate();
                 });
@@ -161,15 +170,11 @@
         // --- API & DATA FUNCTIONS ---
         async function getMatchesFromApi(date) {
             const url = `https://v3.football.api-sports.io/fixtures?date=${date}`;
-            console.log("Pidiendo partidos para:", url); // Log para depuración
             const response = await fetch(url, {
                 method: "GET",
                 headers: { "x-apisports-key": API_SPORTS_KEY }
             });
-
             const data = await response.json();
-            console.log("Respuesta de la API:", data); // Log para depuración
-
             if (!response.ok || (data.errors && Object.keys(data.errors).length > 0)) {
                 const errorMsg = data.errors ? Object.values(data.errors).join(', ') : `Error HTTP ${response.status}`;
                 throw new Error(errorMsg);
@@ -178,27 +183,27 @@
         }
 
         function transformApiData(apiMatches) {
-            // Esta función no ha cambiado, sigue siendo para transformar los datos
             return apiMatches.map(match => ({
                 id: match.fixture.id,
+                leagueName: match.league.name,
                 homeTeam: { id: match.teams.home.id, name: match.teams.home.name, logo: match.teams.home.logo },
                 awayTeam: { id: match.teams.away.id, name: match.teams.away.name, logo: match.teams.away.logo },
                 homeScore: match.goals.home,
                 awayScore: match.goals.away,
                 status: match.fixture.status.long,
-                // ... (resto de la transformación)
             }));
         }
 
         // --- RENDER FUNCTIONS ---
         function renderMatchList() {
-             matchListContainer.innerHTML = ''; // Siempre limpiar primero
+             matchListContainer.innerHTML = '';
              if (state.matches.length === 0) {
-                 matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">No hay partidos programados para este día.</p>`;
+                 matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">No hay partidos de ligas argentinas programados para este día.</p>`;
                  return;
              }
              const html = state.matches.map(match => 
                 `<div class="bg-gray-900 p-4 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors" data-match-id="${match.id}">
+                    <div class="text-xs text-blue-400 font-semibold mb-2">${match.leagueName}</div>
                     <div class="flex items-center justify-between">
                         <div class="space-y-2 flex-grow">
                             <div class="flex items-center space-x-3"><img src="${match.homeTeam.logo}" alt="${match.homeTeam.name}" class="w-6 h-6 object-contain"><span class="font-medium">${match.homeTeam.name}</span></div>
@@ -219,21 +224,24 @@
 
         // --- INITIALIZATION ---
         async function loadMatchesForSelectedDate() {
-            matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">Buscando partidos...</p>`;
+            matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">Buscando partidos del fútbol argentino...</p>`;
             
             try {
                 const dateString = formatDate(state.selectedDate);
                 const apiMatches = await getMatchesFromApi(dateString);
-                state.matches = transformApiData(apiMatches);
+                
+                const filteredMatches = apiMatches.filter(match => 
+                    ARGENTINIAN_LEAGUE_IDS.includes(match.league.id)
+                );
+
+                state.matches = transformApiData(filteredMatches);
                 renderMatchList();
             } catch (error) {
                 console.error("Falló la carga de partidos:", error);
-                // ¡AQUÍ ESTÁ LA MEJORA! Mostramos el error en la UI.
                 matchListContainer.innerHTML = `
                     <div class="text-center text-red-400 bg-red-900/20 p-4 rounded-lg">
                         <p class="font-bold">Error al cargar los partidos</p>
                         <p class="text-sm mt-1">${error.message}</p>
-                        <p class="text-xs mt-2 text-gray-400">Verifica tu clave de API o el límite de usos diarios.</p>
                     </div>`;
             }
         }
