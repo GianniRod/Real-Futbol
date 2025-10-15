@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RealFutbol - Resultados Fútbol Argentino</title>
+    <title>RealFutbol - Resultados de Fútbol</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,7 +63,25 @@
         // --- CONFIG ---
         const API_SPORTS_KEY = "160002c02e969ea355717b6ec7267fa7";
         
-        const ARGENTINIAN_LEAGUE_IDS = [ 128, 1032, 130, 129, 132, 133, 134, 906, 131, 975, 520, 483, 135 ];
+        // IDs de las Ligas a mostrar
+        const INCLUDED_LEAGUE_IDS = [
+            71,   // Brasileirão Série A
+            128,  // Liga Profesional Argentina
+            1032, // Copa de la Liga Profesional
+            130,  // Copa Argentina
+            129,  // Primera Nacional
+            132,  // Primera B Metropolitana
+            133,  // Torneo Federal A
+            134,  // Primera C
+            906,  // Liga de Reserva
+            131,  // Super Copa
+            975,  // Super Copa International
+            520,  // Trofeo de Campeones
+            483,  // Copa de la Superliga (Discontinuada)
+            135,  // Primera D (Discontinuada)
+        ];
+        
+        // IDs de las Selecciones a incluir
         const ARGENTINIAN_NATIONAL_TEAM_IDS = [ 26, 1118 ];
         
         // --- APP STATE ---
@@ -138,7 +156,7 @@
         function transformApiData(apiMatches) {
             return apiMatches.map(match => ({
                 id: match.fixture.id,
-                fixtureDate: match.fixture.date, // Se mantiene la fecha UTC para el filtrado y la hora
+                fixtureDate: match.fixture.date,
                 leagueName: match.league.name,
                 homeTeam: { id: match.teams.home.id, name: match.teams.home.name, logo: match.teams.home.logo },
                 awayTeam: { id: match.teams.away.id, name: match.teams.away.name, logo: match.teams.away.logo },
@@ -154,7 +172,7 @@
         function renderMatchList() {
              matchListContainer.innerHTML = '';
              if (state.matches.length === 0) {
-                 matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">No hay partidos de equipos argentinos programados para este día.</p>`;
+                 matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">No hay partidos programados para este día.</p>`;
                  return;
              }
              const html = state.matches.map(match => {
@@ -169,7 +187,6 @@
                 } else if (isFinished) {
                     statusDisplay = `<span class="text-xs font-semibold text-gray-400">Finalizado</span>`;
                 } else {
-                    // Muestra la hora de inicio para partidos no comenzados
                     const matchDate = new Date(match.fixtureDate);
                     const timeString = matchDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
                     statusDisplay = `<span class="font-bold text-gray-300">${timeString}</span>`;
@@ -199,14 +216,11 @@
         async function loadMatchesForSelectedDate() {
             matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">Buscando partidos...</p>`;
             try {
-                // --- FIX DE ZONA HORARIA ---
-                // 1. Preparamos las fechas para hoy y mañana para cubrir el desfasaje UTC
                 const selectedDateString = formatDate(state.selectedDate);
                 const tomorrow = new Date(state.selectedDate);
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 const tomorrowDateString = formatDate(tomorrow);
 
-                // 2. Hacemos ambas llamadas a la API en paralelo
                 const [todayMatches, tomorrowMatches] = await Promise.all([
                     getMatchesFromApi(selectedDateString),
                     getMatchesFromApi(tomorrowDateString)
@@ -214,18 +228,16 @@
 
                 const allApiMatches = [...todayMatches, ...tomorrowMatches];
 
-                // 3. Filtramos todos los partidos para quedarnos solo con los que, en hora local, son del día seleccionado
                 const selectedDay = state.selectedDate.getDate();
                 const locallyCorrectMatches = allApiMatches.filter(match => {
                     const matchLocalDate = new Date(match.fixture.date);
                     return matchLocalDate.getDate() === selectedDay;
                 });
 
-                // 4. Aplicamos el filtro de equipos y ligas argentinas
                 const filteredMatches = locallyCorrectMatches.filter(match => {
-                    const isArgentinianLeague = ARGENTINIAN_LEAGUE_IDS.includes(match.league.id);
+                    const isIncludedLeague = INCLUDED_LEAGUE_IDS.includes(match.league.id);
                     const isNationalTeamMatch = ARGENTINIAN_NATIONAL_TEAM_IDS.includes(match.teams.home.id) || ARGENTINIAN_NATIONAL_TEAM_IDS.includes(match.teams.away.id);
-                    return isArgentinianLeague || isNationalTeamMatch;
+                    return isIncludedLeague || isNationalTeamMatch;
                 });
 
                 state.matches = transformApiData(filteredMatches);
@@ -255,5 +267,3 @@
     </script>
 </body>
 </html>
-
-
