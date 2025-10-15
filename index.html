@@ -113,7 +113,6 @@
                 
                 dayWrapper.addEventListener('click', (event) => {
                     const selectedDateStr = event.currentTarget.dataset.date;
-                    // FIX: Crear la fecha con T00:00:00 para evitar problemas de zona horaria
                     state.selectedDate = new Date(`${selectedDateStr}T00:00:00`);
                     renderCalendar(); 
                     loadMatchesForSelectedDate();
@@ -137,9 +136,9 @@
         }
 
         function transformApiData(apiMatches) {
-            // Se añaden statusShort y minute para la lógica de partidos en vivo
             return apiMatches.map(match => ({
                 id: match.fixture.id,
+                fixtureDate: match.fixture.date, // Se mantiene la fecha UTC para el filtrado y la hora
                 leagueName: match.league.name,
                 homeTeam: { id: match.teams.home.id, name: match.teams.home.name, logo: match.teams.home.logo },
                 awayTeam: { id: match.teams.away.id, name: match.teams.away.name, logo: match.teams.away.logo },
@@ -159,12 +158,22 @@
                  return;
              }
              const html = state.matches.map(match => {
-                // FIX: Lógica para mostrar el minuto en partidos en vivo
                 const liveStatusCodes = ['1H', 'HT', '2H', 'ET', 'P'];
+                const finishedStatusCodes = ['FT', 'AET', 'PEN'];
                 const isLive = liveStatusCodes.includes(match.statusShort) && match.minute;
-                const statusDisplay = isLive
-                    ? `<span class="font-bold text-red-400 animate-pulse">${match.minute}'</span>`
-                    : `<span class="text-xs font-semibold text-gray-400">${match.status}</span>`;
+                const isFinished = finishedStatusCodes.includes(match.statusShort);
+
+                let statusDisplay;
+                if (isLive) {
+                    statusDisplay = `<span class="font-bold text-red-400 animate-pulse">${match.minute}'</span>`;
+                } else if (isFinished) {
+                    statusDisplay = `<span class="text-xs font-semibold text-gray-400">Finalizado</span>`;
+                } else {
+                    // Muestra la hora de inicio para partidos no comenzados
+                    const matchDate = new Date(match.fixtureDate);
+                    const timeString = matchDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+                    statusDisplay = `<span class="font-bold text-gray-300">${timeString}</span>`;
+                }
 
                 return `<div class="bg-gray-900 p-4 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors" data-match-id="${match.id}">
                     <div class="text-xs text-blue-400 font-semibold mb-2">${match.leagueName}</div>
@@ -188,13 +197,32 @@
 
         // --- INITIALIZATION ---
         async function loadMatchesForSelectedDate() {
-            matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">Buscando partidos del fútbol argentino y la Selección...</p>`;
+            matchListContainer.innerHTML = `<p class="text-center text-gray-400 py-8">Buscando partidos...</p>`;
             try {
-                const dateString = formatDate(state.selectedDate);
-                const apiMatches = await getMatchesFromApi(dateString);
-                
-                // FIX: Filtro para incluir Ligas locales O partidos de la Selección
-                const filteredMatches = apiMatches.filter(match => {
+                // --- FIX DE ZONA HORARIA ---
+                // 1. Preparamos las fechas para hoy y mañana para cubrir el desfasaje UTC
+                const selectedDateString = formatDate(state.selectedDate);
+                const tomorrow = new Date(state.selectedDate);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const tomorrowDateString = formatDate(tomorrow);
+
+                // 2. Hacemos ambas llamadas a la API en paralelo
+                const [todayMatches, tomorrowMatches] = await Promise.all([
+                    getMatchesFromApi(selectedDateString),
+                    getMatchesFromApi(tomorrowDateString)
+                ]);
+
+                const allApiMatches = [...todayMatches, ...tomorrowMatches];
+
+                // 3. Filtramos todos los partidos para quedarnos solo con los que, en hora local, son del día seleccionado
+                const selectedDay = state.selectedDate.getDate();
+                const locallyCorrectMatches = allApiMatches.filter(match => {
+                    const matchLocalDate = new Date(match.fixture.date);
+                    return matchLocalDate.getDate() === selectedDay;
+                });
+
+                // 4. Aplicamos el filtro de equipos y ligas argentinas
+                const filteredMatches = locallyCorrectMatches.filter(match => {
                     const isArgentinianLeague = ARGENTINIAN_LEAGUE_IDS.includes(match.league.id);
                     const isNationalTeamMatch = ARGENTINIAN_NATIONAL_TEAM_IDS.includes(match.teams.home.id) || ARGENTINIAN_NATIONAL_TEAM_IDS.includes(match.teams.away.id);
                     return isArgentinianLeague || isNationalTeamMatch;
