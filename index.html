@@ -12,7 +12,7 @@
         body { 
             font-family: 'Inter', sans-serif; 
             -webkit-tap-highlight-color: transparent; 
-            background-color: #000;
+            background-color: #0a0a0a;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23052e16' fill-opacity='0.1'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 1.4l2.83 2.83 1.41-1.41L1.41 0H0v1.41zM38.59 40l-2.83-2.83 1.41-1.41L40 38.59V40h-1.41zM40 1.41l-2.83 2.83-1.41-1.41L38.59 0H40v1.41zM20 18.6l2.83-2.83 1.41 1.41L21.41 20l2.83 2.83-1.41 1.41L20 21.41l-2.83 2.83-1.41-1.41L18.59 20l-2.83-2.83 1.41-1.41L20 18.59z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
         .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
@@ -22,9 +22,9 @@
         @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @keyframes modalOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1a202c; }
-        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #718096; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
         .tab-active { border-color: #3b82f6; color: #eff6ff; }
         
         .football-pitch { background-color: #064e3b; border: 2px solid #a3a3a3; position: relative; width: 100%; aspect-ratio: 7 / 5; }
@@ -49,10 +49,10 @@
         }
         
         @media (min-width: 768px) {
-            #view-match-list {
+            #left-column {
                 position: sticky;
-                top: 88px; /* Height of header */
-                height: calc(100vh - 88px);
+                top: 80px; /* Height of header */
+                height: calc(100vh - 80px);
                 overflow-y: auto;
             }
         }
@@ -61,18 +61,15 @@
 <body class="bg-black text-gray-200 antialiased">
 
     <div id="app" class="max-w-7xl mx-auto">
-        <header class="sticky top-0 bg-black/70 backdrop-blur-md z-20 p-4 flex items-center justify-between border-b border-gray-800">
-             <div class="flex items-center">
-                 <img src="https://i.postimg.cc/q7Z5b8md/IMG-4424.png" alt="RealFutbol Logo" class="h-12 w-auto">
-                 <h1 class="text-2xl font-extrabold text-white text-center ml-4 tracking-tight hidden sm:block">RealFutbol</h1>
-             </div>
+        <header class="sticky top-0 bg-black/80 backdrop-blur-md z-30 p-4 flex items-center justify-center border-b border-gray-800 h-20">
+            <img src="https://i.postimg.cc/q7Z5b8md/IMG-4424.png" alt="RealFutbol Logo" class="h-16 w-auto">
         </header>
 
         <div class="md:grid md:grid-cols-12 md:gap-8">
             <!-- Left Column: Match List -->
-            <div class="md:col-span-4 lg:col-span-3">
-                 <div id="view-match-list" class="animate-fade-in">
-                    <div id="date-selector-container" class="p-4 bg-black/50 md:bg-transparent">
+            <div id="left-column" class="md:col-span-5 lg:col-span-4 xl:col-span-3">
+                 <div id="view-match-list">
+                    <div id="date-selector-container" class="p-4 bg-black/50 md:bg-transparent sticky top-0 z-10">
                         <div class="flex items-center justify-between mb-3 px-2">
                             <button id="prev-week-btn" class="p-1 rounded-full hover:bg-gray-800 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
                             <h3 id="month-year-title" class="font-semibold text-lg"></h3>
@@ -88,7 +85,7 @@
             </div>
 
             <!-- Right Column: Match Detail -->
-            <div class="md:col-span-8 lg:col-span-9 p-4">
+            <div class="md:col-span-7 lg:col-span-8 xl:col-span-9 p-4">
                 <button id="back-button" class="md:hidden mb-4 text-gray-300 hover:text-white transition-colors flex items-center">
                     <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
                     Volver
@@ -136,6 +133,7 @@
         let state = { currentDate: new Date(), selectedDate: new Date(), matches: [], currentView: 'match-list', selectedMatchId: null, selectedPlayerId: null, selectedPlayerName: null, activeTab: 'timeline', unsubscribeComments: null, unsubscribePlayerComments: null, liveUpdateInterval: null };
         
         // --- DOM ELEMENTS ---
+        const leftColumn = document.getElementById('left-column');
         const viewListContainer = document.getElementById('view-match-list');
         const viewDetailContainer = document.getElementById('view-match-detail');
         const backButton = document.getElementById('back-button');
@@ -175,34 +173,17 @@
         }
 
         // --- API & DATA FUNCTIONS ---
-        async function getMatchesFromApi(date) {
-            const url = `https://v3.football.api-sports.io/fixtures?date=${date}`;
-            const response = await fetch(url, { method: "GET", headers: { "x-apisports-key": API_SPORTS_KEY } });
-            if (!response.ok) throw new Error(`API returned an error (${response.status})`);
-            const data = await response.json();
-            if (data.errors && Object.keys(data.errors).length > 0) { throw new Error(`API Error: ${Object.values(data.errors).join(', ')}`); }
-            return data.response;
-        }
+        async function getMatchesFromApi(date) { const url = `https://v3.football.api-sports.io/fixtures?date=${date}`; const response = await fetch(url, { method: "GET", headers: { "x-apisports-key": API_SPORTS_KEY } }); if (!response.ok) throw new Error(`API returned an error (${response.status})`); const data = await response.json(); if (data.errors && Object.keys(data.errors).length > 0) { throw new Error(`API Error: ${Object.values(data.errors).join(', ')}`); } return data.response; }
         function transformApiData(apiMatches) { return apiMatches.map(match => ({ id: match.fixture.id, league: {id: match.league.id, name: match.league.name, logo: match.league.logo}, homeTeam: { id: match.teams.home.id, name: match.teams.home.name, logo: match.teams.home.logo, lineup: generateMockLineup(1), formation: '4-3-3' }, awayTeam: { id: match.teams.away.id, name: match.teams.away.name, logo: match.teams.away.logo, lineup: generateMockLineup(2), formation: '4-3-3' }, homeScore: match.goals.home, awayScore: match.goals.away, status: { long: match.fixture.status.long, short: match.fixture.status.short, elapsed: match.fixture.status.elapsed }, minute: match.fixture.status.elapsed, stats: generateMockStats(), events: match.events ? match.events.map(e => ({ minute: e.time.elapsed, type: e.type.toLowerCase().replace(' ', '_'), player: e.player.name, description: e.detail })) : [] })); }
         function generateMockLineup(teamIdPrefix) { const lineup = []; const positions = [ { id: 1, name: 'Portero', dorsal: 1, isCaptain: false, pos: {x: 5, y: 50}}, { id: 2, name: 'Lateral Der.', dorsal: 2, isCaptain: false, pos: {x: 18, y: 85}}, { id: 3, name: 'Central', dorsal: 4, isCaptain: true, pos: {x: 18, y: 60}}, { id: 4, name: 'Central', dorsal: 5, isCaptain: false, pos: {x: 18, y: 40}}, { id: 5, name: 'Lateral Izq.', dorsal: 3, isCaptain: false, pos: {x: 18, y: 15}}, { id: 6, name: 'Pivote', dorsal: 6, isCaptain: false, pos: {x: 33, y: 50}}, { id: 7, name: 'Interior Der.', dorsal: 8, isCaptain: false, pos: {x: 35, y: 75}}, { id: 8, name: 'Interior Izq.', dorsal: 10, isCaptain: false, pos: {x: 35, y: 25}}, { id: 9, name: 'Extremo Der.', dorsal: 7, isCaptain: false, pos: {x: 46, y: 80}}, { id: 10, name: 'Extremo Izq.', dorsal: 11, isCaptain: false, pos: {x: 46, y: 20}}, { id: 11, name: 'Delantero', dorsal: 9, isCaptain: false, pos: {x: 48, y: 50}} ]; positions.forEach(p => lineup.push({...p, id: `${teamIdPrefix}${p.id}`, name: `${p.name} #${p.dorsal}`, commentCount: 0})); return lineup; }
         function generateMockStats() { const homePossession = Math.floor(Math.random() * 40) + 30; return { homePossession, awayPossession: 100 - homePossession, homeShots: Math.floor(Math.random() * 15) + 5, awayShots: Math.floor(Math.random() * 15) + 5, homeOnGoal: Math.floor(Math.random() * 7) + 1, awayOnGoal: Math.floor(Math.random() * 7) + 1, homePasses: Math.floor(Math.random() * 300) + 200, awayPasses: Math.floor(Math.random() * 300) + 200, homeAccuracy: Math.floor(Math.random() * 20) + 70, awayAccuracy: Math.floor(Math.random() * 20) + 70, homeXG: (Math.random() * 2 + 0.5).toFixed(1), awayXG: (Math.random() * 2 + 0.5).toFixed(1) }; }
-        function getStatusText(status) {
-            switch (status.short) {
-                case 'FT': case 'AET': case 'PEN': return 'Finalizado';
-                case 'HT': return 'ET';
-                case '1H': case '2H': case 'P': case 'LIVE':
-                    return `<span class="text-red-400 animate-pulse">${status.elapsed}'</span>`;
-                default: return status.long;
-            }
-        }
+        function getStatusText(status) { switch (status.short) { case 'FT': case 'AET': case 'PEN': return 'Finalizado'; case 'HT': return 'ET'; case '1H': case '2H': case 'P': case 'LIVE': return `<span class="text-red-400 animate-pulse">${status.elapsed}'</span>`; default: return status.long; } }
 
         // --- RENDER FUNCTIONS ---
         function renderMatchList() {
             const filteredMatches = state.matches.filter(match => {
                 if (ALLOWED_LEAGUE_IDS.NATIONAL.includes(match.league.id)) return true;
-                if (ALLOWED_LEAGUE_IDS.INTERNATIONAL.includes(match.league.id)) {
-                    return match.homeTeam.name.includes('Argentina') || match.awayTeam.name.includes('Argentina');
-                }
+                if (ALLOWED_LEAGUE_IDS.INTERNATIONAL.includes(match.league.id)) { return match.homeTeam.name.includes('Argentina') || match.awayTeam.name.includes('Argentina'); }
                 return false;
             });
 
@@ -212,25 +193,7 @@
             }
             matchListContainer.innerHTML = filteredMatches.map(match => {
                 const statusText = getStatusText(match.status);
-                return `<div class="bg-gray-900/50 p-4 rounded-lg border border-gray-800 transition-all duration-300 match-card" data-match-id="${match.id}">
-                    <div class="flex items-center text-xs text-gray-400 font-semibold mb-3">
-                        <img src="${match.league.logo}" class="w-4 h-4 mr-2" alt="${match.league.name}" />
-                        ${match.league.name}
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <div class="space-y-2 flex-grow">
-                            <div class="flex items-center space-x-4"><img src="${match.homeTeam.logo}" alt="${match.homeTeam.name}" class="w-8 h-8 object-contain"><span class="font-bold text-lg">${match.homeTeam.name}</span></div>
-                            <div class="flex items-center space-x-4"><img src="${match.awayTeam.logo}" alt="${match.awayTeam.name}" class="w-8 h-8 object-contain"><span class="font-bold text-lg">${match.awayTeam.name}</span></div>
-                        </div>
-                        <div class="flex flex-col items-center w-16" data-score-id="${match.id}">
-                            <span class="font-black text-2xl">${match.homeScore ?? '-'}</span>
-                            <span class="font-black text-2xl">${match.awayScore ?? '-'}</span>
-                        </div>
-                         <div class="flex flex-col items-center w-16 text-center" data-status-id="${match.id}">
-                            <span class="text-sm font-semibold">${statusText}</span>
-                        </div>
-                    </div>
-                </div>`;
+                return `<div class="bg-gray-900/50 p-4 rounded-lg border border-gray-800 transition-all duration-300 match-card" data-match-id="${match.id}"> <div class="flex items-center text-xs text-gray-400 font-semibold mb-3"> <img src="${match.league.logo}" class="w-4 h-4 mr-2" alt="${match.league.name}" /> ${match.league.name} </div><div class="flex items-center justify-between"> <div class="space-y-2 flex-grow"> <div class="flex items-center space-x-4"><img src="${match.homeTeam.logo}" alt="${match.homeTeam.name}" class="w-8 h-8 object-contain"><span class="font-bold text-lg">${match.homeTeam.name}</span></div><div class="flex items-center space-x-4"><img src="${match.awayTeam.logo}" alt="${match.awayTeam.name}" class="w-8 h-8 object-contain"><span class="font-bold text-lg">${match.awayTeam.name}</span></div></div><div class="flex flex-col items-center w-16" data-score-id="${match.id}"> <span class="font-black text-2xl">${match.homeScore ?? '-'}</span> <span class="font-black text-2xl">${match.awayScore ?? '-'}</span> </div><div class="flex flex-col items-center w-16 text-center" data-status-id="${match.id}"> <span class="text-sm font-semibold">${statusText}</span> </div></div></div>`;
             }).join('');
         }
         function renderMatchDetail(matchId) { /* Unchanged */ }
@@ -255,16 +218,10 @@
         
         // --- EVENT HANDLERS ---
         function handleTabClick(e) { /* Unchanged */ }
-        backButton.addEventListener('click', () => {
-            viewDetailContainer.classList.add('hidden');
-            viewListContainer.classList.remove('hidden');
-            backButton.classList.add('hidden');
-            state.selectedMatchId = null;
-            navigateTo('match-list');
-        });
+        backButton.addEventListener('click', () => { viewDetailContainer.classList.add('hidden'); leftColumn.classList.remove('hidden'); backButton.classList.add('hidden'); state.selectedMatchId = null; navigateTo('match-list'); });
         matchListContainer.addEventListener('click', (e) => { const matchCard = e.target.closest('[data-match-id]'); if (matchCard) { state.selectedMatchId = Number(matchCard.dataset.matchId); navigateTo('match-detail', { matchId: state.selectedMatchId }); } });
-        prevWeekBtn.addEventListener('click', () => { state.currentDate.setDate(state.currentDate.getDate() - 7); state.selectedDate = new Date(state.currentDate); renderCalendar(); loadMatchesForSelectedDate(); });
-        nextWeekBtn.addEventListener('click', () => { state.currentDate.setDate(state.currentDate.getDate() + 7); state.selectedDate = new Date(state.currentDate); renderCalendar(); loadMatchesForSelectedDate(); });
+        prevWeekBtn.addEventListener('click', () => { state.currentDate.setDate(state.currentDate.getDate() - 7); state.selectedDate.setDate(state.selectedDate.getDate() - 7); renderCalendar(); loadMatchesForSelectedDate(); });
+        nextWeekBtn.addEventListener('click', () => { state.currentDate.setDate(state.currentDate.getDate() + 7); state.selectedDate.setDate(state.selectedDate.getDate() + 7); renderCalendar(); loadMatchesForSelectedDate(); });
         todayBtn.addEventListener('click', () => { const effectiveToday = getEffectiveDate(); state.currentDate = new Date(effectiveToday); state.selectedDate = new Date(effectiveToday); renderCalendar(); loadMatchesForSelectedDate(); });
         document.getElementById('close-modal-button').addEventListener('click', closePlayerModal);
 
@@ -286,11 +243,10 @@
             const effectiveToday = getEffectiveDate();
             state.currentDate = new Date(effectiveToday);
             state.selectedDate = new Date(effectiveToday);
-
             if (window.innerWidth < 768) {
                 viewDetailContainer.classList.add('hidden');
             } else {
-                viewDetailContainer.innerHTML = `<div class="h-full flex items-center justify-center text-center text-gray-500"><p class="text-lg">Seleccioná un partido de la lista para ver los detalles.</p></div>`;
+                viewDetailContainer.innerHTML = `<div class="h-full flex items-center justify-center text-center text-gray-500"><div class="p-8 bg-gray-900/30 rounded-lg"><h2 class="text-2xl font-bold text-white">Bienvenido a RealFutbol</h2><p class="mt-2">Seleccioná un partido de la lista para ver todos los detalles.</p></div></div>`;
             }
             renderCalendar();
             loadMatchesForSelectedDate();
@@ -299,9 +255,9 @@
         };
 
         // --- PASTE UNCHANGED FUNCTIONS HERE ---
-        navigateTo = (view, data = {}) => { if (state.unsubscribeComments) state.unsubscribeComments(); if (state.unsubscribePlayerComments) state.unsubscribePlayerComments(); state.unsubscribeComments = state.unsubscribePlayerComments = null; const isMobile = window.innerWidth < 768; if (view === 'match-list') { if (isMobile) { viewDetailContainer.classList.add('hidden'); viewListContainer.classList.remove('hidden'); } viewDetailContainer.innerHTML = `<div class="h-full flex items-center justify-center text-center text-gray-500"><p class="text-lg">Seleccioná un partido de la lista para ver los detalles.</p></div>`; state.selectedMatchId = null; } else if (view === 'match-detail') { if (isMobile) { viewListContainer.classList.add('hidden'); viewDetailContainer.classList.remove('hidden'); backButton.classList.remove('hidden'); } else { backButton.classList.add('hidden'); } renderMatchDetail(data.matchId); } };
+        navigateTo = (view, data = {}) => { if (state.unsubscribeComments) state.unsubscribeComments(); if (state.unsubscribePlayerComments) state.unsubscribePlayerComments = null; const isMobile = window.innerWidth < 768; if (view === 'match-list') { if (isMobile) { viewDetailContainer.classList.add('hidden'); leftColumn.classList.remove('hidden'); } else { viewDetailContainer.innerHTML = `<div class="h-full flex items-center justify-center text-center text-gray-500"><div class="p-8 bg-gray-900/30 rounded-lg"><h2 class="text-2xl font-bold text-white">Bienvenido a RealFutbol</h2><p class="mt-2">Seleccioná un partido de la lista para ver todos los detalles.</p></div></div>`; } state.selectedMatchId = null; } else if (view === 'match-detail') { if (isMobile) { leftColumn.classList.add('hidden'); viewDetailContainer.classList.remove('hidden'); backButton.classList.remove('hidden'); } else { backButton.classList.add('hidden'); } renderMatchDetail(data.matchId); } };
         renderMatchDetail = (matchId) => { const match = state.matches.find(m => m.id === Number(matchId)); if (!match) { viewDetailContainer.innerHTML = `<p>Error: Partido no encontrado.</p>`; return; } const statusText = getStatusText(match.status); const detailHTML = `<div id="match-detail-header" class="mb-6 bg-gray-900/50 p-6 rounded-xl border border-gray-800"> <div class="flex justify-around items-center text-center"> <div class="flex flex-col items-center space-y-2 w-1/3"><img src="${match.homeTeam.logo}" class="h-24 w-24 object-contain"><span class="font-bold text-xl">${match.homeTeam.name}</span></div><div class="w-1/3"><p class="text-6xl font-black">${match.homeScore ?? '-'} - ${match.awayScore ?? '-'}</p><p class="text-md font-semibold mt-2 ${match.status.short !== 'FT' ? 'text-red-400' : 'text-gray-400'}">${statusText}</p></div><div class="flex flex-col items-center space-y-2 w-1/3"><img src="${match.awayTeam.logo}" class="h-24 w-24 object-contain"><span class="font-bold text-xl">${match.awayTeam.name}</span></div></div></div><div id="match-tabs" class="my-4 border-b border-gray-700 flex"> <button data-tab="timeline" class="tab-button flex-1 py-3 text-sm font-semibold border-b-2 tab-active">Cronología</button> <button data-tab="lineups" class="tab-button flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400">Alineaciones</button> <button data-tab="stats" class="tab-button flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400">Estadísticas</button> <button data-tab="comments" class="tab-button flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400">Comentarios</button></div><div id="match-tab-content" class="bg-gray-900/30 p-4 rounded-b-lg"> <div id="tab-timeline" class="tab-pane"></div><div id="tab-lineups" class="tab-pane hidden"></div><div id="tab-stats" class="tab-pane hidden"></div><div id="tab-comments" class="tab-pane hidden"> <div id="comments-container" class="space-y-3 max-h-96 overflow-y-auto pr-2 mb-4"></div><div id="comments-form" class="mt-4 space-y-3"> <input type="text" id="comment-username" placeholder="Tu nombre temporal" class="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"> <textarea id="comment-text" placeholder="Escribe un comentario del partido..." rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea> <button id="submit-comment" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors">Enviar</button> </div></div></div>`; viewDetailContainer.innerHTML = detailHTML; document.querySelector('#match-tabs').addEventListener('click', handleTabClick); document.getElementById('submit-comment').addEventListener('click', () => { addComment(state.selectedMatchId, document.getElementById('comment-username').value || 'Anónimo', document.getElementById('comment-text').value); }); document.querySelector('#tab-lineups').addEventListener('click', (e) => { const playerEl = e.target.closest('[data-player-id]'); if (playerEl) { openPlayerModal(playerEl.dataset.playerId, playerEl.dataset.playerName); } }); renderTimeline(match); renderLineups(match); renderStats(match); if (db) listenForComments(matchId); };
-        updateLiveMatches = async () => { if (state.currentView !== 'match-list' || document.hidden) return; const dateString = formatDate(state.selectedDate); try { const apiMatches = await getMatchesFromApi(dateString); const newMatches = transformApiData(apiMatches); newMatches.forEach(newMatch => { const oldMatchIndex = state.matches.findIndex(m => m.id === newMatch.id); if (oldMatchIndex !== -1) { const oldMatch = state.matches[oldMatchIndex]; if (oldMatch.status.elapsed !== newMatch.status.elapsed || oldMatch.homeScore !== newMatch.homeScore || oldMatch.awayScore !== newMatch.awayScore) { state.matches[oldMatchIndex] = { ...oldMatch, ...newMatch }; const scoreEl = document.querySelector(`[data-score-id="${newMatch.id}"]`); const statusEl = document.querySelector(`[data-status-id="${newMatch.id}"]`); const statusText = getStatusText(newMatch.status); if (scoreEl) scoreEl.innerHTML = `<span class="font-black text-2xl">${newMatch.homeScore ?? '-'}</span><span class="font-black text-2xl">${newMatch.awayScore ?? '-'}</span>`; if (statusEl) { statusEl.innerHTML = `<span class="text-sm font-semibold">${statusText}</span>`; } } } }); } catch (error) { console.warn("Live update failed:", error.message); } };
+        updateLiveMatches = async () => { if (state.currentView !== 'match-list' || document.hidden) return; const dateString = formatDate(state.selectedDate); try { const apiMatches = await getMatchesFromApi(dateString); const newMatches = transformApiData(apiMatches); state.matches = newMatches; renderMatchList(); } catch (error) { console.warn("Live update failed:", error.message); } };
         listenForComments = (matchId) => { if (!db) return; const commentsRef = collection(db, "comments", String(matchId), "messages"); const q = query(commentsRef, orderBy("timestamp")); state.unsubscribeComments = onSnapshot(q, (snapshot) => { const container = document.getElementById('comments-container'); if (!container) return; if (snapshot.empty) { container.innerHTML = '<p class="text-gray-500 text-center">Sé el primero en comentar.</p>'; return; } container.innerHTML = snapshot.docs.map(doc => { const comment = doc.data(); return `<div class="bg-gray-800/50 p-3 rounded-lg"><p class="font-semibold text-blue-400">${comment.username}</p><p>${comment.text}</p></div>`; }).join(''); container.scrollTop = container.scrollHeight; }); };
         listenForPlayerComments = (matchId, playerId) => { if (!db) return; const commentsRef = collection(db, `comments/${matchId}/players/${playerId}/messages`); const q = query(commentsRef, orderBy("timestamp")); state.unsubscribePlayerComments = onSnapshot(q, (snapshot) => { renderPlayerComments(snapshot.docs.map(doc => doc.data())); }); };
         handleTabClick = (e) => { if (e.target.matches('.tab-button')) { const tabName = e.target.dataset.tab; state.activeTab = tabName; document.querySelectorAll('#match-tabs .tab-button').forEach(btn => { btn.classList.remove('tab-active', 'text-white'); btn.classList.add('border-transparent', 'text-gray-400'); }); e.target.classList.add('tab-active', 'text-white'); e.target.classList.remove('border-transparent', 'text-gray-400'); document.querySelectorAll('#match-tab-content .tab-pane').forEach(pane => pane.classList.add('hidden')); document.getElementById(`tab-${tabName}`).classList.remove('hidden'); } };
@@ -314,8 +270,7 @@
         document.getElementById('submit-player-comment').addEventListener('click', () => { addPlayerComment(state.selectedMatchId, state.selectedPlayerId, document.getElementById('player-comment-username').value || 'Anónimo', document.getElementById('player-comment-text').value); });
 
         initApp();
-        window.addEventListener('resize', () => { if (window.innerWidth >= 768) { viewListContainer.classList.remove('hidden'); if (!state.selectedMatchId) { viewDetailContainer.innerHTML = `<div class="h-full flex items-center justify-center text-center text-gray-500"><p class="text-lg">Seleccioná un partido de la lista para ver los detalles.</p></div>`; } } else { if (state.selectedMatchId) { viewListContainer.classList.add('hidden'); viewDetailContainer.classList.remove('hidden'); } } });
-
+        window.addEventListener('resize', () => { if (window.innerWidth >= 768) { leftColumn.classList.remove('hidden'); if (!state.selectedMatchId) { viewDetailContainer.innerHTML = `<div class="h-full flex items-center justify-center text-center text-gray-500"><div class="p-8 bg-gray-900/30 rounded-lg"><h2 class="text-2xl font-bold text-white">Bienvenido a RealFutbol</h2><p class="mt-2">Seleccioná un partido de la lista para ver todos los detalles.</p></div></div>`; } } else { if (state.selectedMatchId) { leftColumn.classList.add('hidden'); viewDetailContainer.classList.remove('hidden'); } } });
     </script>
 </body>
 </html>
