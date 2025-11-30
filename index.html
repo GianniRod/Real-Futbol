@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Iconos Lucide para el menú -->
+    <!-- Iconos Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { 
@@ -23,23 +23,22 @@
         .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Scrollbars personalizados */
+        /* Scrollbars */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-        /* Estilos específicos */
+        /* Estilos UI */
         .match-card { transition: all 0.2s; border: 1px solid #1f2937; }
         .match-card:hover { transform: translateY(-2px); border-color: #3b82f6; background-color: rgba(30, 41, 59, 0.8); }
         
         .league-item { transition: all 0.2s; cursor: pointer; }
         .league-item:hover { background-color: #1e2937; color: #60a5fa; }
-        .league-item.active { background-color: #1d4ed8; color: white; border-right: 3px solid #60a5fa; }
-
+        
         .day-selected { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-weight: bold; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); }
         
-        /* Cancha de fútbol */
+        /* Cancha */
         .football-pitch { background-color: #064e3b; border: 2px solid #525252; position: relative; width: 100%; aspect-ratio: 7 / 5; border-radius: 4px; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
         .pitch-line { position: absolute; background-color: rgba(255,255,255,0.3); }
         .center-line { top: 0; bottom: 0; left: 50%; width: 1px; transform: translateX(-50%); }
@@ -48,15 +47,15 @@
         .home-box { left: 0; border-left: none; }
         .away-box { right: 0; border-right: none; }
 
-        /* Jugadores */
         .player-marker { position: absolute; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 11px; border: 2px solid rgba(255, 255, 255, 0.9); cursor: pointer; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 10; }
         .player-marker:hover { transform: scale(1.2) translate(-40%, -40%); z-index: 20; border-color: #fbbf24; }
         .home-player { background: radial-gradient(circle at 30% 30%, #ef4444, #991b1b); }
         .away-player { background: radial-gradient(circle at 30% 30%, #3b82f6, #1e40af); }
 
-        /* Loader */
         .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: #3b82f6; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .font-tnum { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
@@ -89,7 +88,7 @@
     <!-- Main Layout -->
     <div class="flex flex-1 overflow-hidden relative">
         
-        <!-- Sidebar (Competitions) - 1/3 (ish) width on Desktop -->
+        <!-- Sidebar -->
         <aside id="sidebar" class="w-full lg:w-72 xl:w-80 bg-[#0a0a0a] border-r border-gray-800 flex flex-col absolute lg:static inset-y-0 left-0 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 z-20">
             <div class="p-4 border-b border-gray-800 flex justify-between items-center lg:hidden">
                 <h2 class="font-bold text-gray-200">Competencias</h2>
@@ -124,11 +123,6 @@
                     <span class="text-sm font-medium">Brasileirão Série A</span>
                 </button>
 
-                <button onclick="app.showStandings(642, 'Torneo de Reserva')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
-                    <i data-lucide="shield" class="w-6 h-6 text-gray-500"></i>
-                    <span class="text-sm font-medium">Torneo Reserva</span>
-                </button>
-
                  <div class="px-3 py-2 mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Internacional</div>
                  <button onclick="app.showStandings(140, 'La Liga')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
                     <img src="https://media.api-sports.io/football/leagues/140.png" class="w-6 h-6 object-contain">
@@ -148,10 +142,10 @@
             </div>
         </aside>
 
-        <!-- Main Content Area - 2/3 Width -->
+        <!-- Main Content (2/3 width on desktop) -->
         <main class="flex-1 flex flex-col bg-black relative w-full lg:w-auto overflow-hidden">
             
-            <!-- Date Navigation (Only visible in Match List view) -->
+            <!-- Date Navigation -->
             <div id="date-nav" class="bg-[#0a0a0a]/90 backdrop-blur border-b border-gray-800 p-3 z-10 sticky top-0">
                 <div class="flex items-center justify-between mb-2 max-w-2xl mx-auto">
                     <button onclick="app.changeDate(-1)" class="p-2 hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors"><i data-lucide="chevron-left"></i></button>
@@ -161,21 +155,16 @@
                     </div>
                     <button onclick="app.changeDate(1)" class="p-2 hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors"><i data-lucide="chevron-right"></i></button>
                 </div>
-                <!-- Días de la semana -->
-                <div id="calendar-days" class="flex justify-between max-w-2xl mx-auto gap-1">
-                    <!-- JS Injected Days -->
-                </div>
+                <div id="calendar-days" class="flex justify-between max-w-2xl mx-auto gap-1"></div>
             </div>
 
             <!-- Content Container -->
             <div id="main-content" class="flex-1 overflow-y-auto p-4 lg:p-6 relative">
                 
-                <!-- Match List View -->
-                <div id="view-match-list" class="max-w-3xl mx-auto space-y-4 animate-fade-in pb-20">
-                    <!-- Injected Matches -->
-                </div>
+                <!-- Match List -->
+                <div id="view-match-list" class="max-w-3xl mx-auto space-y-4 animate-fade-in pb-20"></div>
 
-                <!-- Standings View (Hidden by default) -->
+                <!-- Standings View -->
                 <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-20">
                     <div class="flex items-center gap-4 mb-6">
                         <button onclick="app.navigateToMatches()" class="lg:hidden p-2 bg-gray-800 rounded-lg"><i data-lucide="arrow-left"></i></button>
@@ -194,26 +183,22 @@
                                         <th scope="col" class="px-4 py-3 text-center hidden sm:table-cell">Últimos 5</th>
                                     </tr>
                                 </thead>
-                                <tbody id="standings-body">
-                                    <!-- Injected Rows -->
-                                </tbody>
+                                <tbody id="standings-body"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- Match Detail View (Overlay/Page) -->
+                <!-- Match Detail Overlay -->
                 <div id="view-match-detail" class="hidden fixed inset-0 lg:absolute lg:inset-0 bg-black z-40 lg:z-10 overflow-y-auto animate-fade-in">
                     <div class="max-w-4xl mx-auto min-h-full bg-[#050505] lg:border-l lg:border-gray-800 shadow-2xl">
-                        
-                        <!-- Detail Header -->
+                        <!-- Header Detail -->
                         <div class="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 flex items-center gap-4">
                             <button onclick="app.closeDetail()" class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-white">
                                 <i data-lucide="arrow-left"></i>
                             </button>
                             <span class="font-bold text-lg text-white">Detalles del Partido</span>
                         </div>
-
                         <!-- Scoreboard -->
                         <div class="relative bg-gradient-to-b from-gray-900 to-black p-8 text-center border-b border-gray-800">
                             <div class="flex justify-between items-center max-w-2xl mx-auto">
@@ -223,13 +208,11 @@
                                 </div>
                                 <div class="px-4">
                                     <div class="text-5xl font-black text-white tracking-tighter flex items-center gap-3">
-                                        <span id="detail-home-score">-</span>
+                                        <span id="detail-home-score" class="font-tnum">-</span>
                                         <span class="text-gray-600 text-3xl">:</span>
-                                        <span id="detail-away-score">-</span>
+                                        <span id="detail-away-score" class="font-tnum">-</span>
                                     </div>
-                                    <div id="detail-status" class="mt-2 inline-block px-3 py-1 rounded-full bg-gray-800 text-xs font-bold text-blue-400 border border-gray-700">
-                                        VS
-                                    </div>
+                                    <div id="detail-status" class="mt-2 inline-block px-3 py-1 rounded-full bg-gray-800 text-xs font-bold text-blue-400 border border-gray-700">VS</div>
                                 </div>
                                 <div class="flex-1 flex flex-col items-center gap-2">
                                     <img id="detail-away-logo" src="" class="w-20 h-20 object-contain drop-shadow-lg">
@@ -237,47 +220,25 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Detail Tabs -->
+                        <!-- Tabs -->
                         <div class="flex border-b border-gray-800 sticky top-[73px] bg-black z-40">
                             <button class="flex-1 py-4 text-sm font-bold text-blue-500 border-b-2 border-blue-500 tab-btn" data-target="tab-timeline">Resumen</button>
                             <button class="flex-1 py-4 text-sm font-bold text-gray-500 hover:text-gray-300 tab-btn" data-target="tab-lineups">Alineaciones</button>
                             <button class="flex-1 py-4 text-sm font-bold text-gray-500 hover:text-gray-300 tab-btn" data-target="tab-stats">Estadísticas</button>
                             <button class="flex-1 py-4 text-sm font-bold text-gray-500 hover:text-gray-300 tab-btn" data-target="tab-chat">Chat</button>
                         </div>
-
-                        <!-- Detail Content -->
+                        <!-- Tab Content -->
                         <div class="p-4 lg:p-8 space-y-6 min-h-[50vh]">
-                            <!-- Timeline Tab -->
-                            <div id="tab-timeline" class="tab-content block space-y-4">
-                                <!-- JS Injected -->
-                            </div>
-                            
-                            <!-- Lineups Tab -->
+                            <div id="tab-timeline" class="tab-content block space-y-4"></div>
                             <div id="tab-lineups" class="tab-content hidden">
                                 <div class="football-pitch mx-auto max-w-lg" id="football-pitch">
                                     <div class="center-line"></div>
                                     <div class="center-circle"></div>
                                     <div class="penalty-box home-box"></div>
                                     <div class="penalty-box away-box"></div>
-                                    <!-- Players injected here -->
-                                </div>
-                                <div class="mt-6 grid grid-cols-2 gap-4">
-                                    <div id="home-subs" class="text-sm text-gray-400">
-                                        <h4 class="font-bold text-white mb-2 border-b border-gray-700 pb-1">Suplentes Local</h4>
-                                    </div>
-                                    <div id="away-subs" class="text-sm text-gray-400 text-right">
-                                        <h4 class="font-bold text-white mb-2 border-b border-gray-700 pb-1">Suplentes Visitante</h4>
-                                    </div>
                                 </div>
                             </div>
-
-                            <!-- Stats Tab -->
-                            <div id="tab-stats" class="tab-content hidden space-y-6">
-                                <!-- JS Injected -->
-                            </div>
-
-                            <!-- Chat Tab -->
+                            <div id="tab-stats" class="tab-content hidden space-y-6"></div>
                             <div id="tab-chat" class="tab-content hidden flex flex-col h-[500px]">
                                 <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 p-2 bg-gray-900/30 rounded-lg border border-gray-800 mb-4">
                                     <div class="text-center text-gray-600 mt-10">
@@ -300,7 +261,7 @@
 
     <!-- Player Modal -->
     <div id="player-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform transition-all scale-100">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
             <div class="bg-gradient-to-r from-gray-800 to-gray-900 p-4 flex justify-between items-center border-b border-gray-700">
                 <h3 id="modal-player-name" class="font-bold text-white text-lg">Nombre Jugador</h3>
                 <button onclick="document.getElementById('player-modal').classList.add('hidden')" class="text-gray-400 hover:text-white"><i data-lucide="x"></i></button>
@@ -317,9 +278,7 @@
                 </div>
                 <div class="border-t border-gray-800 pt-4">
                     <p class="text-xs text-gray-500 uppercase font-bold mb-2">Comentarios sobre el jugador</p>
-                    <div id="player-comments-list" class="h-32 overflow-y-auto space-y-2 mb-3 bg-black/20 p-2 rounded">
-                        <!-- Comments -->
-                    </div>
+                    <div id="player-comments-list" class="h-32 overflow-y-auto space-y-2 mb-3 bg-black/20 p-2 rounded"></div>
                     <div class="flex gap-2">
                         <input type="text" id="player-comment-input" class="flex-1 bg-gray-800 text-sm rounded px-2 py-1 border border-gray-700" placeholder="Opinar...">
                         <button id="player-comment-send" class="bg-blue-600 text-white text-xs px-3 rounded hover:bg-blue-500">Enviar</button>
@@ -336,11 +295,9 @@
 
         // --- CONFIG & UTILS ---
         const API_KEY = "160002c02e969ea355717b6ec7267fa7";
-        // IMPORTANTE: timezone en la URL es clave para corregir el desfase de horario
-        const API_BASE = "https://v3.football.api-sports.io/fixtures?timezone=America/Argentina/Buenos_Aires"; 
+        const API_BASE = "https://v3.football.api-sports.io"; 
         
-        const firebaseConfig = { apiKey: "AIza...", authDomain: "demo.firebaseapp.com", projectId: "demo" }; // Configura tu firebase real aquí
-        
+        const firebaseConfig = { apiKey: "AIza...", authDomain: "demo.firebaseapp.com", projectId: "demo" };
         let db, auth;
         try { 
             const fApp = initializeApp(firebaseConfig); 
@@ -349,41 +306,25 @@
             signInAnonymously(auth).catch(e => console.log("Auth anónima:", e));
         } catch (e) { console.log("Firebase no configurado (Modo Demo)"); }
 
-        // --- STATE MANAGEMENT ---
         const state = {
-            currentDate: new Date(), // Se ajustará a ARG al iniciar
+            currentDate: new Date(),
             matches: [],
             selectedMatch: null,
-            view: 'matches', // matches, standings, detail
-            loading: false,
-            liveInterval: null,
-            listeners: {} // Para guardar unsubscribers de firebase
+            view: 'matches',
+            loading: false
         };
 
-        // --- APP CONTROLLER ---
         window.app = {
             init: () => {
                 lucide.createIcons();
-                
-                // 1. Ajustar fecha inicial a horario ARG
-                // Si es medianoche en UTC, en Arg es noche anterior.
-                // JS Date usa horario local del navegador del usuario.
-                // Para "simular" o forzar que la app piense en horario ARG si el usuario está en otro lado,
-                // deberíamos manipular la fecha, pero asumiremos que el usuario de la app ESTÁ en horario -3 o similar.
-                // Lo más robusto es confiar en la API con el param timezone.
-                
                 app.renderCalendarDays();
                 app.loadMatches();
-
-                // Listeners
-                document.getElementById('mobile-menu-btn').onclick = () => {
-                    document.getElementById('sidebar').classList.toggle('-translate-x-full');
-                };
-                document.getElementById('close-sidebar').onclick = () => {
-                    document.getElementById('sidebar').classList.add('-translate-x-full');
-                };
                 
-                // Tabs del detalle
+                // Listeners Generales
+                document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('sidebar').classList.toggle('-translate-x-full');
+                document.getElementById('close-sidebar').onclick = () => document.getElementById('sidebar').classList.add('-translate-x-full');
+                
+                // Tab switching logic
                 document.querySelectorAll('.tab-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         document.querySelectorAll('.tab-btn').forEach(b => {
@@ -392,18 +333,24 @@
                         });
                         e.target.classList.add('text-blue-500', 'border-b-2', 'border-blue-500');
                         e.target.classList.remove('text-gray-500');
-                        
                         document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
                         document.getElementById(e.target.dataset.target).classList.remove('hidden');
                     });
                 });
 
-                // Auto refresh cada 60s
                 setInterval(() => app.loadMatches(true), 60000);
             },
 
+            // --- DATE FIX: Forzar formato ARGENTINO para la API ---
             formatDateApi: (date) => {
-                return date.toISOString().split('T')[0];
+                // toLocaleDateString con la zona horaria 'America/Argentina/Buenos_Aires'
+                // y el formato 'en-CA' nos devuelve YYYY-MM-DD correcto, sin importar la hora local.
+                return date.toLocaleDateString('en-CA', { 
+                    timeZone: 'America/Argentina/Buenos_Aires',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
             },
 
             changeDate: (days) => {
@@ -422,41 +369,32 @@
                 const container = document.getElementById('calendar-days');
                 const monthTitle = document.getElementById('current-month');
                 const todayText = document.getElementById('current-day-text');
-                
-                // Formato Mes
                 const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                
                 monthTitle.innerText = months[state.currentDate.getMonth()];
                 
-                // Texto Central
                 const today = new Date();
                 if (state.currentDate.toDateString() === today.toDateString()) {
                     todayText.innerText = "Partidos de Hoy";
-                } else if (state.currentDate.getDate() === today.getDate() + 1) {
-                    todayText.innerText = "Mañana";
-                } else if (state.currentDate.getDate() === today.getDate() - 1) {
-                    todayText.innerText = "Ayer";
                 } else {
                     todayText.innerText = state.currentDate.toLocaleDateString('es-AR', {weekday: 'long', day: 'numeric'});
                 }
 
-                // Generar tira de días
                 container.innerHTML = '';
+                // Centrar el día seleccionado
                 const startDay = new Date(state.currentDate);
-                startDay.setDate(startDay.getDate() - 3); // 3 días atrás
+                startDay.setDate(startDay.getDate() - 3);
 
                 const daysOfWeek = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 
                 for (let i = 0; i < 7; i++) {
                     const d = new Date(startDay);
                     d.setDate(d.getDate() + i);
-                    
                     const isSelected = d.toDateString() === state.currentDate.toDateString();
+                    
                     const dayEl = document.createElement('div');
                     dayEl.className = `flex flex-col items-center justify-center w-10 h-14 rounded-lg cursor-pointer transition-all ${isSelected ? 'day-selected' : 'hover:bg-gray-800 text-gray-500'}`;
-                    dayEl.innerHTML = `
-                        <span class="text-[10px] font-bold">${daysOfWeek[d.getDay()]}</span>
-                        <span class="text-sm font-bold">${d.getDate()}</span>
-                    `;
+                    dayEl.innerHTML = `<span class="text-[10px] font-bold">${daysOfWeek[d.getDay()]}</span><span class="text-sm font-bold">${d.getDate()}</span>`;
                     dayEl.onclick = () => {
                         state.currentDate = d;
                         app.renderCalendarDays();
@@ -467,140 +405,135 @@
             },
 
             loadMatches: async (silent = false) => {
-                if (!silent) {
-                    document.getElementById('view-match-list').innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
-                }
+                if (!silent) document.getElementById('view-match-list').innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
                 
+                // Usar la función corregida de fecha
                 const dateStr = app.formatDateApi(state.currentDate);
                 
                 try {
-                    // Fetch con timezone ARG
-                    const res = await fetch(`${API_BASE}&date=${dateStr}`, {
+                    const res = await fetch(`${API_BASE}/fixtures?timezone=America/Argentina/Buenos_Aires&date=${dateStr}`, {
                         headers: { "x-apisports-key": API_KEY }
                     });
                     const data = await res.json();
                     
                     if (data.errors && Object.keys(data.errors).length > 0) throw new Error("API Error");
                     
-                    // Filtrar ligas importantes
-                    const priorityLeagues = [128, 129, 13, 11, 71, 1, 2, 39, 140, 9, 10]; // IDs: LPF, B Nacional, Lib, Sud, Bra, WorldCup, CL, PL, Liga, CopaAm, Amistosos
+                    const priorityLeagues = [128, 129, 13, 11, 71, 1, 2, 39, 140, 9, 10]; 
                     
-                    let matches = data.response.filter(m => {
-                        // Incluir si es liga prioritaria O si juega un equipo Argentino (aprox)
-                        return priorityLeagues.includes(m.league.id) || 
-                               m.league.country === "Argentina" || 
-                               m.teams.home.name.includes('Argentina') ||
-                               m.teams.away.name.includes('Argentina');
-                    });
+                    let matches = data.response.filter(m => 
+                        priorityLeagues.includes(m.league.id) || 
+                        m.league.country === "Argentina" || 
+                        m.teams.home.name.includes('Argentina') ||
+                        m.teams.away.name.includes('Argentina')
+                    );
 
-                    // Ordenar por hora
                     matches.sort((a, b) => a.fixture.timestamp - b.fixture.timestamp);
                     state.matches = matches;
-                    
                     app.renderMatches(matches);
-
                 } catch (err) {
                     console.error(err);
-                    document.getElementById('view-match-list').innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar partidos o límite de API alcanzado.<br>Intenta más tarde.</div>`;
+                    document.getElementById('view-match-list').innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar partidos.</div>`;
                 }
             },
 
             renderMatches: (matches) => {
                 const container = document.getElementById('view-match-list');
-                
                 if (matches.length === 0) {
-                    container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-gray-600">
-                        <i data-lucide="calendar-x" class="w-12 h-12 mb-4"></i>
-                        <p>No hay partidos destacados hoy.</p>
-                    </div>`;
+                    container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-gray-600"><i data-lucide="calendar-x" class="w-12 h-12 mb-4"></i><p>No hay partidos destacados hoy.</p></div>`;
                     lucide.createIcons();
                     return;
                 }
 
-                // Agrupar por Liga
                 const leagues = {};
                 matches.forEach(m => {
-                    if (!leagues[m.league.id]) {
-                        leagues[m.league.id] = { meta: m.league, matches: [] };
-                    }
+                    if (!leagues[m.league.id]) leagues[m.league.id] = { meta: m.league, matches: [] };
                     leagues[m.league.id].matches.push(m);
                 });
 
                 let html = '';
-                
-                // Ordenar ligas para que LPF aparezca primero
-                const sortedLeagueIds = Object.keys(leagues).sort((a,b) => {
-                    if (a == 128) return -1; // LPF primero
-                    return 0;
-                });
+                const sortedLeagueIds = Object.keys(leagues).sort((a,b) => (a == 128 ? -1 : 0));
 
                 sortedLeagueIds.forEach(id => {
                     const group = leagues[id];
-                    html += `<div class="mb-6">
-                        <div class="flex items-center gap-2 mb-3 px-2">
-                            <img src="${group.meta.logo}" class="w-5 h-5 object-contain" onerror="this.style.display='none'">
-                            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">${group.meta.name}</h3>
-                        </div>
-                        <div class="grid gap-3">`;
+                    html += `<div class="mb-6"><div class="flex items-center gap-2 mb-3 px-2"><img src="${group.meta.logo}" class="w-5 h-5 object-contain" onerror="this.style.display='none'"><h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">${group.meta.name}</h3></div><div class="grid gap-3">`;
                     
                     group.matches.forEach(m => {
                         const status = m.fixture.status.short;
                         const isLive = ['1H', '2H', 'HT', 'ET', 'P'].includes(status);
+                        const isFinished = ['FT', 'AET', 'PEN'].includes(status);
+                        
+                        // Lógica de "Entretiempo"
+                        const statusLabel = status === 'HT' ? 'ENTRETIEMPO' : (isLive ? m.fixture.status.elapsed + "'" : m.fixture.status.long);
+                        
+                        // Lógica de Opacidad de Resultados (Perdedor al 50%)
+                        let homeScoreClass = 'text-white';
+                        let awayScoreClass = 'text-white';
+                        
+                        if (isLive || isFinished) {
+                            const homeG = m.goals.home || 0;
+                            const awayG = m.goals.away || 0;
+                            if (homeG < awayG) homeScoreClass = 'text-white/50';
+                            if (awayG < homeG) awayScoreClass = 'text-white/50';
+                        }
+                        
                         const time = new Date(m.fixture.date).toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
                         
                         html += `
                         <div onclick="app.openDetail(${m.fixture.id})" class="match-card bg-[#111] rounded-xl p-4 cursor-pointer relative overflow-hidden group">
                             ${isLive ? '<div class="absolute top-0 right-0 bg-red-600 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg text-white animate-pulse">EN VIVO</div>' : ''}
-                            
                             <div class="flex items-center justify-between">
-                                <!-- Home -->
                                 <div class="flex items-center gap-3 flex-1">
-                                    <span class="font-semibold text-gray-200 text-right truncate flex-1 ${m.teams.home.winner ? 'text-yellow-400' : ''}">${m.teams.home.name}</span>
+                                    <span class="font-semibold text-gray-200 text-right truncate flex-1">${m.teams.home.name}</span>
                                     <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain">
                                 </div>
-
-                                <!-- Score/Time -->
-                                <div class="px-4 flex flex-col items-center w-24">
+                                <div class="px-4 flex flex-col items-center w-28">
                                     ${status === 'NS' 
                                         ? `<span class="text-xl font-bold text-gray-500">${time}</span>` 
-                                        : `<div class="flex gap-2 text-2xl font-black text-white">
-                                            <span>${m.goals.home ?? 0}</span><span>-</span><span>${m.goals.away ?? 0}</span>
+                                        : `<div class="flex gap-2 text-2xl font-black">
+                                            <span class="${homeScoreClass}">${m.goals.home ?? 0}</span><span class="text-gray-600">-</span><span class="${awayScoreClass}">${m.goals.away ?? 0}</span>
                                            </div>`
                                     }
-                                    <span class="text-xs font-medium ${isLive ? 'text-red-500' : 'text-gray-500'}">${isLive ? m.fixture.status.elapsed + "'" : m.fixture.status.long}</span>
+                                    <span class="text-[10px] font-bold mt-1 ${isLive ? 'text-red-500' : 'text-gray-500'} uppercase">${statusLabel}</span>
                                 </div>
-
-                                <!-- Away -->
                                 <div class="flex items-center gap-3 flex-1">
                                     <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain">
-                                    <span class="font-semibold text-gray-200 truncate flex-1 ${m.teams.away.winner ? 'text-yellow-400' : ''}">${m.teams.away.name}</span>
+                                    <span class="font-semibold text-gray-200 truncate flex-1">${m.teams.away.name}</span>
                                 </div>
                             </div>
                         </div>`;
                     });
-                    
                     html += `</div></div>`;
                 });
-
                 container.innerHTML = html;
             },
 
             openDetail: (fixtureId) => {
                 const match = state.matches.find(m => m.fixture.id === fixtureId);
                 if (!match) return;
-
                 state.selectedMatch = match;
                 
-                // Populate Header
                 document.getElementById('detail-home-name').innerText = match.teams.home.name;
                 document.getElementById('detail-away-name').innerText = match.teams.away.name;
                 document.getElementById('detail-home-logo').src = match.teams.home.logo;
                 document.getElementById('detail-away-logo').src = match.teams.away.logo;
                 document.getElementById('detail-home-score').innerText = match.goals.home ?? 0;
                 document.getElementById('detail-away-score').innerText = match.goals.away ?? 0;
-                document.getElementById('detail-status').innerText = match.fixture.status.long;
+                
+                // Status corregido también en detalle
+                const status = match.fixture.status.short;
+                const statusLabel = status === 'HT' ? 'ENTRETIEMPO' : match.fixture.status.long;
+                document.getElementById('detail-status').innerText = statusLabel;
 
-                // Populate Timeline (Mock data if no events)
+                // Opacidad en detalle
+                const homeG = match.goals.home || 0;
+                const awayG = match.goals.away || 0;
+                const homeScoreEl = document.getElementById('detail-home-score');
+                const awayScoreEl = document.getElementById('detail-away-score');
+                
+                homeScoreEl.className = 'font-tnum ' + (homeG < awayG ? 'text-white/50' : 'text-white');
+                awayScoreEl.className = 'font-tnum ' + (awayG < homeG ? 'text-white/50' : 'text-white');
+
+                // Renderizar eventos, lineups (mock) etc...
                 const timelineContainer = document.getElementById('tab-timeline');
                 if (match.events && match.events.length > 0) {
                     timelineContainer.innerHTML = match.events.map(e => `
@@ -610,18 +543,14 @@
                                 <span class="text-sm font-medium text-white">${e.player.name}</span>
                                 <span class="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 uppercase border border-gray-700">${e.type}</span>
                             </div>
-                        </div>
-                    `).join('');
+                        </div>`).join('');
                 } else {
                     timelineContainer.innerHTML = `<p class="text-center text-gray-500 py-4">No hay eventos disponibles aún.</p>`;
                 }
 
-                // Generar alineaciones visuales (Mocked porque la API free a veces no da lineups completos)
                 app.renderLineupsMock(match);
-
-                // Mostrar
                 document.getElementById('view-match-detail').classList.remove('hidden');
-                document.body.style.overflow = 'hidden'; // Evitar scroll de fondo
+                document.body.style.overflow = 'hidden';
             },
 
             closeDetail: () => {
@@ -631,98 +560,71 @@
             },
 
             renderLineupsMock: (match) => {
-                // Simulación visual de alineación para la UI
                 const pitch = document.getElementById('football-pitch');
-                // Limpiar jugadores viejos (mantener líneas de cancha)
-                const markers = pitch.querySelectorAll('.player-marker');
-                markers.forEach(m => m.remove());
-
-                // Home Players (4-4-2 simple mock)
-                const homePositions = [
-                    {top: '45%', left: '5%'}, // GK
-                    {top: '10%', left: '20%'}, {top: '35%', left: '20%'}, {top: '55%', left: '20%'}, {top: '80%', left: '20%'}, // DEF
-                    {top: '10%', left: '40%'}, {top: '35%', left: '40%'}, {top: '55%', left: '40%'}, {top: '80%', left: '40%'}, // MID
-                    {top: '35%', left: '60%'}, {top: '55%', left: '60%'} // FWD
-                ];
-
+                pitch.querySelectorAll('.player-marker').forEach(m => m.remove());
+                const homePositions = [{top:'45%',left:'5%'},{top:'10%',left:'20%'},{top:'35%',left:'20%'},{top:'55%',left:'20%'},{top:'80%',left:'20%'},{top:'10%',left:'40%'},{top:'35%',left:'40%'},{top:'55%',left:'40%'},{top:'80%',left:'40%'},{top:'35%',left:'60%'},{top:'55%',left:'60%'}];
                 homePositions.forEach((pos, i) => {
-                    const el = document.createElement('div');
-                    el.className = 'player-marker home-player';
-                    el.style.top = pos.top;
-                    el.style.left = pos.left;
-                    el.innerText = i + 1;
-                    el.onclick = () => app.openPlayerModal(match.teams.home.name + " Player " + (i+1));
-                    pitch.appendChild(el);
+                    const el = document.createElement('div'); el.className = 'player-marker home-player'; el.style.top = pos.top; el.style.left = pos.left; el.innerText = i + 1; el.onclick = () => app.openPlayerModal(match.teams.home.name + " Player " + (i+1)); pitch.appendChild(el);
                 });
-
-                // Away Players (Mirror)
-                const awayPositions = [
-                    {top: '45%', right: '5%'}, // GK
-                    {top: '10%', right: '20%'}, {top: '35%', right: '20%'}, {top: '55%', right: '20%'}, {top: '80%', right: '20%'}, 
-                    {top: '10%', right: '40%'}, {top: '35%', right: '40%'}, {top: '55%', right: '40%'}, {top: '80%', right: '40%'}, 
-                    {top: '35%', right: '60%'}, {top: '55%', right: '60%'} 
-                ];
-
+                const awayPositions = [{top:'45%',right:'5%'},{top:'10%',right:'20%'},{top:'35%',right:'20%'},{top:'55%',right:'20%'},{top:'80%',right:'20%'},{top:'10%',right:'40%'},{top:'35%',right:'40%'},{top:'55%',right:'40%'},{top:'80%',right:'40%'},{top:'35%',right:'60%'},{top:'55%',right:'60%'}];
                 awayPositions.forEach((pos, i) => {
-                    const el = document.createElement('div');
-                    el.className = 'player-marker away-player';
-                    el.style.top = pos.top;
-                    el.style.right = pos.right; // Usar right para visitante
-                    el.innerText = i + 1;
-                    el.onclick = () => app.openPlayerModal(match.teams.away.name + " Player " + (i+1));
-                    pitch.appendChild(el);
+                    const el = document.createElement('div'); el.className = 'player-marker away-player'; el.style.top = pos.top; el.style.right = pos.right; el.innerText = i + 1; el.onclick = () => app.openPlayerModal(match.teams.away.name + " Player " + (i+1)); pitch.appendChild(el);
                 });
             },
 
+            // --- STANDINGS REALES ---
             showStandings: async (leagueId, leagueName) => {
-                // Ocultar lista, mostrar tabla
                 document.getElementById('view-match-list').classList.add('hidden');
                 document.getElementById('date-nav').classList.add('hidden');
                 document.getElementById('view-standings').classList.remove('hidden');
                 document.getElementById('standings-title').innerText = leagueName;
-                
-                // Cerrar sidebar en mobile si está abierto
                 document.getElementById('sidebar').classList.add('-translate-x-full');
 
                 const tbody = document.getElementById('standings-body');
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8"><div class="loader"></div></td></tr>`;
 
-                // Aquí deberías llamar a la API endpoint /standings
-                // Como es demo, generamos datos falsos creíbles para la UI
-                
-                setTimeout(() => {
-                    const mockTeams = Array.from({length: 20}, (_, i) => ({
-                        rank: i + 1,
-                        name: `Equipo ${i+1}`,
-                        played: Math.floor(Math.random() * 5) + 10,
-                        points: Math.floor(Math.random() * 30) + 10,
-                        goalsDiff: Math.floor(Math.random() * 20) - 5
-                    })).sort((a,b) => b.points - a.points);
+                // Calcular temporada actual
+                const season = new Date().getFullYear(); 
 
-                    // Re-asignar rank
-                    mockTeams.forEach((t, i) => t.rank = i+1);
+                try {
+                    const res = await fetch(`${API_BASE}/standings?league=${leagueId}&season=${season}`, {
+                        headers: { "x-apisports-key": API_KEY }
+                    });
+                    const data = await res.json();
+                    
+                    if (!data.response || data.response.length === 0) throw new Error("No standings");
 
-                    tbody.innerHTML = mockTeams.map(t => `
+                    // La API devuelve standings dentro de un array. Generalmente [0] es la tabla total.
+                    // Algunos torneos tienen grupos (Libertadores), aquí tomamos el primer grupo/tabla.
+                    const standings = data.response[0].league.standings[0];
+
+                    tbody.innerHTML = standings.map(t => `
                         <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
                             <td class="px-4 py-3 text-center font-bold ${t.rank <= 4 ? 'text-blue-400' : 'text-gray-500'}">${t.rank}</td>
                             <td class="px-4 py-3 font-medium text-white flex items-center gap-2">
-                                <div class="w-6 h-6 rounded-full bg-gray-700"></div> ${t.name}
+                                <img src="${t.team.logo}" class="w-6 h-6 object-contain"> ${t.team.name}
                             </td>
-                            <td class="px-4 py-3 text-center">${t.played}</td>
+                            <td class="px-4 py-3 text-center">${t.all.played}</td>
                             <td class="px-4 py-3 text-center font-bold text-white text-lg">${t.points}</td>
-                            <td class="px-4 py-3 text-center hidden md:table-cell text-gray-400">${t.goalsDiff > 0 ? '+'+t.goalsDiff : t.goalsDiff}</td>
+                            <td class="px-4 py-3 text-center hidden md:table-cell text-gray-400 font-tnum">${t.goalsDiff > 0 ? '+'+t.goalsDiff : t.goalsDiff}</td>
                             <td class="px-4 py-3 text-center hidden sm:table-cell">
                                 <div class="flex justify-center gap-1">
-                                    ${Array(5).fill(0).map(() => {
-                                        const r = Math.random();
-                                        const color = r > 0.6 ? 'bg-green-500' : (r > 0.3 ? 'bg-gray-500' : 'bg-red-500');
-                                        return `<div class="w-2 h-2 rounded-full ${color}"></div>`;
+                                    ${(t.form || '?????').split('').map(char => {
+                                        let color = 'bg-gray-600';
+                                        if (char === 'W') color = 'bg-green-500';
+                                        if (char === 'L') color = 'bg-red-500';
+                                        return `<div class="w-2 h-2 rounded-full ${color}" title="${char}"></div>`;
                                     }).join('')}
                                 </div>
                             </td>
                         </tr>
                     `).join('');
-                }, 800);
+
+                } catch (e) {
+                    console.error(e);
+                    // Fallback visual si falla la API (común en cuentas free si no tienen acceso a esa liga específica)
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">No se pudo cargar la tabla. Verifica tu plan de API.</td></tr>`;
+                }
             },
 
             navigateToMatches: () => {
@@ -735,13 +637,10 @@
             openPlayerModal: (playerName) => {
                 document.getElementById('modal-player-name').innerText = playerName;
                 document.getElementById('player-modal').classList.remove('hidden');
-                // Aquí cargaríamos comentarios de Firebase para este jugador
             }
         };
 
-        // Iniciar
         app.init();
-
     </script>
 </body>
 </html>
