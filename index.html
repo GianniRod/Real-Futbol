@@ -122,6 +122,11 @@
                     <img src="https://media.api-sports.io/football/leagues/71.png" class="w-6 h-6 object-contain" onerror="this.src='https://via.placeholder.com/20'">
                     <span class="text-sm font-medium">Brasileirão Série A</span>
                 </button>
+                
+                <button onclick="app.showStandings(1032, 'Copa de la Liga')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
+                    <img src="https://media.api-sports.io/football/leagues/1032.png" class="w-6 h-6 object-contain" onerror="this.src='https://via.placeholder.com/20'">
+                    <span class="text-sm font-medium">Copa de la Liga</span>
+                </button>
 
                  <div class="px-3 py-2 mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Internacional</div>
                  <button onclick="app.showStandings(140, 'La Liga')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
@@ -142,7 +147,7 @@
             </div>
         </aside>
 
-        <!-- Main Content (2/3 width on desktop) -->
+        <!-- Main Content -->
         <main class="flex-1 flex flex-col bg-black relative w-full lg:w-auto overflow-hidden">
             
             <!-- Date Navigation -->
@@ -170,23 +175,8 @@
                         <button onclick="app.navigateToMatches()" class="lg:hidden p-2 bg-gray-800 rounded-lg"><i data-lucide="arrow-left"></i></button>
                         <h2 id="standings-title" class="text-2xl font-bold text-white">Tabla de Posiciones</h2>
                     </div>
-                    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-2xl">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left text-gray-400">
-                                <thead class="text-xs text-gray-300 uppercase bg-gray-800 border-b border-gray-700">
-                                    <tr>
-                                        <th scope="col" class="px-4 py-3 text-center">#</th>
-                                        <th scope="col" class="px-4 py-3">Equipo</th>
-                                        <th scope="col" class="px-4 py-3 text-center">PJ</th>
-                                        <th scope="col" class="px-4 py-3 text-center font-bold text-white">Pts</th>
-                                        <th scope="col" class="px-4 py-3 text-center hidden md:table-cell">DG</th>
-                                        <th scope="col" class="px-4 py-3 text-center hidden sm:table-cell">Últimos 5</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="standings-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <!-- El contenedor de tablas se inyectará aquí dinámicamente -->
+                    <div id="standings-container" class="space-y-8"></div>
                 </div>
 
                 <!-- Match Detail Overlay -->
@@ -341,16 +331,33 @@
                 setInterval(() => app.loadMatches(true), 60000);
             },
 
-            // --- DATE FIX: Forzar formato ARGENTINO para la API ---
-            formatDateApi: (date) => {
-                // toLocaleDateString con la zona horaria 'America/Argentina/Buenos_Aires'
-                // y el formato 'en-CA' nos devuelve YYYY-MM-DD correcto, sin importar la hora local.
-                return date.toLocaleDateString('en-CA', { 
+            // --- DATE LOGIC CORRECTA ---
+            // Esta función convierte cualquier objeto Date a la fecha que es EN ARGENTINA
+            // Independientemente de la hora local del usuario.
+            // Ejemplo: Usuario en España a las 02:00 AM del día 30 -> Devuelve '2025-11-29' (que es la fecha en Arg)
+            getArgDateString: (dateObj) => {
+                return dateObj.toLocaleDateString('en-CA', { 
                     timeZone: 'America/Argentina/Buenos_Aires',
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit'
                 });
+            },
+
+            // Obtiene los componentes de la fecha Argentina para mostrar en UI (Día numérico, nombre día)
+            getArgDateComponents: (dateObj) => {
+                const formatter = new Intl.DateTimeFormat('es-AR', {
+                    timeZone: 'America/Argentina/Buenos_Aires',
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'long'
+                });
+                const parts = formatter.formatToParts(dateObj);
+                return {
+                    day: parts.find(p => p.type === 'day').value,
+                    weekday: parts.find(p => p.type === 'weekday').value,
+                    month: parts.find(p => p.type === 'month').value
+                };
             },
 
             changeDate: (days) => {
@@ -369,32 +376,47 @@
                 const container = document.getElementById('calendar-days');
                 const monthTitle = document.getElementById('current-month');
                 const todayText = document.getElementById('current-day-text');
-                const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
                 
-                monthTitle.innerText = months[state.currentDate.getMonth()];
+                // Usamos la fecha en contexto ARGENTINA para todo el renderizado
+                const argComponents = app.getArgDateComponents(state.currentDate);
+                monthTitle.innerText = argComponents.month;
                 
-                const today = new Date();
-                if (state.currentDate.toDateString() === today.toDateString()) {
+                // Comparar con "Hoy" en tiempo Argentina
+                const todayArg = app.getArgDateString(new Date());
+                const currentArg = app.getArgDateString(state.currentDate);
+
+                if (todayArg === currentArg) {
                     todayText.innerText = "Partidos de Hoy";
                 } else {
-                    todayText.innerText = state.currentDate.toLocaleDateString('es-AR', {weekday: 'long', day: 'numeric'});
+                    todayText.innerText = `${argComponents.weekday} ${argComponents.day}`;
                 }
 
                 container.innerHTML = '';
-                // Centrar el día seleccionado
+                
+                // Generar tira de días centrada en la fecha seleccionada
+                // IMPORTANTE: Iteramos sobre objetos Date base, pero mostramos info de Arg
                 const startDay = new Date(state.currentDate);
                 startDay.setDate(startDay.getDate() - 3);
 
-                const daysOfWeek = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+                const daysOfWeek = ['D', 'L', 'M', 'M', 'J', 'V', 'S']; // Visual simple overrides locale sometimes better
 
                 for (let i = 0; i < 7; i++) {
                     const d = new Date(startDay);
                     d.setDate(d.getDate() + i);
-                    const isSelected = d.toDateString() === state.currentDate.toDateString();
                     
+                    const dArgString = app.getArgDateString(d);
+                    const isSelected = dArgString === currentArg;
+                    const dComponents = app.getArgDateComponents(d);
+
                     const dayEl = document.createElement('div');
                     dayEl.className = `flex flex-col items-center justify-center w-10 h-14 rounded-lg cursor-pointer transition-all ${isSelected ? 'day-selected' : 'hover:bg-gray-800 text-gray-500'}`;
-                    dayEl.innerHTML = `<span class="text-[10px] font-bold">${daysOfWeek[d.getDay()]}</span><span class="text-sm font-bold">${d.getDate()}</span>`;
+                    
+                    // Renderizar el número de día CORREGIDO a Arg
+                    dayEl.innerHTML = `
+                        <span class="text-[10px] font-bold uppercase">${dComponents.weekday.substring(0,3)}</span>
+                        <span class="text-sm font-bold">${dComponents.day}</span>
+                    `;
+                    
                     dayEl.onclick = () => {
                         state.currentDate = d;
                         app.renderCalendarDays();
@@ -407,8 +429,7 @@
             loadMatches: async (silent = false) => {
                 if (!silent) document.getElementById('view-match-list').innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
                 
-                // Usar la función corregida de fecha
-                const dateStr = app.formatDateApi(state.currentDate);
+                const dateStr = app.getArgDateString(state.currentDate);
                 
                 try {
                     const res = await fetch(`${API_BASE}/fixtures?timezone=America/Argentina/Buenos_Aires&date=${dateStr}`, {
@@ -416,9 +437,13 @@
                     });
                     const data = await res.json();
                     
-                    if (data.errors && Object.keys(data.errors).length > 0) throw new Error("API Error");
+                    if (data.errors && Object.keys(data.errors).length > 0) {
+                        // Si hay errores de API (ej. Rate Limit)
+                        console.error("API Errors:", data.errors);
+                        throw new Error("Límite de API o error de servicio.");
+                    }
                     
-                    const priorityLeagues = [128, 129, 13, 11, 71, 1, 2, 39, 140, 9, 10]; 
+                    const priorityLeagues = [128, 129, 13, 11, 71, 1032, 1, 2, 39, 140, 9, 10]; 
                     
                     let matches = data.response.filter(m => 
                         priorityLeagues.includes(m.league.id) || 
@@ -432,7 +457,10 @@
                     app.renderMatches(matches);
                 } catch (err) {
                     console.error(err);
-                    document.getElementById('view-match-list').innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar partidos.</div>`;
+                    document.getElementById('view-match-list').innerHTML = `<div class="text-center text-gray-500 py-10">
+                        <p>No se pudieron cargar los partidos.</p>
+                        <p class="text-xs mt-2 text-gray-600">${err.message}</p>
+                    </div>`;
                 }
             },
 
@@ -461,11 +489,8 @@
                         const status = m.fixture.status.short;
                         const isLive = ['1H', '2H', 'HT', 'ET', 'P'].includes(status);
                         const isFinished = ['FT', 'AET', 'PEN'].includes(status);
-                        
-                        // Lógica de "Entretiempo"
                         const statusLabel = status === 'HT' ? 'ENTRETIEMPO' : (isLive ? m.fixture.status.elapsed + "'" : m.fixture.status.long);
                         
-                        // Lógica de Opacidad de Resultados (Perdedor al 50%)
                         let homeScoreClass = 'text-white';
                         let awayScoreClass = 'text-white';
                         
@@ -519,12 +544,10 @@
                 document.getElementById('detail-home-score').innerText = match.goals.home ?? 0;
                 document.getElementById('detail-away-score').innerText = match.goals.away ?? 0;
                 
-                // Status corregido también en detalle
                 const status = match.fixture.status.short;
                 const statusLabel = status === 'HT' ? 'ENTRETIEMPO' : match.fixture.status.long;
                 document.getElementById('detail-status').innerText = statusLabel;
 
-                // Opacidad en detalle
                 const homeG = match.goals.home || 0;
                 const awayG = match.goals.away || 0;
                 const homeScoreEl = document.getElementById('detail-home-score');
@@ -533,7 +556,6 @@
                 homeScoreEl.className = 'font-tnum ' + (homeG < awayG ? 'text-white/50' : 'text-white');
                 awayScoreEl.className = 'font-tnum ' + (awayG < homeG ? 'text-white/50' : 'text-white');
 
-                // Renderizar eventos, lineups (mock) etc...
                 const timelineContainer = document.getElementById('tab-timeline');
                 if (match.events && match.events.length > 0) {
                     timelineContainer.innerHTML = match.events.map(e => `
@@ -572,7 +594,7 @@
                 });
             },
 
-            // --- STANDINGS REALES ---
+            // --- STANDINGS (Lógica Robusta) ---
             showStandings: async (leagueId, leagueName) => {
                 document.getElementById('view-match-list').classList.add('hidden');
                 document.getElementById('date-nav').classList.add('hidden');
@@ -580,50 +602,100 @@
                 document.getElementById('standings-title').innerText = leagueName;
                 document.getElementById('sidebar').classList.add('-translate-x-full');
 
-                const tbody = document.getElementById('standings-body');
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8"><div class="loader"></div></td></tr>`;
+                const container = document.getElementById('standings-container');
+                container.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
 
-                // Calcular temporada actual
-                const season = new Date().getFullYear(); 
-
-                try {
-                    const res = await fetch(`${API_BASE}/standings?league=${leagueId}&season=${season}`, {
+                let season = new Date().getFullYear();
+                
+                // Función interna para fetch seguro
+                const getStandings = async (s) => {
+                    const r = await fetch(`${API_BASE}/standings?league=${leagueId}&season=${s}`, {
                         headers: { "x-apisports-key": API_KEY }
                     });
-                    const data = await res.json();
+                    return await r.json();
+                };
+
+                try {
+                    // Intento 1: Año actual
+                    let data = await getStandings(season);
                     
-                    if (!data.response || data.response.length === 0) throw new Error("No standings");
+                    // FALLBACK: Si no hay datos, intentar el año anterior
+                    // Esto arregla el bug cuando la API aún no abre la temporada actual
+                    if (!data.response || data.response.length === 0) {
+                        console.warn(`No data for ${season}, trying ${season-1}`);
+                        season = season - 1;
+                        data = await getStandings(season);
+                    }
 
-                    // La API devuelve standings dentro de un array. Generalmente [0] es la tabla total.
-                    // Algunos torneos tienen grupos (Libertadores), aquí tomamos el primer grupo/tabla.
-                    const standings = data.response[0].league.standings[0];
+                    if (!data.response || data.response.length === 0) {
+                        if (data.errors && Object.keys(data.errors).length > 0) {
+                            throw new Error("API Limit or Error: " + JSON.stringify(data.errors));
+                        }
+                        throw new Error("No hay datos disponibles para esta liga.");
+                    }
 
-                    tbody.innerHTML = standings.map(t => `
-                        <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
-                            <td class="px-4 py-3 text-center font-bold ${t.rank <= 4 ? 'text-blue-400' : 'text-gray-500'}">${t.rank}</td>
-                            <td class="px-4 py-3 font-medium text-white flex items-center gap-2">
-                                <img src="${t.team.logo}" class="w-6 h-6 object-contain"> ${t.team.name}
-                            </td>
-                            <td class="px-4 py-3 text-center">${t.all.played}</td>
-                            <td class="px-4 py-3 text-center font-bold text-white text-lg">${t.points}</td>
-                            <td class="px-4 py-3 text-center hidden md:table-cell text-gray-400 font-tnum">${t.goalsDiff > 0 ? '+'+t.goalsDiff : t.goalsDiff}</td>
-                            <td class="px-4 py-3 text-center hidden sm:table-cell">
-                                <div class="flex justify-center gap-1">
-                                    ${(t.form || '?????').split('').map(char => {
-                                        let color = 'bg-gray-600';
-                                        if (char === 'W') color = 'bg-green-500';
-                                        if (char === 'L') color = 'bg-red-500';
-                                        return `<div class="w-2 h-2 rounded-full ${color}" title="${char}"></div>`;
-                                    }).join('')}
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('');
+                    // Renderizado Inteligente (Soporte Multi-Tablas / Grupos)
+                    const leagueData = data.response[0].league;
+                    const allStandings = leagueData.standings; // Array de Arrays
+
+                    let tablesHtml = '';
+
+                    allStandings.forEach((group, index) => {
+                        // Título del grupo si hay más de uno (ej. "Group A")
+                        const groupTitle = group[0].group !== leagueData.name ? group[0].group : '';
+                        
+                        tablesHtml += `
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-2xl mb-6">
+                            ${groupTitle ? `<div class="bg-gray-800/50 px-4 py-2 text-sm font-bold text-blue-400 border-b border-gray-800">${groupTitle}</div>` : ''}
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left text-gray-400">
+                                    <thead class="text-xs text-gray-300 uppercase bg-gray-800 border-b border-gray-700">
+                                        <tr>
+                                            <th class="px-3 py-3 text-center">#</th>
+                                            <th class="px-3 py-3">Equipo</th>
+                                            <th class="px-3 py-3 text-center">PJ</th>
+                                            <th class="px-3 py-3 text-center font-bold text-white">Pts</th>
+                                            <th class="px-3 py-3 text-center hidden md:table-cell">DG</th>
+                                            <th class="px-3 py-3 text-center hidden sm:table-cell">Forma</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${group.map(t => `
+                                            <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+                                                <td class="px-3 py-3 text-center font-bold ${t.rank <= 4 ? 'text-blue-400' : 'text-gray-500'}">${t.rank}</td>
+                                                <td class="px-3 py-3 font-medium text-white flex items-center gap-2 whitespace-nowrap">
+                                                    <img src="${t.team.logo}" class="w-5 h-5 object-contain"> ${t.team.name}
+                                                </td>
+                                                <td class="px-3 py-3 text-center">${t.all.played}</td>
+                                                <td class="px-3 py-3 text-center font-bold text-white text-lg">${t.points}</td>
+                                                <td class="px-3 py-3 text-center hidden md:table-cell text-gray-400 font-tnum">${t.goalsDiff > 0 ? '+'+t.goalsDiff : t.goalsDiff}</td>
+                                                <td class="px-3 py-3 text-center hidden sm:table-cell">
+                                                    <div class="flex justify-center gap-1">
+                                                        ${(t.form || '').split('').slice(-5).map(char => {
+                                                            let color = 'bg-gray-600';
+                                                            if (char === 'W') color = 'bg-green-500';
+                                                            if (char === 'L') color = 'bg-red-500';
+                                                            if (char === 'D') color = 'bg-yellow-500';
+                                                            return `<div class="w-1.5 h-1.5 rounded-full ${color}" title="${char}"></div>`;
+                                                        }).join('')}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>`;
+                    });
+
+                    container.innerHTML = tablesHtml;
 
                 } catch (e) {
                     console.error(e);
-                    // Fallback visual si falla la API (común en cuentas free si no tienen acceso a esa liga específica)
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">No se pudo cargar la tabla. Verifica tu plan de API.</td></tr>`;
+                    container.innerHTML = `<div class="text-center text-red-400 py-8 bg-red-900/10 rounded-lg border border-red-900/30">
+                        <p class="font-bold">Error al cargar la tabla</p>
+                        <p class="text-sm opacity-70 mt-1">${e.message}</p>
+                    </div>`;
                 }
             },
 
