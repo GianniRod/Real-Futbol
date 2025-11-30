@@ -171,9 +171,21 @@
 
                 <!-- Standings View -->
                 <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-20">
-                    <div class="flex items-center gap-4 mb-6">
-                        <button onclick="app.navigateToMatches()" class="lg:hidden p-2 bg-gray-800 rounded-lg"><i data-lucide="arrow-left"></i></button>
-                        <h2 id="standings-title" class="text-2xl font-bold text-white">Tabla de Posiciones</h2>
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+                        <div class="flex items-center gap-4">
+                            <button onclick="app.navigateToMatches()" class="lg:hidden p-2 bg-gray-800 rounded-lg"><i data-lucide="arrow-left"></i></button>
+                            <h2 id="standings-title" class="text-2xl font-bold text-white">Tabla de Posiciones</h2>
+                        </div>
+                        
+                        <!-- Season Selector -->
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-gray-400">Temporada:</label>
+                            <select id="season-selector" onchange="app.changeSeason(this.value)" class="bg-gray-800 text-white text-sm rounded-lg border border-gray-700 p-2 focus:border-blue-500 focus:outline-none">
+                                <option value="2023" selected>2023</option>
+                                <option value="2022">2022</option>
+                                <option value="2021">2021</option>
+                            </select>
+                        </div>
                     </div>
                     <!-- El contenedor de tablas se inyectará aquí dinámicamente -->
                     <div id="standings-container" class="space-y-8"></div>
@@ -301,7 +313,10 @@
             matches: [],
             selectedMatch: null,
             view: 'matches',
-            loading: false
+            loading: false,
+            currentLeagueId: null, // Para guardar qué liga estamos viendo
+            currentLeagueName: null,
+            currentSeason: 2023 // Default a 2023 para plan free
         };
 
         window.app = {
@@ -331,10 +346,7 @@
                 setInterval(() => app.loadMatches(true), 60000);
             },
 
-            // --- DATE LOGIC CORRECTA ---
-            // Esta función convierte cualquier objeto Date a la fecha que es EN ARGENTINA
-            // Independientemente de la hora local del usuario.
-            // Ejemplo: Usuario en España a las 02:00 AM del día 30 -> Devuelve '2025-11-29' (que es la fecha en Arg)
+            // --- DATE LOGIC ---
             getArgDateString: (dateObj) => {
                 return dateObj.toLocaleDateString('en-CA', { 
                     timeZone: 'America/Argentina/Buenos_Aires',
@@ -344,7 +356,6 @@
                 });
             },
 
-            // Obtiene los componentes de la fecha Argentina para mostrar en UI (Día numérico, nombre día)
             getArgDateComponents: (dateObj) => {
                 const formatter = new Intl.DateTimeFormat('es-AR', {
                     timeZone: 'America/Argentina/Buenos_Aires',
@@ -377,11 +388,9 @@
                 const monthTitle = document.getElementById('current-month');
                 const todayText = document.getElementById('current-day-text');
                 
-                // Usamos la fecha en contexto ARGENTINA para todo el renderizado
                 const argComponents = app.getArgDateComponents(state.currentDate);
                 monthTitle.innerText = argComponents.month;
                 
-                // Comparar con "Hoy" en tiempo Argentina
                 const todayArg = app.getArgDateString(new Date());
                 const currentArg = app.getArgDateString(state.currentDate);
 
@@ -392,13 +401,10 @@
                 }
 
                 container.innerHTML = '';
-                
-                // Generar tira de días centrada en la fecha seleccionada
-                // IMPORTANTE: Iteramos sobre objetos Date base, pero mostramos info de Arg
                 const startDay = new Date(state.currentDate);
                 startDay.setDate(startDay.getDate() - 3);
 
-                const daysOfWeek = ['D', 'L', 'M', 'M', 'J', 'V', 'S']; // Visual simple overrides locale sometimes better
+                const daysOfWeek = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 
                 for (let i = 0; i < 7; i++) {
                     const d = new Date(startDay);
@@ -411,7 +417,6 @@
                     const dayEl = document.createElement('div');
                     dayEl.className = `flex flex-col items-center justify-center w-10 h-14 rounded-lg cursor-pointer transition-all ${isSelected ? 'day-selected' : 'hover:bg-gray-800 text-gray-500'}`;
                     
-                    // Renderizar el número de día CORREGIDO a Arg
                     dayEl.innerHTML = `
                         <span class="text-[10px] font-bold uppercase">${dComponents.weekday.substring(0,3)}</span>
                         <span class="text-sm font-bold">${dComponents.day}</span>
@@ -432,16 +437,15 @@
                 const dateStr = app.getArgDateString(state.currentDate);
                 
                 try {
+                    // Nota: para que aparezcan goleadores en la LISTA, la API suele necesitar "fixtures?id=X", 
+                    // pero en la llamada masiva por fecha a veces no los incluye.
+                    // Si el plan lo permite, vendrán en 'events'. Si no, no se mostrarán (graceful degradation).
                     const res = await fetch(`${API_BASE}/fixtures?timezone=America/Argentina/Buenos_Aires&date=${dateStr}`, {
                         headers: { "x-apisports-key": API_KEY }
                     });
                     const data = await res.json();
                     
-                    if (data.errors && Object.keys(data.errors).length > 0) {
-                        // Si hay errores de API (ej. Rate Limit)
-                        console.error("API Errors:", data.errors);
-                        throw new Error("Límite de API o error de servicio.");
-                    }
+                    if (data.errors && Object.keys(data.errors).length > 0) throw new Error("API Limit");
                     
                     const priorityLeagues = [128, 129, 13, 11, 71, 1032, 1, 2, 39, 140, 9, 10]; 
                     
@@ -459,7 +463,7 @@
                     console.error(err);
                     document.getElementById('view-match-list').innerHTML = `<div class="text-center text-gray-500 py-10">
                         <p>No se pudieron cargar los partidos.</p>
-                        <p class="text-xs mt-2 text-gray-600">${err.message}</p>
+                        <p class="text-xs mt-2 text-gray-600">Verifica tu conexión o cuota de API.</p>
                     </div>`;
                 }
             },
@@ -501,11 +505,28 @@
                             if (awayG < homeG) awayScoreClass = 'text-white/50';
                         }
                         
+                        // Lógica de Goleadores (si la API trae 'events' en el listado)
+                        let homeScorers = [];
+                        let awayScorers = [];
+                        
+                        if (m.events && m.events.length > 0) {
+                            m.events.forEach(e => {
+                                if (e.type === 'Goal') {
+                                    const scorerName = e.player.name.split(' ').pop(); // Solo apellido o último nombre para ahorrar espacio
+                                    const time = e.time.elapsed + (e.time.extra ? `+${e.time.extra}` : '') + "'";
+                                    if (e.team.id === m.teams.home.id) homeScorers.push(`${scorerName} ${time}`);
+                                    if (e.team.id === m.teams.away.id) awayScorers.push(`${scorerName} ${time}`);
+                                }
+                            });
+                        }
+
                         const time = new Date(m.fixture.date).toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
                         
                         html += `
                         <div onclick="app.openDetail(${m.fixture.id})" class="match-card bg-[#111] rounded-xl p-4 cursor-pointer relative overflow-hidden group">
                             ${isLive ? '<div class="absolute top-0 right-0 bg-red-600 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg text-white animate-pulse">EN VIVO</div>' : ''}
+                            
+                            <!-- Main Row -->
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3 flex-1">
                                     <span class="font-semibold text-gray-200 text-right truncate flex-1">${m.teams.home.name}</span>
@@ -525,6 +546,19 @@
                                     <span class="font-semibold text-gray-200 truncate flex-1">${m.teams.away.name}</span>
                                 </div>
                             </div>
+                            
+                            <!-- Goleadores Row (Solo si hay goles) -->
+                            ${(homeScorers.length > 0 || awayScorers.length > 0) ? `
+                                <div class="flex justify-between items-start mt-3 pt-2 border-t border-gray-800 text-[10px] text-gray-400">
+                                    <div class="flex-1 text-right pr-12 leading-tight">
+                                        ${homeScorers.join('<br>')}
+                                    </div>
+                                    <div class="flex-1 text-left pl-12 leading-tight">
+                                        ${awayScorers.join('<br>')}
+                                    </div>
+                                </div>
+                            ` : ''}
+
                         </div>`;
                     });
                     html += `</div></div>`;
@@ -584,6 +618,7 @@
             renderLineupsMock: (match) => {
                 const pitch = document.getElementById('football-pitch');
                 pitch.querySelectorAll('.player-marker').forEach(m => m.remove());
+                // Mock simple
                 const homePositions = [{top:'45%',left:'5%'},{top:'10%',left:'20%'},{top:'35%',left:'20%'},{top:'55%',left:'20%'},{top:'80%',left:'20%'},{top:'10%',left:'40%'},{top:'35%',left:'40%'},{top:'55%',left:'40%'},{top:'80%',left:'40%'},{top:'35%',left:'60%'},{top:'55%',left:'60%'}];
                 homePositions.forEach((pos, i) => {
                     const el = document.createElement('div'); el.className = 'player-marker home-player'; el.style.top = pos.top; el.style.left = pos.left; el.innerText = i + 1; el.onclick = () => app.openPlayerModal(match.teams.home.name + " Player " + (i+1)); pitch.appendChild(el);
@@ -594,56 +629,47 @@
                 });
             },
 
-            // --- STANDINGS (Lógica Robusta) ---
+            // --- STANDINGS Lógica Modificada ---
+            changeSeason: (year) => {
+                state.currentSeason = year;
+                if (state.currentLeagueId) {
+                    app.showStandings(state.currentLeagueId, state.currentLeagueName);
+                }
+            },
+
             showStandings: async (leagueId, leagueName) => {
+                // Guardar estado actual
+                state.currentLeagueId = leagueId;
+                state.currentLeagueName = leagueName;
+                
                 document.getElementById('view-match-list').classList.add('hidden');
                 document.getElementById('date-nav').classList.add('hidden');
                 document.getElementById('view-standings').classList.remove('hidden');
                 document.getElementById('standings-title').innerText = leagueName;
                 document.getElementById('sidebar').classList.add('-translate-x-full');
+                
+                // Actualizar selector visualmente si venimos de un clic directo
+                document.getElementById('season-selector').value = state.currentSeason;
 
                 const container = document.getElementById('standings-container');
                 container.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
 
-                let season = new Date().getFullYear();
-                
-                // Función interna para fetch seguro
-                const getStandings = async (s) => {
-                    const r = await fetch(`${API_BASE}/standings?league=${leagueId}&season=${s}`, {
+                try {
+                    const res = await fetch(`${API_BASE}/standings?league=${leagueId}&season=${state.currentSeason}`, {
                         headers: { "x-apisports-key": API_KEY }
                     });
-                    return await r.json();
-                };
-
-                try {
-                    // Intento 1: Año actual
-                    let data = await getStandings(season);
+                    const data = await res.json();
                     
-                    // FALLBACK: Si no hay datos, intentar el año anterior
-                    // Esto arregla el bug cuando la API aún no abre la temporada actual
                     if (!data.response || data.response.length === 0) {
-                        console.warn(`No data for ${season}, trying ${season-1}`);
-                        season = season - 1;
-                        data = await getStandings(season);
+                        throw new Error("No hay datos disponibles para la temporada " + state.currentSeason);
                     }
 
-                    if (!data.response || data.response.length === 0) {
-                        if (data.errors && Object.keys(data.errors).length > 0) {
-                            throw new Error("API Limit or Error: " + JSON.stringify(data.errors));
-                        }
-                        throw new Error("No hay datos disponibles para esta liga.");
-                    }
-
-                    // Renderizado Inteligente (Soporte Multi-Tablas / Grupos)
                     const leagueData = data.response[0].league;
-                    const allStandings = leagueData.standings; // Array de Arrays
+                    const allStandings = leagueData.standings;
 
                     let tablesHtml = '';
-
-                    allStandings.forEach((group, index) => {
-                        // Título del grupo si hay más de uno (ej. "Group A")
+                    allStandings.forEach((group) => {
                         const groupTitle = group[0].group !== leagueData.name ? group[0].group : '';
-                        
                         tablesHtml += `
                         <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-2xl mb-6">
                             ${groupTitle ? `<div class="bg-gray-800/50 px-4 py-2 text-sm font-bold text-blue-400 border-b border-gray-800">${groupTitle}</div>` : ''}
@@ -692,9 +718,9 @@
 
                 } catch (e) {
                     console.error(e);
-                    container.innerHTML = `<div class="text-center text-red-400 py-8 bg-red-900/10 rounded-lg border border-red-900/30">
-                        <p class="font-bold">Error al cargar la tabla</p>
-                        <p class="text-sm opacity-70 mt-1">${e.message}</p>
+                    container.innerHTML = `<div class="text-center text-gray-400 py-8">
+                        <p class="font-bold text-lg mb-2">Sin datos disponibles</p>
+                        <p class="text-sm opacity-70">No se encontraron tablas para la temporada ${state.currentSeason}.</p>
                     </div>`;
                 }
             },
