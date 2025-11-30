@@ -73,24 +73,31 @@
         
         .live-dot { height: 8px; width: 8px; background-color: #ef4444; border-radius: 50%; display: inline-block; animation: pulse-red 2s infinite; }
         @keyframes pulse-red { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        
+        /* Backdrop para móvil */
+        .mobile-backdrop { position: fixed; inset: 0; background-color: rgba(0,0,0,0.7); z-index: 40; backdrop-filter: blur(2px); }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-<header class="w-full flex justify-center py-4 bg-black">
+<header class="w-full flex justify-left py-4 bg-black">
     <img src="https://i.postimg.cc/pL6B4Mpr/real-futbol-removebg-preview.png" 
          alt="Real Futbol Logo" 
          class="h-24 object-contain">
 </header>
+
     <!-- Main Layout -->
     <div class="flex flex-1 overflow-hidden relative">
         
-        <!-- Sidebar (MENU DE LIGAS) -->
-        <aside id="sidebar" class="absolute lg:static inset-y-0 left-0 w-full lg:w-72 xl:w-80 bg-[#0a0a0a] border-r border-gray-800 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-300 z-50">
+        <!-- Backdrop Mobile (Oculto por defecto) -->
+        <div id="mobile-backdrop" class="mobile-backdrop hidden lg:hidden"></div>
+
+        <!-- Sidebar (MENU DE LIGAS) - Fixed en Mobile -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 w-[280px] bg-[#0a0a0a] border-r border-gray-800 flex flex-col transform -translate-x-full lg:translate-x-0 lg:static lg:w-72 xl:w-80 transition-transform duration-300 z-50 shadow-2xl lg:shadow-none h-full">
             <div class="p-4 border-b border-gray-800 flex justify-between items-center lg:hidden bg-[#0a0a0a]">
-                <h2 class="font-bold text-gray-200">Competencias</h2>
-                <button id="close-sidebar" class="text-gray-400 p-2"><i data-lucide="x"></i></button>
+                <h2 class="font-bold text-gray-200 flex items-center gap-2"><i data-lucide="list"></i> Competencias</h2>
+                <button id="close-sidebar" class="text-gray-400 p-2 hover:text-white bg-gray-900 rounded-full"><i data-lucide="x"></i></button>
             </div>
             
             <div class="overflow-y-auto flex-1 p-2 space-y-1 bg-[#0a0a0a]">
@@ -166,7 +173,8 @@
                 <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-20">
                     <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
                         <div class="flex items-center gap-4">
-                            <button onclick="app.navigateToMatches()" class="lg:hidden p-2 bg-gray-800 rounded-lg"><i data-lucide="arrow-left"></i></button>
+                            <!-- Botón back en mobile para salir de standings -->
+                            <button onclick="app.navigateToMatches()" class="lg:hidden p-2 bg-gray-800 rounded-lg text-white"><i data-lucide="arrow-left"></i></button>
                             <h2 id="standings-title" class="text-2xl font-bold text-white">Tabla de Posiciones</h2>
                         </div>
                         <div class="flex items-center gap-2">
@@ -329,12 +337,32 @@
                 lucide.createIcons();
                 app.renderCalendarDays();
                 app.loadMatches();
-                document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('sidebar').classList.toggle('-translate-x-full');
-                document.getElementById('close-sidebar').onclick = () => document.getElementById('sidebar').classList.add('-translate-x-full');
+                
+                // SIDEBAR LOGIC (Improved for Mobile)
+                const sidebar = document.getElementById('sidebar');
+                const backdrop = document.getElementById('mobile-backdrop');
+                
+                const openMenu = () => {
+                    sidebar.classList.remove('-translate-x-full');
+                    backdrop.classList.remove('hidden');
+                };
+                
+                const closeMenu = () => {
+                    sidebar.classList.add('-translate-x-full');
+                    backdrop.classList.add('hidden');
+                };
+                
+                document.getElementById('mobile-menu-btn').onclick = openMenu;
+                document.getElementById('close-sidebar').onclick = closeMenu;
+                backdrop.onclick = closeMenu; // Clic afuera cierra menú
+
+                // Toggle Live
                 document.getElementById('live-toggle').addEventListener('change', (e) => {
                     state.showLiveOnly = e.target.checked;
                     app.renderMatches(state.matches);
                 });
+                
+                // Tabs
                 document.querySelectorAll('.tab-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('text-blue-500', 'border-b-2', 'border-blue-500'); b.classList.add('text-gray-500'); });
@@ -524,7 +552,12 @@
             changeSeason: (year) => { state.currentSeason = year; if (state.currentLeagueId) app.showStandings(state.currentLeagueId, state.currentLeagueName); },
             showStandings: async (leagueId, leagueName) => {
                 state.currentLeagueId = leagueId; state.currentLeagueName = leagueName;
-                document.getElementById('view-match-list').classList.add('hidden'); document.getElementById('date-nav').classList.add('hidden'); document.getElementById('view-standings').classList.remove('hidden'); document.getElementById('standings-title').innerText = leagueName; document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('season-selector').value = state.currentSeason;
+                document.getElementById('view-match-list').classList.add('hidden'); document.getElementById('date-nav').classList.add('hidden'); document.getElementById('view-standings').classList.remove('hidden'); document.getElementById('standings-title').innerText = leagueName; 
+                // Close sidebar on selection
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('mobile-backdrop').classList.add('hidden');
+                
+                document.getElementById('season-selector').value = state.currentSeason;
                 const c = document.getElementById('standings-container'); c.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
                 try {
                     const res = await fetch(`${API_BASE}/standings?league=${leagueId}&season=${state.currentSeason}`, { headers: { "x-apisports-key": API_KEY } });
@@ -533,7 +566,13 @@
                     c.innerHTML = data.response[0].league.standings.map(g => `<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-2xl mb-6">${(g[0].group && g[0].group !== leagueName) ? `<div class="bg-gray-800/50 px-4 py-2 text-sm font-bold text-blue-400 border-b border-gray-800">${g[0].group}</div>` : ''}<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-400"><thead class="text-xs text-gray-300 uppercase bg-gray-800 border-b border-gray-700"><tr><th class="px-3 py-3 text-center">#</th><th class="px-3 py-3">Equipo</th><th class="px-3 py-3 text-center">PJ</th><th class="px-3 py-3 text-center font-bold text-white">Pts</th><th class="px-3 py-3 text-center hidden md:table-cell">DG</th></tr></thead><tbody>${g.map(t => `<tr class="border-b border-gray-800 hover:bg-gray-800/50"><td class="px-3 py-3 text-center font-bold ${t.rank <= 4 ? 'text-blue-400' : 'text-gray-500'}">${t.rank}</td><td class="px-3 py-3 font-medium text-white flex items-center gap-2 whitespace-nowrap"><img src="${t.team.logo}" class="w-5 h-5 object-contain"> ${t.team.name}</td><td class="px-3 py-3 text-center">${t.all.played}</td><td class="px-3 py-3 text-center font-bold text-white text-lg">${t.points}</td><td class="px-3 py-3 text-center hidden md:table-cell text-gray-400 font-tnum">${t.goalsDiff > 0 ? '+'+t.goalsDiff : t.goalsDiff}</td></tr>`).join('')}</tbody></table></div></div>`).join('');
                 } catch (e) { c.innerHTML = `<div class="text-center text-gray-400 py-8"><p class="font-bold text-lg mb-2">Sin datos disponibles</p></div>`; }
             },
-            navigateToMatches: () => { document.getElementById('view-standings').classList.add('hidden'); document.getElementById('view-match-list').classList.remove('hidden'); document.getElementById('date-nav').classList.remove('hidden'); document.getElementById('sidebar').classList.add('-translate-x-full'); },
+            navigateToMatches: () => { 
+                document.getElementById('view-standings').classList.add('hidden'); 
+                document.getElementById('view-match-list').classList.remove('hidden'); 
+                document.getElementById('date-nav').classList.remove('hidden'); 
+                document.getElementById('sidebar').classList.add('-translate-x-full'); 
+                document.getElementById('mobile-backdrop').classList.add('hidden');
+            },
             closeDetail: () => { document.getElementById('view-match-detail').classList.add('hidden'); document.body.style.overflow = ''; state.selectedMatch = null; },
             openPlayerModal: (name) => { document.getElementById('modal-player-name').innerText = name; document.getElementById('player-modal').classList.remove('hidden'); }
         };
