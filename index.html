@@ -65,10 +65,7 @@
             text-shadow: 0px 1px 2px rgba(0,0,0,0.8);
         }
         .player-marker:hover { transform: scale(1.25); z-index: 20; border-color: #fbbf24; }
-        /* Default Colors (Fallback) */
-        .home-player { background-color: #ef4444; }
-        .away-player { background-color: #3b82f6; }
-
+        
         .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: #3b82f6; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
@@ -80,26 +77,23 @@
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
+    <!-- Header -->
 <header class="w-full flex justify-center py-4 bg-black">
     <img src="https://i.postimg.cc/pL6B4Mpr/real-futbol-removebg-preview.png" 
          alt="Real Futbol Logo" 
          class="h-24 object-contain">
 </header>
-
-
-
-
     <!-- Main Layout -->
     <div class="flex flex-1 overflow-hidden relative">
         
-        <!-- Sidebar -->
-        <aside id="sidebar" class="w-full lg:w-72 xl:w-80 bg-[#0a0a0a] border-r border-gray-800 flex flex-col absolute lg:static inset-y-0 left-0 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 z-20">
-            <div class="p-4 border-b border-gray-800 flex justify-between items-center lg:hidden">
+        <!-- Sidebar (MENU DE LIGAS) -->
+        <aside id="sidebar" class="absolute lg:static inset-y-0 left-0 w-full lg:w-72 xl:w-80 bg-[#0a0a0a] border-r border-gray-800 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-300 z-50">
+            <div class="p-4 border-b border-gray-800 flex justify-between items-center lg:hidden bg-[#0a0a0a]">
                 <h2 class="font-bold text-gray-200">Competencias</h2>
-                <button id="close-sidebar" class="text-gray-400"><i data-lucide="x"></i></button>
+                <button id="close-sidebar" class="text-gray-400 p-2"><i data-lucide="x"></i></button>
             </div>
             
-            <div class="overflow-y-auto flex-1 p-2 space-y-1">
+            <div class="overflow-y-auto flex-1 p-2 space-y-1 bg-[#0a0a0a]">
                 <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Torneos Destacados</div>
                 
                 <button onclick="app.showStandings(128, 'Liga Profesional Arg')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
@@ -147,7 +141,7 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col bg-black relative w-full lg:w-auto overflow-hidden">
+        <main class="flex-1 flex flex-col bg-black relative w-full lg:w-auto overflow-hidden z-0">
             
             <!-- Date Navigation -->
             <div id="date-nav" class="bg-[#0a0a0a]/90 backdrop-blur border-b border-gray-800 p-3 z-10 sticky top-0">
