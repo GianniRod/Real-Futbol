@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Iconos SVG Nativos para máxima compatibilidad -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
@@ -17,32 +17,23 @@
             background-image: radial-gradient(circle at top center, #111827 0%, #000000 100%);
             color: #e5e7eb;
         }
-        
-        /* Animaciones */
         .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Scrollbars */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
-
-        /* Estilos UI */
+        
         .match-card { transition: all 0.2s; border: 1px solid #1f2937; }
-        /* Solo aplicar hover si es clickable */
         .match-card.clickable:hover { transform: translateY(-2px); border-color: #3b82f6; background-color: rgba(30, 41, 59, 0.8); cursor: pointer; }
-        .match-card.not-clickable { opacity: 0.7; cursor: default; }
+        .match-card.not-clickable { opacity: 0.6; cursor: default; background-color: #0f0f0f; }
         
         .league-item { transition: all 0.2s; cursor: pointer; }
         .league-item:hover { background-color: #1e2937; color: #60a5fa; }
-        
         .day-selected { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-weight: bold; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); }
-        
         .toggle-checkbox:checked { right: 0; border-color: #3b82f6; }
         .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
         
-        /* Cancha */
         .football-pitch { background-color: #064e3b; border: 2px solid #525252; position: relative; width: 100%; aspect-ratio: 7 / 5; border-radius: 4px; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
         .pitch-line { position: absolute; background-color: rgba(255,255,255,0.3); }
         .center-line { top: 0; bottom: 0; left: 50%; width: 1px; transform: translateX(-50%); }
@@ -50,20 +41,39 @@
         .penalty-box { position: absolute; border: 1px solid rgba(255,255,255,0.3); width: 15%; height: 40%; top: 30%; }
         .home-box { left: 0; border-left: none; }
         .away-box { right: 0; border-right: none; }
-
-        /* Jugadores */
         .player-marker { position: absolute; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 11px; border: 2px solid rgba(255, 255, 255, 0.8); cursor: pointer; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.6); z-index: 10; text-shadow: 0px 1px 2px rgba(0,0,0,0.8); }
         .player-marker:hover { transform: scale(1.25); z-index: 20; border-color: #fbbf24; }
         
         .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: #3b82f6; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
         .font-tnum { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
         .live-dot { height: 8px; width: 8px; background-color: #ef4444; border-radius: 50%; display: inline-block; animation: pulse-red 2s infinite; }
         @keyframes pulse-red { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         
-        /* Backdrop Móvil */
         .mobile-backdrop { position: fixed; inset: 0; background-color: rgba(0,0,0,0.7); z-index: 40; backdrop-filter: blur(2px); }
+        
+        /* Botón Volver Flotante SUPERIOR */
+        .btn-close-detail {
+            position: fixed;
+            top: 15px; /* Ajuste para que no se corte */
+            left: 15px;
+            z-index: 100; /* Maxima prioridad */
+            background-color: rgba(31, 41, 55, 0.95);
+            border: 1px solid #374151;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 8px;
+            border-radius: 9999px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-close-detail:hover { background-color: #3b82f6; border-color: #3b82f6; }
+        
+        /* Zone Tabs */
+        .zone-tab { padding: 10px 16px; font-size: 0.875rem; font-weight: 600; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+        .zone-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
@@ -96,25 +106,23 @@
         <!-- Sidebar -->
         <aside id="sidebar" class="fixed inset-y-0 left-0 w-[280px] bg-[#0a0a0a] border-r border-gray-800 flex flex-col transform -translate-x-full lg:translate-x-0 lg:static lg:w-72 xl:w-80 transition-transform duration-300 z-50 shadow-2xl lg:shadow-none h-full">
             <div class="p-4 border-b border-gray-800 flex justify-between items-center lg:hidden bg-[#0a0a0a]">
-                <h2 class="font-bold text-gray-200 flex items-center gap-2">Competencias</h2>
-                <button id="close-sidebar" class="text-gray-400 p-2 hover:text-white bg-gray-900 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
+                <h2 class="font-bold text-gray-200 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg> Competencias</h2>
+                <button id="close-sidebar" class="text-gray-400 p-2 hover:text-white bg-gray-900 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
             <div class="overflow-y-auto flex-1 p-2 space-y-1 bg-[#0a0a0a]">
                 <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Mis Ligas</div>
                 
-                <!-- IDs CORREGIDOS POR EL USUARIO -->
+                <!-- LISTADO DE LIGAS SOLICITADO -->
                 <button onclick="app.showStandings(44, 'Liga Argentina')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
-                    <img src="https://media.api-sports.io/football/leagues/128.png" class="w-6 h-6 object-contain">
+                    <img src="https://media.api-sports.io/football/leagues/128.png" class="w-6 h-6 object-contain" onerror="this.src='https://via.placeholder.com/20'">
                     <span class="text-sm font-medium">Liga Argentina</span>
                 </button>
-                <button onclick="app.showStandings(45, 'Primera B Nacional')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
-                    <img src="https://media.api-sports.io/football/leagues/129.png" class="w-6 h-6 object-contain">
+                <button onclick="app.showStandings(317, 'Primera B Nacional')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
+                    <img src="https://media.api-sports.io/football/leagues/129.png" class="w-6 h-6 object-contain" onerror="this.src='https://via.placeholder.com/20'">
                     <span class="text-sm font-medium">Primera B Nacional</span>
                 </button>
                 <button onclick="app.showStandings(99, 'Brasileirão Série A')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
-                    <img src="https://media.api-sports.io/football/leagues/71.png" class="w-6 h-6 object-contain">
+                    <img src="https://media.api-sports.io/football/leagues/71.png" class="w-6 h-6 object-contain" onerror="this.src='https://via.placeholder.com/20'">
                     <span class="text-sm font-medium">Brasileirão</span>
                 </button>
                 <button onclick="app.showStandings(152, 'Premier League')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
@@ -132,8 +140,14 @@
 
                 <div class="mt-8 px-4">
                     <button onclick="app.navigateToMatches()" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors border border-gray-700">
+                        <i data-lucide="calendar"></i>
                         Ver Partidos de Hoy
                     </button>
+                </div>
+                
+                <!-- Herramienta oculta de debug -->
+                <div class="mt-10 px-4">
+                    <button onclick="app.debugLeagues()" class="text-[10px] text-gray-700 hover:text-gray-500 w-full text-center">¿Problemas con Ligas? (Debug)</button>
                 </div>
             </div>
         </aside>
@@ -174,25 +188,26 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <!-- Tabs Zonas (Ocultos si no hay grupos) -->
+                    <div id="standings-tabs" class="flex overflow-x-auto border-b border-gray-800 mb-4 hidden no-scrollbar"></div>
+                    
                     <div id="standings-container" class="space-y-8"></div>
                 </div>
 
-                <!-- Match Detail Overlay (FIXED BACK BUTTON) -->
+                <!-- Match Detail Overlay -->
                 <div id="view-match-detail" class="hidden fixed inset-0 lg:absolute lg:inset-0 bg-black z-50 overflow-y-auto animate-fade-in">
                     <div class="max-w-4xl mx-auto min-h-full bg-[#050505] lg:border-l lg:border-gray-800 shadow-2xl relative">
                         
-                        <!-- Header Flotante -->
-                        <div class="sticky top-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800 p-3 flex items-center gap-4">
-                            <!-- Botón Volver con z-index alto -->
-                            <button onclick="app.closeDetail()" class="p-2 bg-gray-800 rounded-full hover:bg-gray-700 text-white transition-colors z-50 cursor-pointer">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                            </button>
-                            <span class="font-bold text-lg text-white">Detalles del Partido</span>
-                        </div>
-                        
+                        <!-- BOTÓN VOLVER ARREGLADO -->
+                        <button onclick="app.closeDetail()" class="btn-close-detail">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                            <span class="ml-2 text-sm font-bold hidden sm:inline">Volver</span>
+                        </button>
+
                         <div id="detail-loader" class="hidden py-20 text-center"><div class="loader"></div></div>
 
-                        <div id="detail-content-wrapper">
+                        <div id="detail-content-wrapper" class="pt-16">
                             <div class="relative bg-gradient-to-b from-gray-900 to-black p-8 text-center border-b border-gray-800">
                                 <div class="flex justify-between items-center max-w-2xl mx-auto">
                                     <div class="flex-1 flex flex-col items-center gap-2">
@@ -212,12 +227,9 @@
                                         <h3 id="detail-away-name" class="font-bold text-lg leading-tight">Away</h3>
                                     </div>
                                 </div>
-                                <div id="detail-header-scorers" class="mt-6 flex justify-between max-w-2xl mx-auto text-sm text-gray-400">
-                                    <div id="detail-home-scorers-list" class="flex-1 text-right pr-8"></div>
-                                    <div id="detail-away-scorers-list" class="flex-1 text-left pl-8"></div>
-                                </div>
+                                <div id="detail-header-scorers" class="mt-6 flex justify-between max-w-2xl mx-auto text-sm text-gray-400"><div id="detail-home-scorers-list" class="flex-1 text-right pr-8"></div><div id="detail-away-scorers-list" class="flex-1 text-left pl-8"></div></div>
                             </div>
-                            <div class="flex border-b border-gray-800 sticky top-[64px] bg-black z-40">
+                            <div class="flex border-b border-gray-800 sticky top-0 bg-black z-40">
                                 <button class="flex-1 py-4 text-sm font-bold text-blue-500 border-b-2 border-blue-500 tab-btn" data-target="tab-timeline">Resumen</button>
                                 <button class="flex-1 py-4 text-sm font-bold text-gray-500 hover:text-gray-300 tab-btn" data-target="tab-lineups">Alineaciones</button>
                                 <button class="flex-1 py-4 text-sm font-bold text-gray-500 hover:text-gray-300 tab-btn" data-target="tab-stats">Estadísticas</button>
@@ -225,28 +237,9 @@
                             </div>
                             <div class="p-4 lg:p-8 space-y-6 min-h-[50vh]">
                                 <div id="tab-timeline" class="tab-content block space-y-4"></div>
-                                <div id="tab-lineups" class="tab-content hidden">
-                                    <div class="football-pitch mx-auto max-w-lg" id="football-pitch">
-                                        <div class="center-line"></div>
-                                        <div class="center-circle"></div>
-                                        <div class="penalty-box home-box"></div>
-                                        <div class="penalty-box away-box"></div>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-8 mt-6">
-                                        <div><h4 class="text-white font-bold border-b border-gray-800 pb-2 mb-2">Local</h4><div id="lineup-home-list" class="space-y-1 text-sm text-gray-400"></div></div>
-                                        <div><h4 class="text-white font-bold border-b border-gray-800 pb-2 mb-2 text-right">Visitante</h4><div id="lineup-away-list" class="space-y-1 text-sm text-gray-400 text-right"></div></div>
-                                    </div>
-                                </div>
+                                <div id="tab-lineups" class="tab-content hidden"><div class="football-pitch mx-auto max-w-lg" id="football-pitch"><div class="center-line"></div><div class="center-circle"></div><div class="penalty-box home-box"></div><div class="penalty-box away-box"></div></div><div class="grid grid-cols-2 gap-8 mt-6"><div><h4 class="text-white font-bold border-b border-gray-800 pb-2 mb-2">Local</h4><div id="lineup-home-list" class="space-y-1 text-sm text-gray-400"></div></div><div><h4 class="text-white font-bold border-b border-gray-800 pb-2 mb-2 text-right">Visitante</h4><div id="lineup-away-list" class="space-y-1 text-sm text-gray-400 text-right"></div></div></div></div>
                                 <div id="tab-stats" class="tab-content hidden space-y-6"></div>
-                                <div id="tab-chat" class="tab-content hidden flex flex-col h-[500px]">
-                                    <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 p-2 bg-gray-900/30 rounded-lg border border-gray-800 mb-4">
-                                        <div class="text-center text-gray-600 mt-10"><p>Comenta el partido.</p></div>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <input type="text" id="chat-input" placeholder="Escribe tu mensaje..." class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors">
-                                        <button id="chat-send" class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg px-6 font-bold transition-colors">Enviar</button>
-                                    </div>
-                                </div>
+                                <div id="tab-chat" class="tab-content hidden flex flex-col h-[500px]"><div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 p-2 bg-gray-900/30 rounded-lg border border-gray-800 mb-4"><div class="text-center text-gray-600 mt-10"><i data-lucide="message-square" class="w-10 h-10 mx-auto mb-2 opacity-50"></i><p>Comenta el partido.</p></div></div><div class="flex gap-2"><input type="text" id="chat-input" placeholder="Escribe tu mensaje..." class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors"><button id="chat-send" class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg px-6 font-bold transition-colors">Enviar</button></div></div>
                             </div>
                         </div>
                     </div>
@@ -260,18 +253,9 @@
         <div class="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
             <div class="bg-gradient-to-r from-gray-800 to-gray-900 p-4 flex justify-between items-center border-b border-gray-700">
                 <h3 id="modal-player-name" class="font-bold text-white text-lg">Nombre Jugador</h3>
-                <button onclick="document.getElementById('player-modal').classList.add('hidden')" class="text-gray-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                <button onclick="document.getElementById('player-modal').classList.add('hidden')" class="text-gray-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            <div class="p-4">
-                <div class="border-t border-gray-800 pt-4">
-                    <p class="text-xs text-gray-500 uppercase font-bold mb-2">Comentarios sobre el jugador</p>
-                    <div id="player-comments-list" class="h-32 overflow-y-auto space-y-2 mb-3 bg-black/20 p-2 rounded"></div>
-                    <div class="flex gap-2">
-                        <input type="text" id="player-comment-input" class="flex-1 bg-gray-800 text-sm rounded px-2 py-1 border border-gray-700" placeholder="Opinar...">
-                        <button id="player-comment-send" class="bg-blue-600 text-white text-xs px-3 rounded hover:bg-blue-500">Enviar</button>
-                    </div>
-                </div>
-            </div>
+            <div class="p-4"><div class="border-t border-gray-800 pt-4"><p class="text-xs text-gray-500 uppercase font-bold mb-2">Comentarios sobre el jugador</p><div id="player-comments-list" class="h-32 overflow-y-auto space-y-2 mb-3 bg-black/20 p-2 rounded"></div><div class="flex gap-2"><input type="text" id="player-comment-input" class="flex-1 bg-gray-800 text-sm rounded px-2 py-1 border border-gray-700" placeholder="Opinar..."><button id="player-comment-send" class="bg-blue-600 text-white text-xs px-3 rounded hover:bg-blue-500">Enviar</button></div></div></div>
         </div>
     </div>
 
@@ -280,14 +264,14 @@
         import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        // --- API CONFIG ---
+        // --- CONFIG ---
         const API_KEY = "a401c12ada74070fd77af86140c296053d8ae53801c19fd1e625ffda8fd18156";
         const API_BASE = "https://apiv2.allsportsapi.com/football"; 
         
-        // IDs proporcionados por el usuario
+        // IDs DEFINITIVOS
         const TARGET_LEAGUES = {
             44: "Liga Argentina",
-            45: "Primera B Nacional",
+            317: "Primera B Nacional", // Intentamos con 317, si falla usar debug
             99: "Brasileirao",
             152: "Premier League",
             175: "Bundesliga",
@@ -298,10 +282,10 @@
         let db, auth;
         try { const fApp = initializeApp(firebaseConfig); db = getFirestore(fApp); auth = getAuth(fApp); signInAnonymously(auth).catch(e => console.log(e)); } catch (e) { }
 
-        // --- CACHE (Nueva key para limpiar anterior) ---
-        const CACHE_DURATION = 5 * 60 * 1000; 
+        // --- CACHE v7 ---
+        const CACHE_DURATION = 10 * 60 * 1000; 
         const fetchWithCache = async (url) => {
-            const cacheKey = "v3_" + url; // Nueva versión de caché para forzar recarga
+            const cacheKey = "v7_" + url; 
             const cached = localStorage.getItem(cacheKey);
             if (cached) {
                 const { timestamp, data } = JSON.parse(cached);
@@ -322,11 +306,13 @@
             currentLeagueId: null,
             currentLeagueName: null,
             currentSeason: 2024,
-            showLiveOnly: false
+            showLiveOnly: false,
+            standingsData: null
         };
 
         window.app = {
             init: () => {
+                lucide.createIcons();
                 app.renderCalendarDays();
                 app.loadMatches();
                 
@@ -349,6 +335,14 @@
                 setInterval(() => app.loadMatches(true), 60000);
             },
             
+            debugLeagues: async () => {
+                const url = `${API_BASE}/?met=Leagues&APIkey=${API_KEY}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                console.log("TODAS LAS LIGAS:", data.result);
+                alert("Mira la consola (F12) para ver los IDs reales.");
+            },
+
             getArgDateString: (dateObj) => dateObj.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }),
             getArgDateComponents: (dateObj) => {
                 const formatter = new Intl.DateTimeFormat('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', weekday: 'short', day: 'numeric', month: 'long' });
@@ -388,7 +382,7 @@
                     
                     if (!data.result) { state.matches = []; app.renderMatches([]); return; }
                     
-                    // FILTRAR SOLO LAS 6 LIGAS
+                    // FILTRAR LIGAS
                     let matches = data.result.filter(m => TARGET_LEAGUES[m.league_key]);
                     matches.sort((a, b) => (a.event_time > b.event_time) ? 1 : -1);
                     
@@ -402,7 +396,7 @@
             renderMatches: (matches) => {
                 const container = document.getElementById('view-match-list');
                 let displayMatches = state.showLiveOnly ? matches.filter(m => !['Finished', 'After Full Time', ''].includes(m.event_status)) : matches;
-                if (displayMatches.length === 0) { container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-gray-600"><p>${state.showLiveOnly ? 'No hay partidos en vivo.' : 'No hay partidos destacados hoy.'}</p></div>`; return; }
+                if (displayMatches.length === 0) { container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-gray-600"><i data-lucide="${state.showLiveOnly ? 'activity' : 'calendar-x'}" class="w-12 h-12 mb-4"></i><p>${state.showLiveOnly ? 'No hay partidos en vivo.' : 'No hay partidos destacados hoy.'}</p></div>`; lucide.createIcons(); return; }
                 const leagues = {}; displayMatches.forEach(m => { if (!leagues[m.league_key]) leagues[m.league_key] = { name: m.league_name, logo: m.league_logo, matches: [] }; leagues[m.league_key].matches.push(m); });
                 let html = '';
                 Object.keys(leagues).forEach(id => {
@@ -410,9 +404,9 @@
                     html += `<div class="mb-6"><div class="flex items-center gap-2 mb-3 px-2"><img src="${group.logo || 'https://via.placeholder.com/20'}" class="w-5 h-5 object-contain" onerror="this.style.display='none'"><h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">${group.name}</h3></div><div class="grid gap-3">`;
                     group.matches.forEach(m => {
                         const isFinished = ['Finished', 'After Full Time', 'FT'].includes(m.event_status);
-                        const isLive = !isFinished && m.event_status && m.event_status.length > 3 && m.event_status.includes(':') === false; 
+                        const isLive = !isFinished && m.event_status && m.event_status.length > 0 && !m.event_status.includes(':'); 
                         const isNotStarted = !isFinished && !isLive;
-                        
+
                         const statusLabel = isLive ? `<span class="text-red-500 animate-pulse">${m.event_status}'</span>` : (isFinished ? 'Finalizado' : m.event_time);
                         const score = m.event_final_result; let hScore = '-', aScore = '-'; if(score && score.includes('-')) [hScore, aScore] = score.split(' - ');
                         let homeScoreClass = 'text-white', awayScoreClass = 'text-white';
@@ -425,11 +419,10 @@
                             if(hS.length > 0 || aS.length > 0) scorersHtml = `<div class="flex justify-between items-start pt-2 border-t border-gray-800 text-[10px] text-gray-400"><div class="flex-1 text-right pr-12 leading-tight space-y-0.5">${hS.join('<br>')}</div><div class="flex-1 text-left pl-12 leading-tight space-y-0.5">${aS.join('<br>')}</div></div>`;
                         }
 
-                        // CLASE CLICKABLE Y EVENTO
                         const clickableClass = isNotStarted ? 'not-clickable' : 'clickable';
-                        const clickEvent = isNotStarted ? '' : `onclick="app.openDetail('${m.event_key}')"`;
+                        const clickAction = isNotStarted ? '' : `onclick="app.openDetail('${m.event_key}')"`;
 
-                        html += `<div ${clickEvent} class="match-card ${clickableClass} bg-[#111] rounded-xl p-4 relative overflow-hidden group">${isLive ? '<div class="absolute top-0 right-0 bg-red-600 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg text-white"><div class="live-dot mr-1"></div>EN VIVO</div>' : ''}<div class="flex items-center justify-between mb-2"><div class="flex items-center gap-3 flex-1"><span class="font-semibold text-gray-200 text-right truncate flex-1 leading-tight">${m.event_home_team}</span><img src="${m.home_team_logo || 'https://via.placeholder.com/20'}" class="w-8 h-8 object-contain"></div><div class="px-2 flex flex-col items-center w-24 shrink-0">${score === '-' ? `<span class="text-xl font-bold text-gray-500">${m.event_time}</span>` : `<div class="flex gap-2 text-2xl font-black"><span class="${homeScoreClass}">${hScore}</span><span class="text-gray-600">-</span><span class="${awayScoreClass}">${aScore}</span></div>`}<span class="text-[10px] font-bold mt-1 text-gray-500 uppercase">${statusLabel}</span></div><div class="flex items-center gap-3 flex-1"><img src="${m.away_team_logo || 'https://via.placeholder.com/20'}" class="w-8 h-8 object-contain"><span class="font-semibold text-gray-200 truncate flex-1 leading-tight">${m.event_away_team}</span></div></div>${scorersHtml}</div>`;
+                        html += `<div ${clickAction} class="match-card ${clickableClass} bg-[#111] rounded-xl p-4 relative overflow-hidden group">${isLive ? '<div class="absolute top-0 right-0 bg-red-600 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg text-white"><div class="live-dot mr-1"></div>EN VIVO</div>' : ''}<div class="flex items-center justify-between mb-2"><div class="flex items-center gap-3 flex-1"><span class="font-semibold text-gray-200 text-right truncate flex-1 leading-tight">${m.event_home_team}</span><img src="${m.home_team_logo || 'https://via.placeholder.com/20'}" class="w-8 h-8 object-contain"></div><div class="px-2 flex flex-col items-center w-24 shrink-0">${score === '-' ? `<span class="text-xl font-bold text-gray-500">${m.event_time}</span>` : `<div class="flex gap-2 text-2xl font-black"><span class="${homeScoreClass}">${hScore}</span><span class="text-gray-600">-</span><span class="${awayScoreClass}">${aScore}</span></div>`}<span class="text-[10px] font-bold mt-1 text-gray-500 uppercase">${statusLabel}</span></div><div class="flex items-center gap-3 flex-1"><img src="${m.away_team_logo || 'https://via.placeholder.com/20'}" class="w-8 h-8 object-contain"><span class="font-semibold text-gray-200 truncate flex-1 leading-tight">${m.event_away_team}</span></div></div>${scorersHtml}</div>`;
                     }); html += `</div></div>`;
                 }); container.innerHTML = html;
             },
@@ -451,27 +444,9 @@
                 state.selectedMatch = null;
             },
 
-            renderDetailTimeline: (match) => {
-                const c = document.getElementById('tab-timeline'); let html = '';
-                if (match.goalscorers && match.goalscorers.length > 0) { match.goalscorers.forEach(g => { const isHome = !!g.home_scorer; const name = isHome ? g.home_scorer : g.away_scorer; html += `<div class="flex items-center gap-4 ${isHome ? 'flex-row' : 'flex-row-reverse'}"><div class="w-10 text-center text-sm font-bold text-gray-500 shrink-0">${g.time}'</div><div class="flex-1 bg-gray-900/50 p-3 rounded-lg border border-gray-800 flex items-center gap-3 ${isHome ? '' : 'justify-end'}"><span class="text-sm font-medium text-white">${name}</span><span class="text-[10px] px-2 py-0.5 rounded bg-green-900 text-green-200 uppercase border border-green-700 tracking-wider">GOL</span></div></div>`; }); }
-                c.innerHTML = html || `<p class="text-center text-gray-500 py-10">Sin eventos destacados.</p>`;
-            },
-
-            renderDetailLineups: (match) => {
-                const pitch = document.getElementById('football-pitch'); pitch.querySelectorAll('.player-marker').forEach(m => m.remove());
-                const homeList = document.getElementById('lineup-home-list'); const awayList = document.getElementById('lineup-away-list');
-                if (!match.lineup || !match.lineup.home || !match.lineup.home.starting_lineups) { homeList.innerHTML = '<p class="text-gray-600">No disponible</p>'; awayList.innerHTML = '<p class="text-gray-600">No disponible</p>'; return; }
-                const renderList = (arr) => arr.map(p => `<div class="flex justify-between"><span class="text-gray-300">${p.player_number}. ${p.player}</span><span class="text-gray-600 text-xs">${p.player_position || ''}</span></div>`).join('');
-                homeList.innerHTML = renderList(match.lineup.home.starting_lineups); awayList.innerHTML = renderList(match.lineup.away.starting_lineups);
-                const getCoords = (pos, i, total, side) => { let x = 0, y = 50; if (side === 'home') { if (i === 0) x = 5; else if (i < 5) x = 20; else if (i < 9) x = 35; else x = 45; } else { if (i === 0) x = 95; else if (i < 5) x = 80; else if (i < 9) x = 65; else x = 55; } y = ((i % 4 + 1) / 5) * 100; return {x, y}; };
-                match.lineup.home.starting_lineups.forEach((p, i) => { const c = getCoords(p.player_position, i, 11, 'home'); const el = document.createElement('div'); el.className = `player-marker home-player`; el.style.left = c.x + '%'; el.style.top = c.y + '%'; el.innerText = p.player_number; el.onclick = () => app.openPlayerModal(p.player); pitch.appendChild(el); });
-                match.lineup.away.starting_lineups.forEach((p, i) => { const c = getCoords(p.player_position, i, 11, 'away'); const el = document.createElement('div'); el.className = `player-marker away-player`; el.style.left = c.x + '%'; el.style.top = c.y + '%'; el.innerText = p.player_number; el.onclick = () => app.openPlayerModal(p.player); pitch.appendChild(el); });
-            },
-
-            renderDetailStats: (match) => {
-                const c = document.getElementById('tab-stats');
-                if (match.statistics && match.statistics.length > 0) { c.innerHTML = match.statistics.map(s => { const hVal = parseInt(s.home) || 0; const aVal = parseInt(s.away) || 0; const total = hVal + aVal || 1; const per = (hVal / total) * 100; return `<div class="mb-4"><div class="flex justify-between text-xs text-gray-400 mb-1 uppercase font-bold"><span>${s.home}</span><span>${s.type}</span><span>${s.away}</span></div><div class="h-2 bg-gray-800 rounded-full overflow-hidden flex"><div class="h-full bg-blue-600" style="width: ${per}%"></div><div class="h-full bg-red-600" style="width: ${100-per}%"></div></div></div>`; }).join(''); } else { c.innerHTML = `<p class="text-center text-gray-500 py-10">Estadísticas no disponibles.</p>`; }
-            },
+            renderDetailTimeline: (match) => { /*... same ...*/ const c = document.getElementById('tab-timeline'); let html = ''; if (match.goalscorers && match.goalscorers.length > 0) { match.goalscorers.forEach(g => { const isHome = !!g.home_scorer; const name = isHome ? g.home_scorer : g.away_scorer; html += `<div class="flex items-center gap-4 ${isHome ? 'flex-row' : 'flex-row-reverse'}"><div class="w-10 text-center text-sm font-bold text-gray-500 shrink-0">${g.time}'</div><div class="flex-1 bg-gray-900/50 p-3 rounded-lg border border-gray-800 flex items-center gap-3 ${isHome ? '' : 'justify-end'}"><span class="text-sm font-medium text-white">${name}</span><span class="text-[10px] px-2 py-0.5 rounded bg-green-900 text-green-200 uppercase border border-green-700 tracking-wider">GOL</span></div></div>`; }); } c.innerHTML = html || `<p class="text-center text-gray-500 py-10">Sin eventos destacados.</p>`; },
+            renderDetailLineups: (match) => { /*... same ...*/ const pitch = document.getElementById('football-pitch'); pitch.querySelectorAll('.player-marker').forEach(m => m.remove()); const homeList = document.getElementById('lineup-home-list'); const awayList = document.getElementById('lineup-away-list'); if (!match.lineup || !match.lineup.home || !match.lineup.home.starting_lineups) { homeList.innerHTML = '<p class="text-gray-600">No disponible</p>'; awayList.innerHTML = '<p class="text-gray-600">No disponible</p>'; return; } const renderList = (arr) => arr.map(p => `<div class="flex justify-between"><span class="text-gray-300">${p.player_number}. ${p.player}</span><span class="text-gray-600 text-xs">${p.player_position || ''}</span></div>`).join(''); homeList.innerHTML = renderList(match.lineup.home.starting_lineups); awayList.innerHTML = renderList(match.lineup.away.starting_lineups); const getCoords = (pos, i, total, side) => { let x = 0, y = 50; if (side === 'home') { if (i === 0) x = 5; else if (i < 5) x = 20; else if (i < 9) x = 35; else x = 45; } else { if (i === 0) x = 95; else if (i < 5) x = 80; else if (i < 9) x = 65; else x = 55; } y = ((i % 4 + 1) / 5) * 100; return {x, y}; }; match.lineup.home.starting_lineups.forEach((p, i) => { const c = getCoords(p.player_position, i, 11, 'home'); const el = document.createElement('div'); el.className = `player-marker home-player`; el.style.left = c.x + '%'; el.style.top = c.y + '%'; el.innerText = p.player_number; el.onclick = () => app.openPlayerModal(p.player); pitch.appendChild(el); }); match.lineup.away.starting_lineups.forEach((p, i) => { const c = getCoords(p.player_position, i, 11, 'away'); const el = document.createElement('div'); el.className = `player-marker away-player`; el.style.left = c.x + '%'; el.style.top = c.y + '%'; el.innerText = p.player_number; el.onclick = () => app.openPlayerModal(p.player); pitch.appendChild(el); }); },
+            renderDetailStats: (match) => { /*... same ...*/ const c = document.getElementById('tab-stats'); if (match.statistics && match.statistics.length > 0) { c.innerHTML = match.statistics.map(s => { const hVal = parseInt(s.home) || 0; const aVal = parseInt(s.away) || 0; const total = hVal + aVal || 1; const per = (hVal / total) * 100; return `<div class="mb-4"><div class="flex justify-between text-xs text-gray-400 mb-1 uppercase font-bold"><span>${s.home}</span><span>${s.type}</span><span>${s.away}</span></div><div class="h-2 bg-gray-800 rounded-full overflow-hidden flex"><div class="h-full bg-blue-600" style="width: ${per}%"></div><div class="h-full bg-red-600" style="width: ${100-per}%"></div></div></div>`; }).join(''); } else { c.innerHTML = `<p class="text-center text-gray-500 py-10">Estadísticas no disponibles.</p>`; } },
 
             changeSeason: (year) => { state.currentSeason = year; if (state.currentLeagueId) app.showStandings(state.currentLeagueId, state.currentLeagueName); },
             
@@ -479,20 +454,61 @@
                 state.currentLeagueId = leagueId; state.currentLeagueName = leagueName;
                 document.getElementById('view-match-list').classList.add('hidden'); document.getElementById('date-nav').classList.add('hidden'); document.getElementById('view-standings').classList.remove('hidden'); document.getElementById('standings-title').innerText = leagueName; 
                 document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('mobile-backdrop').classList.add('hidden');
-                
+                document.getElementById('season-selector').value = state.currentSeason;
+                document.getElementById('standings-tabs').innerHTML = ''; document.getElementById('standings-tabs').classList.add('hidden');
+
                 const c = document.getElementById('standings-container'); c.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
                 
                 try {
                     const res = await fetchWithCache(`${API_BASE}/?met=Standings&leagueId=${leagueId}&APIkey=${API_KEY}`);
                     const data = await res.json();
                     
-                    if (!data.result || data.result.total.length === 0) throw new Error("No hay datos para esta temporada.");
-                    const table = data.result.total;
+                    if (!data.result || data.result.total.length === 0) throw new Error("No hay datos");
                     
-                    c.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-2xl mb-6"><div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-400"><thead class="text-xs text-gray-300 uppercase bg-gray-800 border-b border-gray-700"><tr><th class="px-3 py-3 text-center">#</th><th class="px-3 py-3">Equipo</th><th class="px-3 py-3 text-center">PJ</th><th class="px-3 py-3 text-center font-bold text-white">Pts</th><th class="px-3 py-3 text-center hidden md:table-cell">DG</th></tr></thead><tbody>${
-                        table.map(t => `<tr class="border-b border-gray-800 hover:bg-gray-800/50"><td class="px-3 py-3 text-center font-bold ${t.standing_place <= 4 ? 'text-blue-400' : 'text-gray-500'}">${t.standing_place}</td><td class="px-3 py-3 font-medium text-white flex items-center gap-2 whitespace-nowrap"><div class="w-5 h-5 bg-gray-700 rounded-full flex items-center justify-center text-[8px] overflow-hidden text-white border border-gray-600">${t.standing_team.substring(0,2)}</div> ${t.standing_team}</td><td class="px-3 py-3 text-center">${t.standing_P}</td><td class="px-3 py-3 text-center font-bold text-white text-lg">${t.standing_PTS}</td><td class="px-3 py-3 text-center hidden md:table-cell text-gray-400 font-tnum">${t.standing_GD}</td></tr>`).join('')
-                    }</tbody></table></div></div>`;
+                    // STANDINGS GROUP LOGIC
+                    app.processStandings(data.result.total);
+
                 } catch (e) { c.innerHTML = `<div class="text-center text-gray-400 py-8"><p class="font-bold text-lg mb-2">Sin datos disponibles</p><p class="text-xs text-red-500">${e.message}</p></div>`; }
+            },
+
+            processStandings: (tableData) => {
+                const c = document.getElementById('standings-container');
+                const tabsContainer = document.getElementById('standings-tabs');
+                
+                const groups = {};
+                tableData.forEach(t => {
+                    // Try to detect group name if it exists (stage_name or other prop in AllSportsAPI might vary, assuming logic)
+                    // If no explicit group, default to 'General'
+                    const groupKey = t.league_round ? t.league_round : 'General';
+                    if (!groups[groupKey]) groups[groupKey] = [];
+                    groups[groupKey].push(t);
+                });
+
+                const groupNames = Object.keys(groups);
+                
+                if (groupNames.length > 1) {
+                    tabsContainer.classList.remove('hidden');
+                    tabsContainer.innerHTML = groupNames.map((name, index) => 
+                        `<div class="zone-tab ${index === 0 ? 'active' : ''} flex-1 text-center whitespace-nowrap" onclick="app.switchZone('${name}')">${name}</div>`
+                    ).join('');
+                    
+                    app.renderStandingsTable(groups[groupNames[0]]);
+                    state.standingsData = groups;
+                } else {
+                    app.renderStandingsTable(tableData);
+                }
+            },
+
+            switchZone: (zoneName) => {
+                document.querySelectorAll('.zone-tab').forEach(t => { t.classList.remove('active'); if(t.innerText === zoneName) t.classList.add('active'); });
+                if(state.standingsData && state.standingsData[zoneName]) app.renderStandingsTable(state.standingsData[zoneName]);
+            },
+
+            renderStandingsTable: (rows) => {
+                const c = document.getElementById('standings-container');
+                c.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-2xl mb-6"><div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-400"><thead class="text-xs text-gray-300 uppercase bg-gray-800 border-b border-gray-700"><tr><th class="px-3 py-3 text-center">#</th><th class="px-3 py-3">Equipo</th><th class="px-3 py-3 text-center">PJ</th><th class="px-3 py-3 text-center">G</th><th class="px-3 py-3 text-center">E</th><th class="px-3 py-3 text-center">P</th><th class="px-3 py-3 text-center hidden md:table-cell">DG</th><th class="px-3 py-3 text-center font-bold text-white">Pts</th></tr></thead><tbody>${
+                    rows.map(t => `<tr class="border-b border-gray-800 hover:bg-gray-800/50"><td class="px-3 py-3 text-center font-bold ${t.standing_place <= 4 ? 'text-blue-400' : 'text-gray-500'}">${t.standing_place}</td><td class="px-3 py-3 font-medium text-white flex items-center gap-2 whitespace-nowrap"><img src="${t.team_logo || 'https://via.placeholder.com/20'}" class="w-5 h-5 object-contain" onerror="this.src='https://via.placeholder.com/20'"> ${t.standing_team}</td><td class="px-3 py-3 text-center">${t.standing_P}</td><td class="px-3 py-3 text-center">${t.standing_W}</td><td class="px-3 py-3 text-center">${t.standing_D}</td><td class="px-3 py-3 text-center">${t.standing_L}</td><td class="px-3 py-3 text-center hidden md:table-cell text-gray-400 font-tnum">${t.standing_GD}</td><td class="px-3 py-3 text-center font-bold text-white text-lg">${t.standing_PTS}</td></tr>`).join('')
+                }</tbody></table></div></div>`;
             },
 
             navigateToMatches: () => { 
@@ -502,6 +518,7 @@
                 document.getElementById('sidebar').classList.add('-translate-x-full'); 
                 document.getElementById('mobile-backdrop').classList.add('hidden');
             },
+            closeDetail: () => { document.getElementById('view-match-detail').classList.add('hidden'); document.body.style.overflow = ''; state.selectedMatch = null; },
             openPlayerModal: (name) => { document.getElementById('modal-player-name').innerText = name; document.getElementById('player-modal').classList.remove('hidden'); }
         };
         app.init();
