@@ -13,10 +13,9 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, onSnapshot, setDoc, updateDoc, increment, getDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Configuración proporcionada
         const firebaseConfig = {
             apiKey: "AIzaSyDiRY9xyTiQWeJuFCjU7CTBDWcJxDUcVVo",
             authDomain: "real-futbol-950e9.firebaseapp.com",
@@ -32,10 +31,11 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Exponer globalmente para usar en la app
+        // Exponer globalmente
         window.firebaseDB = db;
         window.firebaseAuth = auth;
         window.firebaseLogin = signInAnonymously;
+        window.firebaseAuthListener = onAuthStateChanged;
         window.firebaseMethods = { collection, doc, addDoc, onSnapshot, setDoc, updateDoc, increment, getDoc, serverTimestamp, query, orderBy };
     </script>
 
@@ -145,8 +145,45 @@
         /* Backdrop Móvil */
         .mobile-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 40; backdrop-filter: blur(4px); }
 
-        /* Chat Styles */
-        .chat-bubble { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; line-height: 1.3; position: relative; word-wrap: break-word; }
+        /* Chat Styles - BOTTOM SHEET */
+        #chat-modal {
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #chat-modal.hidden {
+            transform: translateY(100%);
+        }
+        
+        /* Mobile: Bottom Sheet */
+        .chat-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 75vh;
+            background-color: #050505;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            border-top: 1px solid #333;
+            z-index: 80;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+        }
+        
+        /* Desktop: Floating Side Panel */
+        @media (min-width: 1024px) {
+            .chat-container {
+                right: 20px;
+                left: auto;
+                bottom: 20px;
+                width: 400px;
+                height: 600px;
+                border-radius: 12px;
+                border: 1px solid #333;
+            }
+        }
+
+        .chat-bubble { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; line-height: 1.3; position: relative; word-wrap: break-word; }
         .chat-own { background-color: #fff; color: #000; align-self: flex-end; border-bottom-right-radius: 2px; }
         .chat-other { background-color: #222; color: #fff; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid #333; }
         .chat-name { font-size: 0.65rem; margin-bottom: 2px; opacity: 0.7; font-weight: bold; }
@@ -157,21 +194,14 @@
 
     <!-- HEADER SIMÉTRICO -->
     <header class="h-14 border-b border-[#222] bg-black flex items-center justify-between px-4 z-40 shrink-0 relative">
-        <!-- Izquierda: Menú -->
         <div class="flex items-center w-12">
             <button id="mobile-menu-btn" class="text-white p-1 rounded hover:bg-[#222]">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
         </div>
-
-        <!-- Centro: Logo (Absoluto para simetría perfecta) -->
         <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center cursor-pointer" onclick="window.location.reload()">
-    <img src="https://i.postimg.cc/pL6B4Mpr/real-futbol-removebg-preview.png" 
-         alt="Real Futbol Logo" 
-         class="h-14 object-contain ml-10">
+            <img src="https://i.postimg.cc/pL6B4Mpr/real-futbol-removebg-preview.png" alt="Real Futbol Logo" class="h-14 object-contain ml-10">
         </div>
-
-        <!-- Derecha: Toggle -->
         <div class="flex items-center justify-end w-12">
             <div class="relative inline-block w-8 h-5 align-middle select-none">
                 <input type="checkbox" id="live-toggle" class="toggle-checkbox absolute block w-3 h-3 mt-1 ml-1 rounded-full bg-white border-none appearance-none cursor-pointer transition-all duration-300 left-0"/>
@@ -183,8 +213,9 @@
     <div class="flex flex-1 overflow-hidden relative">
         
         <div id="mobile-backdrop" class="mobile-backdrop hidden lg:hidden"></div>
+        <div id="chat-backdrop" class="mobile-backdrop hidden" onclick="app.closeChat()"></div>
 
-        <!-- Sidebar B&W -->
+        <!-- Sidebar -->
         <aside id="sidebar" class="fixed inset-y-0 left-0 w-[280px] bg-black border-r border-[#222] flex flex-col transform -translate-x-full lg:translate-x-0 lg:static lg:w-72 transition-transform duration-300 z-50 h-full shadow-2xl">
             <div class="p-5 border-b border-[#222] flex justify-between items-center lg:hidden">
                 <h2 class="font-bold text-white text-lg uppercase tracking-widest font-sport">Menu</h2>
@@ -193,49 +224,17 @@
             
             <div class="overflow-y-auto flex-1 p-3 space-y-1">
                 <div class="px-3 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Competiciones</div>
-                
-                <!-- Botones de Ligas (IDs Correctos API-Sports) -->
-                <button onclick="app.showStandings(128, 'Liga Profesional')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/128.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-bold">Liga Argentina</span>
-                </button>
-                
-                <button onclick="app.showStandings(1032, 'Copa de la Liga')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/1032.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-bold">Copa de la Liga</span>
-                </button>
-
-                <button onclick="app.showStandings(129, 'Primera Nacional')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/129.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-bold">Primera Nacional</span>
-                </button>
-
-                <button onclick="app.showStandings(71, 'Brasileirão')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/71.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-bold">Brasileirão A</span>
-                </button>
-
+                <button onclick="app.showStandings(128, 'Liga Profesional')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all"><img src="https://media.api-sports.io/football/leagues/128.png" class="w-5 h-5 object-contain"><span class="text-sm font-bold">Liga Argentina</span></button>
+                <button onclick="app.showStandings(1032, 'Copa de la Liga')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all"><img src="https://media.api-sports.io/football/leagues/1032.png" class="w-5 h-5 object-contain"><span class="text-sm font-bold">Copa de la Liga</span></button>
+                <button onclick="app.showStandings(129, 'Primera Nacional')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all"><img src="https://media.api-sports.io/football/leagues/129.png" class="w-5 h-5 object-contain"><span class="text-sm font-bold">Primera Nacional</span></button>
+                <button onclick="app.showStandings(71, 'Brasileirão')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all"><img src="https://media.api-sports.io/football/leagues/71.png" class="w-5 h-5 object-contain"><span class="text-sm font-bold">Brasileirão A</span></button>
                 <div class="my-2 border-t border-[#222]"></div>
-                
-                <button onclick="app.showStandings(39, 'Premier League')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/39.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-bold">Premier League</span>
-                </button>
-
-                <button onclick="app.showStandings(140, 'La Liga')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/140.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-bold">La Liga</span>
-                </button>
-
-                <button onclick="app.showStandings(78, 'Bundesliga')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/78.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-bold">Bundesliga</span>
-                </button>
+                <button onclick="app.showStandings(39, 'Premier League')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all"><img src="https://media.api-sports.io/football/leagues/39.png" class="w-5 h-5 object-contain"><span class="text-sm font-bold">Premier League</span></button>
+                <button onclick="app.showStandings(140, 'La Liga')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all"><img src="https://media.api-sports.io/football/leagues/140.png" class="w-5 h-5 object-contain"><span class="text-sm font-bold">La Liga</span></button>
+                <button onclick="app.showStandings(78, 'Bundesliga')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all"><img src="https://media.api-sports.io/football/leagues/78.png" class="w-5 h-5 object-contain"><span class="text-sm font-bold">Bundesliga</span></button>
 
                 <div class="mt-8 px-2">
-                    <button onclick="app.navigateToMatches()" class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg">
-                        Partidos de Hoy
-                    </button>
+                    <button onclick="app.navigateToMatches()" class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg">Partidos de Hoy</button>
                 </div>
             </div>
         </aside>
@@ -257,11 +256,9 @@
             </div>
 
             <div id="main-content" class="flex-1 overflow-y-auto p-4 relative scroll-smooth">
-                
-                <!-- Match List -->
                 <div id="view-match-list" class="max-w-3xl mx-auto space-y-6 animate-fade-in pb-24"></div>
 
-                <!-- Standings View -->
+                <!-- Standings -->
                 <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-24">
                     <div class="flex flex-col gap-4 mb-6 sticky top-0 z-20 bg-black/95 backdrop-blur py-2 border-b border-[#222]">
                         <div class="flex items-center justify-between px-1">
@@ -275,26 +272,17 @@
                                 <option value="2023">2023</option>
                             </select>
                         </div>
-                        <!-- Tabs Zonas -->
                         <div id="standings-tabs" class="flex overflow-x-auto gap-2 px-1 no-scrollbar hidden"></div>
                     </div>
-                    
                     <div id="standings-container" class="space-y-6"></div>
                 </div>
 
                 <!-- Match Detail Overlay -->
                 <div id="view-match-detail" class="hidden fixed inset-0 bg-black z-[60] overflow-y-auto animate-fade-in">
                     <div class="max-w-4xl mx-auto min-h-full bg-[#050505] relative">
-                        
-                        <!-- Botón Volver Flotante -->
-                        <button onclick="app.closeDetail()" class="btn-float-back hover:bg-[#222] transition-all">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                        </button>
-
+                        <button onclick="app.closeDetail()" class="btn-float-back hover:bg-[#222] transition-all"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                         <div id="detail-loader" class="hidden py-40 text-center"><div class="loader"></div></div>
-
                         <div id="detail-content-wrapper" class="pt-16 pb-20">
-                            <!-- Scoreboard -->
                             <div class="relative p-6 text-center border-b border-[#222] bg-[#0a0a0a]">
                                 <div class="flex justify-between items-center max-w-md mx-auto">
                                     <div class="flex-1 flex flex-col items-center gap-3">
@@ -303,9 +291,7 @@
                                     </div>
                                     <div class="px-4 flex flex-col items-center">
                                         <div class="text-4xl font-black text-white tracking-tighter flex items-center gap-2 score-font">
-                                            <span id="detail-home-score">-</span>
-                                            <span class="text-gray-600 text-2xl">:</span>
-                                            <span id="detail-away-score">-</span>
+                                            <span id="detail-home-score">-</span><span class="text-gray-600 text-2xl">:</span><span id="detail-away-score">-</span>
                                         </div>
                                         <div id="detail-status" class="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">VS</div>
                                     </div>
@@ -314,33 +300,25 @@
                                         <h3 id="detail-away-name" class="font-bold text-sm leading-tight text-white uppercase">Away</h3>
                                     </div>
                                 </div>
-                                
                                 <div id="detail-header-scorers" class="mt-6 flex justify-between max-w-md mx-auto text-xs text-gray-500 font-mono border-t border-[#222] pt-4">
                                     <div id="detail-home-scorers-list" class="flex-1 text-right pr-4 space-y-1"></div>
                                     <div id="detail-away-scorers-list" class="flex-1 text-left pl-4 space-y-1"></div>
                                 </div>
                             </div>
-
-                            <!-- Tabs -->
                             <div class="flex border-b border-[#222] sticky top-[57px] bg-black/95 backdrop-blur z-30 overflow-x-auto no-scrollbar">
                                 <button class="flex-1 py-3 px-4 text-xs font-bold text-white border-b-2 border-white tab-btn whitespace-nowrap uppercase" data-target="tab-timeline">Timeline</button>
                                 <button class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase" data-target="tab-lineups">Alineaciones</button>
                                 <button class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase" data-target="tab-stats">Stats</button>
                             </div>
-
                             <div class="p-4 lg:p-8 space-y-6 min-h-[50vh]">
                                 <div id="tab-timeline" class="tab-content block space-y-4 max-w-2xl mx-auto"></div>
-                                
                                 <div id="tab-lineups" class="tab-content hidden max-w-2xl mx-auto">
-                                    <div class="football-pitch mx-auto" id="football-pitch">
-                                        <div class="center-line"></div><div class="center-circle"></div><div class="penalty-box home-box"></div><div class="penalty-box away-box"></div>
-                                    </div>
+                                    <div class="football-pitch mx-auto" id="football-pitch"><div class="center-line"></div><div class="center-circle"></div><div class="penalty-box home-box"></div><div class="penalty-box away-box"></div></div>
                                     <div class="grid grid-cols-2 gap-4 mt-6">
                                         <div class="bg-[#111] p-4 rounded border border-[#222]"><h4 class="text-white font-bold border-b border-[#333] pb-2 mb-2 text-xs uppercase tracking-wider">Local</h4><div id="lineup-home-list" class="space-y-2 text-xs text-gray-400 font-mono"></div></div>
                                         <div class="bg-[#111] p-4 rounded border border-[#222]"><h4 class="text-white font-bold border-b border-[#333] pb-2 mb-2 text-right text-xs uppercase tracking-wider">Visitante</h4><div id="lineup-away-list" class="space-y-2 text-xs text-gray-400 text-right font-mono"></div></div>
                                     </div>
                                 </div>
-                                
                                 <div id="tab-stats" class="tab-content hidden space-y-4 max-w-xl mx-auto"></div>
                             </div>
                         </div>
@@ -365,19 +343,19 @@
         </div>
     </div>
 
-    <!-- Chat Modal -->
-    <div id="chat-modal" class="fixed inset-0 bg-black z-[80] hidden flex flex-col animate-fade-in">
+    <!-- Chat Modal (Bottom Sheet Style) -->
+    <div id="chat-modal" class="hidden chat-container z-[80]">
         <!-- Chat Header -->
-        <div class="bg-[#111] border-b border-[#333] p-3 flex items-center justify-between shrink-0 shadow-xl z-20">
+        <div class="bg-[#111] border-b border-[#333] p-3 flex items-center justify-between shrink-0 shadow-xl rounded-t-xl cursor-pointer" onclick="app.closeChat()">
             <div class="flex items-center gap-3">
-                <button onclick="app.closeChat()" class="p-2 text-white hover:bg-[#222] rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                <button onclick="app.closeChat(); event.stopPropagation()" class="p-2 text-white hover:bg-[#222] rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                 </button>
                 <div>
-                    <h3 id="chat-match-title" class="font-bold text-white text-sm uppercase">Foro en Vivo</h3>
+                    <h3 id="chat-match-title" class="font-bold text-white text-xs uppercase">Foro en Vivo</h3>
                     <div class="flex items-center gap-1.5">
-                        <span class="live-dot w-2 h-2 bg-green-500"></span>
-                        <span class="text-[10px] text-gray-400 uppercase tracking-widest">En directo</span>
+                        <span class="live-dot w-1.5 h-1.5 bg-green-500"></span>
+                        <span class="text-[9px] text-gray-400 uppercase tracking-widest">En directo</span>
                     </div>
                 </div>
             </div>
@@ -392,7 +370,7 @@
         <div class="bg-[#111] border-t border-[#333] p-3 shrink-0 pb-safe">
             <form id="chat-form" onsubmit="app.sendMessage(event)" class="flex gap-2">
                 <input type="text" id="chat-input" class="flex-1 bg-[#050505] border border-[#333] rounded-full px-4 py-3 text-sm text-white focus:outline-none focus:border-white transition-colors" placeholder="Escribe un comentario..." autocomplete="off">
-                <button type="submit" class="bg-white text-black rounded-full w-12 h-12 flex items-center justify-center font-bold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="submit" id="chat-send-btn" class="bg-white text-black rounded-full w-12 h-12 flex items-center justify-center font-bold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transform rotate-90 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                 </button>
             </form>
@@ -409,19 +387,12 @@
         </div>
     </div>
 
-    <script type="module">
-        // Importar APIs desde el bloque superior si fuera necesario, pero ya están en window
-    </script>
-
     <script>
-        // --- CONFIGURACIÓN API-SPORTS ---
         const API_KEY = "1d6013be5112e78ac0ee1c138fbad117";
         const BACKUP_KEY = "8f6b9c9d9c9d9c9d9c9d9c9d9c9d9c9d"; 
         const API_BASE = "https://v3.football.api-sports.io";
         const CACHE_TIME = 10 * 60 * 1000;
-        
-        // APP ID INTERNAL
-        const APP_ID = 'real-futbol-v1';
+        const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'real-futbol-v1';
 
         const fetchAPI = async (endpoint) => {
             const cacheKey = "bw_v3_" + endpoint;
@@ -436,13 +407,11 @@
             let data = await res.json();
 
             if(data.message && data.message.includes("quota")) {
-                console.warn("Cupo agotado, usando respaldo...");
                 res = await fetch(`${API_BASE}${endpoint}`, { headers: { "x-apisports-key": BACKUP_KEY } });
                 data = await res.json();
             }
             
             if(data.errors && Object.keys(data.errors).length > 0) {
-                console.error("API Error:", data.errors);
                 if(endpoint.includes('fixtures')) return getMockMatches();
                 throw new Error("API Limit");
             }
@@ -484,21 +453,22 @@
             init: async () => {
                 app.renderCalendar();
                 app.loadMatches();
-                
-                // Initialize Auth
-                const { onAuthStateChanged } = window.firebaseAuth.constructor; // Helper if needed, but methods are in window.firebaseAuth
-                
-                // Wait for Firebase to load essentially
-                const checkFirebase = setInterval(() => {
-                    if (window.firebaseLogin) {
-                        clearInterval(checkFirebase);
-                        window.firebaseLogin(window.firebaseAuth).then((u) => {
-                            console.log("Anon user:", u.user.uid);
-                            state.user = u.user;
+
+                // Initialize Auth Listener correctly
+                if (window.firebaseAuthListener && window.firebaseAuth) {
+                    window.firebaseAuthListener(window.firebaseAuth, (user) => {
+                        if (user) {
+                            state.user = user;
+                            console.log("Logged in:", user.uid);
                             app.listenToChatCounts();
-                        }).catch(e => console.error("Auth error", e));
-                    }
-                }, 100);
+                        } else {
+                            // Only sign in if strictly needed, avoid loops
+                            if (window.firebaseLogin) {
+                                window.firebaseLogin(window.firebaseAuth).catch(e => console.error(e));
+                            }
+                        }
+                    });
+                }
 
                 // UI Event Listeners
                 document.getElementById('mobile-menu-btn').onclick = () => {
@@ -533,15 +503,12 @@
                 setInterval(() => app.loadMatches(true), 60000);
             },
 
-            // --- FIREBASE LOGIC ---
-            
             listenToChatCounts: () => {
                 if (state.countsUnsubscribe) state.countsUnsubscribe();
-                const { db, collection, onSnapshot } = window.firebaseDB;
-                const { collection: colMethod } = window.firebaseMethods;
+                const { collection, onSnapshot } = window.firebaseMethods;
                 
-                // Listening to the 'chat_counts' collection in our artifacts path
-                const countsRef = colMethod(window.firebaseDB, 'artifacts', APP_ID, 'public', 'data', 'chat_counts');
+                // Listening to specific stats collection
+                const countsRef = collection(window.firebaseDB, 'artifacts', APP_ID, 'public', 'data', 'chat_counts');
                 
                 state.countsUnsubscribe = onSnapshot(countsRef, (snapshot) => {
                     const counts = {};
@@ -549,12 +516,13 @@
                         counts[doc.id] = doc.data().count || 0;
                     });
                     state.chatCounts = counts;
-                    app.updateBadges(); // Only update badges to avoid full re-render
+                    app.updateBadges();
+                }, (error) => {
+                    console.log("Error listening to counts (likely empty collection initially):", error);
                 });
             },
 
             updateBadges: () => {
-                // Find all chat badges and update them
                 document.querySelectorAll('.chat-badge').forEach(el => {
                     const matchId = el.dataset.matchId;
                     if (state.chatCounts[matchId]) {
@@ -567,9 +535,8 @@
             },
 
             openChat: (e, matchId, homeName, awayName) => {
-                e.stopPropagation(); // Prevent opening match details
+                if(e) e.stopPropagation();
                 
-                // Check name
                 const name = localStorage.getItem('rf_username');
                 if (!name) {
                     state.pendingChat = { matchId, homeName, awayName };
@@ -579,9 +546,19 @@
 
                 state.currentChatId = matchId;
                 document.getElementById('chat-match-title').innerText = `${homeName} vs ${awayName}`;
-                document.getElementById('chat-modal').classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
                 
+                // Show modal (Bottom Sheet logic)
+                const modal = document.getElementById('chat-modal');
+                const backdrop = document.getElementById('chat-backdrop');
+                modal.classList.remove('hidden');
+                backdrop.classList.remove('hidden');
+                
+                // Slide in animation delay slightly
+                requestAnimationFrame(() => {
+                    modal.style.transform = 'translateY(0)';
+                });
+
+                document.body.style.overflow = 'hidden';
                 app.loadChatMessages(matchId);
             },
 
@@ -591,16 +568,25 @@
                 localStorage.setItem('rf_username', name);
                 document.getElementById('name-modal').classList.add('hidden');
                 if (state.pendingChat) {
-                    app.openChat(new Event('click'), state.pendingChat.matchId, state.pendingChat.homeName, state.pendingChat.awayName);
+                    app.openChat(null, state.pendingChat.matchId, state.pendingChat.homeName, state.pendingChat.awayName);
                     state.pendingChat = null;
                 }
             },
 
             closeChat: () => {
-                document.getElementById('chat-modal').classList.add('hidden');
-                document.body.style.overflow = '';
-                if (state.chatUnsubscribe) state.chatUnsubscribe();
-                state.currentChatId = null;
+                const modal = document.getElementById('chat-modal');
+                const backdrop = document.getElementById('chat-backdrop');
+                
+                // Animation out
+                modal.style.transform = 'translateY(100%)';
+                
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    backdrop.classList.add('hidden');
+                    document.body.style.overflow = '';
+                    if (state.chatUnsubscribe) state.chatUnsubscribe();
+                    state.currentChatId = null;
+                }, 300);
             },
 
             loadChatMessages: (matchId) => {
@@ -608,15 +594,6 @@
                 const messagesContainer = document.getElementById('chat-messages');
                 messagesContainer.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest"><div class="loader w-6 h-6 border-2"></div></div>';
 
-                // Path: artifacts/APP_ID/public/data/chat_{matchId}
-                // NOTE: Using dynamic collection name 'chat_{matchId}' inside data is not standard rule compliant strictly if interpreted as "one collection name for all data", but necessary for partitioning. 
-                // Strict rule compliance: 'artifacts', APP_ID, 'public', 'data', 'chat_messages'. Add field 'matchId'.
-                // Let's use Strict Rule Compliance for safety.
-                
-                // CHANGE: Use sub-collection strategy is cleaner, but strict rule says NO subcollections deep?
-                // Rule: /artifacts/{appId}/public/data/{collectionName}
-                // I will use `collectionName = "chat_${matchId}"`.
-                
                 const collName = `chat_${matchId}`;
                 const q = query(
                     collection(window.firebaseDB, 'artifacts', APP_ID, 'public', 'data', collName),
@@ -627,6 +604,9 @@
                     const messages = [];
                     snapshot.forEach((doc) => messages.push({ id: doc.id, ...doc.data() }));
                     app.renderMessages(messages);
+                }, (error) => {
+                    console.error("Error loading chat:", error);
+                    messagesContainer.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs">Error al cargar chat</div>';
                 });
             },
 
@@ -641,7 +621,7 @@
 
                 container.innerHTML = messages.map(msg => {
                     const isMe = msg.user === myName;
-                    const time = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...';
+                    const time = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
                     return `
                         <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-fade-in">
                             <div class="chat-bubble ${isMe ? 'chat-own' : 'chat-other'}">
@@ -659,20 +639,22 @@
             sendMessage: async (e) => {
                 e.preventDefault();
                 const input = document.getElementById('chat-input');
+                const btn = document.getElementById('chat-send-btn');
                 const text = input.value.trim();
-                if (!text || !state.currentChatId) return;
+                
+                if (!text || !state.currentChatId || !state.user) return;
 
                 const name = localStorage.getItem('rf_username');
                 const matchId = state.currentChatId;
 
-                input.value = '';
-                input.focus();
+                input.disabled = true;
+                btn.disabled = true;
+                btn.innerHTML = '<div class="loader w-4 h-4 border-2"></div>';
 
-                const { addDoc, collection, serverTimestamp, doc, setDoc, increment, updateDoc, getDoc } = window.firebaseMethods;
+                const { addDoc, collection, serverTimestamp, doc, setDoc, increment, updateDoc } = window.firebaseMethods;
                 const collName = `chat_${matchId}`;
 
                 try {
-                    // 1. Add Message
                     await addDoc(collection(window.firebaseDB, 'artifacts', APP_ID, 'public', 'data', collName), {
                         text: text,
                         user: name,
@@ -680,45 +662,36 @@
                         timestamp: serverTimestamp()
                     });
 
-                    // 2. Update Counter
+                    // Update count safely
                     const countRef = doc(window.firebaseDB, 'artifacts', APP_ID, 'public', 'data', 'chat_counts', matchId.toString());
-                    
-                    // Transaction-like update (safely)
-                    // Since we can't easily do transactions with the raw SDK exposed this way without more imports, lets try update, fallback to set
                     try {
                         await updateDoc(countRef, { count: increment(1) });
                     } catch (err) {
-                        // Document likely doesn't exist
                         await setDoc(countRef, { count: 1 });
                     }
 
+                    input.value = '';
+                    input.focus();
                 } catch (error) {
                     console.error("Error sending message:", error);
+                    alert("Error enviando mensaje. Revisa tu conexión.");
+                } finally {
+                    input.disabled = false;
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transform rotate-90 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>';
                 }
             },
 
-            // --- EXISTING LOGIC ---
-
-            changeDate: (days) => {
-                state.date.setDate(state.date.getDate() + days);
-                app.renderCalendar();
-                app.loadMatches();
-            },
-            resetDate: () => {
-                state.date = new Date();
-                app.renderCalendar();
-                app.loadMatches();
-            },
+            changeDate: (days) => { state.date.setDate(state.date.getDate() + days); app.renderCalendar(); app.loadMatches(); },
+            resetDate: () => { state.date = new Date(); app.renderCalendar(); app.loadMatches(); },
             renderCalendar: () => {
                 const container = document.getElementById('calendar-days');
                 const month = document.getElementById('current-month');
                 const todayTxt = document.getElementById('current-day-text');
                 const months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
-                
                 month.innerText = months[state.date.getMonth()];
                 const isToday = state.date.toDateString() === new Date().toDateString();
                 todayTxt.innerText = isToday ? "HOY" : state.date.toLocaleDateString('es-AR', {day:'numeric', month:'short'}).toUpperCase();
-
                 container.innerHTML = '';
                 const start = new Date(state.date); start.setDate(start.getDate() - 3);
                 for(let i=0; i<7; i++){
@@ -734,13 +707,10 @@
 
             loadMatches: async (silent=false) => {
                 if(!silent) document.getElementById('view-match-list').innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
-                
                 const dateStr = formatDate(state.date);
                 const targetIds = [128, 1032, 129, 39, 140, 78, 71, 13, 11]; 
-                
                 try {
                     const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires`);
-                    
                     let matches = data.response.filter(m => targetIds.includes(m.league.id));
                     matches.sort((a,b) => {
                         const isArgA = [128,1032].includes(a.league.id);
@@ -749,10 +719,9 @@
                         if(!isArgA && isArgB) return 1;
                         return a.fixture.timestamp - b.fixture.timestamp;
                     });
-
                     state.matches = matches;
                     app.renderMatches();
-                    app.updateBadges(); // Try updating badges immediately after render
+                    app.updateBadges();
                 } catch(e) {
                     document.getElementById('view-match-list').innerHTML = `<div class="text-center py-10 text-gray-500"><p>Error de conexión o límite diario alcanzado.</p></div>`;
                 }
@@ -762,18 +731,15 @@
                 const container = document.getElementById('view-match-list');
                 let list = state.matches;
                 if(state.liveOnly) list = list.filter(m => ['1H','HT','2H','ET','P','LIVE'].includes(m.fixture.status.short));
-                
                 if(list.length === 0) {
                     container.innerHTML = `<div class="text-center py-20 text-gray-600 uppercase tracking-widest text-xs"><p>${state.liveOnly ? 'No hay partidos en vivo' : 'No hay partidos destacados'}</p></div>`;
                     return;
                 }
-
                 const groups = {};
                 list.forEach(m => {
                     if(!groups[m.league.id]) groups[m.league.id] = { name: m.league.name, logo: m.league.logo, matches: [] };
                     groups[m.league.id].matches.push(m);
                 });
-
                 let html = '';
                 Object.values(groups).forEach(g => {
                     html += `<div class="mb-6"><div class="px-2 py-2 flex items-center gap-3"><img src="${g.logo}" class="w-4 h-4 object-contain"><h3 class="text-xs font-bold text-white uppercase tracking-widest">${g.name}</h3></div><div class="space-y-2">`;
@@ -783,18 +749,13 @@
                         const isHT = s.short === 'HT';
                         const isFin = ['FT','AET','PEN'].includes(s.short);
                         const notStarted = ['NS','TBD'].includes(s.short);
-                        
                         const timeDisplay = isLive ? `<span class="text-white font-bold animate-pulse text-xs">${s.elapsed}'</span>` : (isHT ? '<span class="text-white font-bold text-xs">ET</span>' : (isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})));
-                        
-                        let homeOpacity = 'opacity-100';
-                        let awayOpacity = 'opacity-100';
+                        let homeOpacity = 'opacity-100', awayOpacity = 'opacity-100';
                         if (!notStarted) {
-                            if ((m.goals.home ?? 0) > (m.goals.away ?? 0)) { awayOpacity = 'opacity-50'; } 
-                            else if ((m.goals.away ?? 0) > (m.goals.home ?? 0)) { homeOpacity = 'opacity-50'; }
+                            if ((m.goals.home ?? 0) > (m.goals.away ?? 0)) awayOpacity = 'opacity-50';
+                            else if ((m.goals.away ?? 0) > (m.goals.home ?? 0)) homeOpacity = 'opacity-50';
                         }
-
-                        let hScorers = '';
-                        let aScorers = '';
+                        let hScorers = '', aScorers = '';
                         if (m.events && m.events.length > 0) {
                             const goals = m.events.filter(e => e.type === 'Goal');
                             if (goals.length > 0) {
@@ -805,47 +766,26 @@
                                 if (aGoals.length > 0) aScorers = aGoals.join(', ');
                             }
                         }
-
-                        // Chat count badge placeholder
                         const chatCount = state.chatCounts[m.fixture.id] || 0;
                         const badgeClass = chatCount > 0 ? '' : 'hidden';
 
                         html += `
-                        <div class="p-4 match-card relative bg-[#0a0a0a] rounded flex flex-col gap-3" >
-                            <!-- Main Match Info -->
+                        <div class="p-4 match-card relative bg-[#0a0a0a] rounded flex flex-col gap-3">
                             <div class="flex items-center justify-between clickable" onclick="app.openDetail(${m.fixture.id})">
                                 ${isLive ? '<div class="absolute top-3 right-3"><div class="live-dot"></div></div>' : ''}
-                                
                                 <div class="flex-1 flex justify-end items-center gap-3 ${homeOpacity} transition-opacity duration-300 text-right">
-                                    <div class="flex flex-col items-end">
-                                        <span class="font-bold text-white text-sm uppercase tracking-tight leading-none">${m.teams.home.name}</span>
-                                        ${hScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1">${hScorers}</span>` : ''}
-                                    </div>
+                                    <div class="flex flex-col items-end"><span class="font-bold text-white text-sm uppercase tracking-tight leading-none">${m.teams.home.name}</span>${hScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1">${hScorers}</span>` : ''}</div>
                                     <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain">
                                 </div>
-
                                 <div class="px-3 flex flex-col items-center w-24 shrink-0">
-                                    ${notStarted 
-                                        ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>` 
-                                        : `<div class="flex gap-2 text-2xl font-black text-white score-font tracking-widest">
-                                             <span class="${homeOpacity}">${m.goals.home ?? 0}</span>
-                                             <span class="text-gray-700">-</span>
-                                             <span class="${awayOpacity}">${m.goals.away ?? 0}</span>
-                                           </div>`
-                                    }
+                                    ${notStarted ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>` : `<div class="flex gap-2 text-2xl font-black text-white score-font tracking-widest"><span class="${homeOpacity}">${m.goals.home ?? 0}</span><span class="text-gray-700">-</span><span class="${awayOpacity}">${m.goals.away ?? 0}</span></div>`}
                                     <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest">${isLive || isHT || isFin ? timeDisplay : ''}</span>
                                 </div>
-
                                 <div class="flex-1 flex justify-start items-center gap-3 ${awayOpacity} transition-opacity duration-300 text-left">
                                     <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain">
-                                    <div class="flex flex-col items-start">
-                                        <span class="font-bold text-white text-sm uppercase tracking-tight leading-none">${m.teams.away.name}</span>
-                                        ${aScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1">${aScorers}</span>` : ''}
-                                    </div>
+                                    <div class="flex flex-col items-start"><span class="font-bold text-white text-sm uppercase tracking-tight leading-none">${m.teams.away.name}</span>${aScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1">${aScorers}</span>` : ''}</div>
                                 </div>
                             </div>
-                            
-                            <!-- Forum Button inside Card -->
                              <div class="border-t border-[#222] pt-2 mt-1 flex justify-center">
                                 <button onclick="app.openChat(event, ${m.fixture.id}, '${m.teams.home.name.replace(/'/g, "\\'")}', '${m.teams.away.name.replace(/'/g, "\\'")}')" class="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-white transition-colors py-1 px-3 rounded hover:bg-[#222]">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
@@ -858,19 +798,17 @@
                     html += `</div></div>`;
                 });
                 container.innerHTML = html;
-                app.updateBadges(); // Ensure badges are synced
+                app.updateBadges();
             },
 
             openDetail: async (id) => {
                 const m = state.matches.find(x => x.fixture.id == id);
                 if(!m) return;
                 state.selectedMatch = m;
-
                 document.getElementById('view-match-detail').classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
                 document.getElementById('detail-content-wrapper').classList.add('hidden');
                 document.getElementById('detail-loader').classList.remove('hidden');
-
                 document.getElementById('detail-home-name').innerText = m.teams.home.name;
                 document.getElementById('detail-away-name').innerText = m.teams.away.name;
                 document.getElementById('detail-home-logo').src = m.teams.home.logo;
@@ -878,7 +816,6 @@
                 document.getElementById('detail-home-score').innerText = m.goals.home ?? 0;
                 document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
                 document.getElementById('detail-status').innerText = m.fixture.status.long;
-
                 try {
                     const data = await fetchAPI(`/fixtures?id=${id}`);
                     const fullMatch = data.response[0];
@@ -886,7 +823,6 @@
                     app.renderLineups(fullMatch);
                     app.renderStats(fullMatch);
                 } catch(e) { console.error(e); }
-
                 document.getElementById('detail-loader').classList.add('hidden');
                 document.getElementById('detail-content-wrapper').classList.remove('hidden');
             },
@@ -907,8 +843,7 @@
                             <span class="text-sm font-bold text-white">${e.player.name}</span>
                             <span class="text-[9px] px-2 py-0.5 uppercase font-bold tracking-wider ${e.type === 'Goal' ? 'bg-white text-black' : 'bg-[#333] text-gray-400'}">${e.type === 'Goal' ? 'GOL' : e.detail}</span>
                         </div>
-                    </div>
-                `).join('');
+                    </div>`).join('');
             },
 
             renderLineups: (m) => {
@@ -916,77 +851,49 @@
                 pitch.querySelectorAll('.player-marker').forEach(el => el.remove());
                 const hList = document.getElementById('lineup-home-list');
                 const aList = document.getElementById('lineup-away-list');
-                
-                if(!m.lineups || m.lineups.length === 0) {
-                    hList.innerHTML = 'No disponible'; aList.innerHTML = 'No disponible'; return;
-                }
-
-                const homeL = m.lineups[0];
-                const awayL = m.lineups[1];
-
+                if(!m.lineups || m.lineups.length === 0) { hList.innerHTML = 'No disponible'; aList.innerHTML = 'No disponible'; return; }
+                const homeL = m.lineups[0]; const awayL = m.lineups[1];
                 hList.innerHTML = homeL.startXI.map(p => `<div class="flex justify-between border-b border-[#222] py-1.5"><span class="text-gray-300">${p.player.name}</span><span class="text-gray-600 font-mono text-xs">${p.player.number}</span></div>`).join('');
                 aList.innerHTML = awayL.startXI.map(p => `<div class="flex justify-between border-b border-[#222] py-1.5"><span class="text-gray-600 font-mono text-xs">${p.player.number}</span><span class="text-gray-300">${p.player.name}</span></div>`).join('');
-
                 const addPlayers = (players, side) => {
                     players.forEach((p, i) => {
                         const el = document.createElement('div');
                         el.className = `player-marker ${side === 'home' ? 'home-player' : 'away-player'}`;
                         el.innerText = p.player.number;
-                        
                         let x = 50, y = 50;
                         if(p.player.grid) {
                             const parts = p.player.grid.split(':');
-                            const col = parseInt(parts[0]); 
-                            const row = parseInt(parts[1]); 
-                            if(side === 'home') x = (col * 18); 
-                            else x = 100 - (col * 18);
+                            const col = parseInt(parts[0]); const row = parseInt(parts[1]); 
+                            if(side === 'home') x = (col * 18); else x = 100 - (col * 18);
                             y = (row * 20) + 10;
                         } else {
                             if(side === 'home') x = 10 + (i%4)*20; else x = 90 - (i%4)*20;
                             y = 10 + (i%3)*30;
                         }
                         el.style.left = x + '%'; el.style.top = y + '%';
-                        el.onclick = () => {
-                            document.getElementById('modal-player-name').innerText = p.player.name;
-                            document.getElementById('player-modal').classList.remove('hidden');
-                        };
+                        el.onclick = () => { document.getElementById('modal-player-name').innerText = p.player.name; document.getElementById('player-modal').classList.remove('hidden'); };
                         pitch.appendChild(el);
                     });
                 };
-                addPlayers(homeL.startXI, 'home');
-                addPlayers(awayL.startXI, 'away');
+                addPlayers(homeL.startXI, 'home'); addPlayers(awayL.startXI, 'away');
             },
 
             renderStats: (m) => {
                 const c = document.getElementById('tab-stats');
                 if(!m.statistics || m.statistics.length === 0) { c.innerHTML = 'No disponible'; return; }
                 const statsTypes = ['Ball Possession', 'Total Shots', 'Shots on Goal', 'Corner Kicks', 'Fouls', 'Yellow Cards', 'Red Cards'];
-                const hStats = m.statistics[0].statistics;
-                const aStats = m.statistics[1].statistics;
-
+                const hStats = m.statistics[0].statistics; const aStats = m.statistics[1].statistics;
                 c.innerHTML = statsTypes.map(type => {
                     const hVal = hStats.find(s=>s.type===type)?.value || 0;
                     const aVal = aStats.find(s=>s.type===type)?.value || 0;
-                    const hNum = parseInt(hVal);
-                    const aNum = parseInt(aVal);
+                    const hNum = parseInt(hVal); const aNum = parseInt(aVal);
                     const total = hNum + aNum || 1;
                     const hPerc = (hNum / total) * 100;
-                    
-                    return `
-                    <div class="bg-[#111] p-4 border border-[#222]">
-                        <div class="flex justify-between text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest">
-                            <span>${hVal}</span><span>${type.replace('Ball Possession','Posesión').replace('Shots','Tiros')}</span><span>${aVal}</span>
-                        </div>
-                        <div class="h-1 bg-[#333] flex overflow-hidden">
-                            <div class="h-full bg-white" style="width: ${hPerc}%"></div>
-                            <div class="h-full bg-[#555]" style="width: ${100-hPerc}%"></div>
-                        </div>
-                    </div>`;
+                    return `<div class="bg-[#111] p-4 border border-[#222]"><div class="flex justify-between text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest"><span>${hVal}</span><span>${type.replace('Ball Possession','Posesión').replace('Shots','Tiros')}</span><span>${aVal}</span></div><div class="h-1 bg-[#333] flex overflow-hidden"><div class="h-full bg-white" style="width: ${hPerc}%"></div><div class="h-full bg-[#555]" style="width: ${100-hPerc}%"></div></div></div>`;
                 }).join('');
             },
 
             changeSeason: (y) => { state.season = y; if(state.selectedLeague) app.showStandings(state.selectedLeague.id, state.selectedLeague.name); },
-
             showStandings: async (id, name) => {
                 state.selectedLeague = {id, name};
                 document.getElementById('view-match-list').classList.add('hidden');
@@ -994,81 +901,31 @@
                 document.getElementById('view-standings').classList.remove('hidden');
                 document.getElementById('standings-title').innerText = name;
                 document.getElementById('standings-tabs').classList.add('hidden');
-                
                 document.getElementById('sidebar').classList.add('-translate-x-full');
                 document.getElementById('mobile-backdrop').classList.add('hidden');
-
                 const container = document.getElementById('standings-container');
                 container.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
-
                 try {
                     const data = await fetchAPI(`/standings?league=${id}&season=${state.season}`);
                     const standings = data.response[0].league.standings;
                     app.processStandings(standings);
-                } catch(e) {
-                    container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs uppercase tracking-widest">Sin datos para ${state.season}.</div>`;
-                }
+                } catch(e) { container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs uppercase tracking-widest">Sin datos para ${state.season}.</div>`; }
             },
-
             processStandings: (standingsData) => {
                 const tabs = document.getElementById('standings-tabs');
                 if(standingsData.length > 1) {
                     tabs.classList.remove('hidden');
-                    tabs.innerHTML = standingsData.map((g, i) => `
-                        <button onclick="app.renderTable(${i})" class="px-4 py-2 bg-[#111] text-xs font-bold uppercase border border-[#333] text-gray-400 hover:text-white hover:border-white transition-all whitespace-nowrap">
-                            ${g[0].group}
-                        </button>
-                    `).join('');
-                    state.standingsData = standingsData;
-                    app.renderTable(0);
+                    tabs.innerHTML = standingsData.map((g, i) => `<button onclick="app.renderTable(${i})" class="px-4 py-2 bg-[#111] text-xs font-bold uppercase border border-[#333] text-gray-400 hover:text-white hover:border-white transition-all whitespace-nowrap">${g[0].group}</button>`).join('');
+                    state.standingsData = standingsData; app.renderTable(0);
                 } else {
-                    tabs.classList.add('hidden');
-                    state.standingsData = standingsData;
-                    app.renderTable(0);
+                    tabs.classList.add('hidden'); state.standingsData = standingsData; app.renderTable(0);
                 }
             },
-
             renderTable: (groupIndex) => {
                 const table = state.standingsData[groupIndex];
                 const container = document.getElementById('standings-container');
-                container.innerHTML = `
-                <div class="bg-[#0a0a0a] border border-[#222] overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left text-gray-400">
-                            <thead class="text-[10px] text-gray-500 uppercase bg-[#111] border-b border-[#222] tracking-widest">
-                                <tr>
-                                    <th class="px-4 py-3 text-center w-10">#</th>
-                                    <th class="px-3 py-3">Equipo</th>
-                                    <th class="px-2 py-3 text-center text-white">Pts</th>
-                                    <th class="px-2 py-3 text-center">PJ</th>
-                                    <th class="px-2 py-3 text-center font-mono">DG</th>
-                                    <th class="px-2 py-3 text-center hidden sm:table-cell">Forma</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-[#1a1a1a]">
-                                ${table.map(t => `
-                                    <tr class="hover:bg-[#111] transition-colors">
-                                        <td class="px-4 py-3 text-center font-bold ${t.rank<=4?'text-white':'text-gray-600'}">${t.rank}</td>
-                                        <td class="px-3 py-3 font-bold text-gray-300 flex items-center gap-3 whitespace-nowrap uppercase text-xs">
-                                            <img src="${t.team.logo}" class="w-5 h-5 object-contain">
-                                            ${t.team.name}
-                                        </td>
-                                        <td class="px-2 py-3 text-center font-bold text-white">${t.points}</td>
-                                        <td class="px-2 py-3 text-center font-mono text-xs">${t.all.played}</td>
-                                        <td class="px-2 py-3 text-center font-mono text-xs ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff>0?'+':''}${t.goalsDiff}</td>
-                                        <td class="px-2 py-3 text-center hidden sm:table-cell">
-                                            <div class="flex justify-center gap-0.5">
-                                                ${t.form ? t.form.split('').slice(-5).map(f => `<div class="w-1.5 h-1.5 rounded-full ${f==='W'?'bg-white':(f==='D'?'bg-gray-500':'bg-[#333]')}\"></div>`).join('') : '-'}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>`;
+                container.innerHTML = `<div class="bg-[#0a0a0a] border border-[#222] overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-400"><thead class="text-[10px] text-gray-500 uppercase bg-[#111] border-b border-[#222] tracking-widest"><tr><th class="px-4 py-3 text-center w-10">#</th><th class="px-3 py-3">Equipo</th><th class="px-2 py-3 text-center text-white">Pts</th><th class="px-2 py-3 text-center">PJ</th><th class="px-2 py-3 text-center font-mono">DG</th><th class="px-2 py-3 text-center hidden sm:table-cell">Forma</th></tr></thead><tbody class="divide-y divide-[#1a1a1a]">${table.map(t => `<tr class="hover:bg-[#111] transition-colors"><td class="px-4 py-3 text-center font-bold ${t.rank<=4?'text-white':'text-gray-600'}">${t.rank}</td><td class="px-3 py-3 font-bold text-gray-300 flex items-center gap-3 whitespace-nowrap uppercase text-xs"><img src="${t.team.logo}" class="w-5 h-5 object-contain">${t.team.name}</td><td class="px-2 py-3 text-center font-bold text-white">${t.points}</td><td class="px-2 py-3 text-center font-mono text-xs">${t.all.played}</td><td class="px-2 py-3 text-center font-mono text-xs ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff>0?'+':''}${t.goalsDiff}</td><td class="px-2 py-3 text-center hidden sm:table-cell"><div class="flex justify-center gap-0.5">${t.form ? t.form.split('').slice(-5).map(f => `<div class="w-1.5 h-1.5 rounded-full ${f==='W'?'bg-white':(f==='D'?'bg-gray-500':'bg-[#333]')}\"></div>`).join('') : '-'}</div></td></tr>`).join('')}</tbody></table></div></div>`;
             },
-
             navigateToMatches: () => {
                 document.getElementById('view-standings').classList.add('hidden');
                 document.getElementById('view-match-list').classList.remove('hidden');
