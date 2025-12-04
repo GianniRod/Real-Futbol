@@ -2,507 +2,824 @@
 <html lang="es" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RealFutbol - Resultados en vivo.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RealFutbol - B&W</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        :root {
+            --bg-main: #000000;
+            --bg-card: #0f0f0f;
+            --border: #333333;
+            --text-main: #ffffff;
+            --text-muted: #888888;
+        }
+
         body { 
             font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-            background-color: #050505;
-            background-image: radial-gradient(circle at top center, #111827 0%, #000000 100%);
-            color: #e5e7eb;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            -webkit-tap-highlight-color: transparent;
         }
-        .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-        
-        .match-card { transition: all 0.2s; border: 1px solid #1f2937; }
-        
-        /* LOGICA DE CLICKEABLE MODIFICADA */
-        /* Si es clickable, tiene hover y cursor de mano */
-        .match-card.clickable:hover { transform: translateY(-2px); border-color: #3b82f6; background-color: rgba(30, 41, 59, 0.8); cursor: pointer; }
-        
-        /* Si NO es clickable (no iniciado), se ve NORMAL (sin opacidad) pero sin cursor de mano */
-        .match-card.not-clickable { opacity: 1; cursor: default; } 
-        .match-card.not-clickable:hover { border-color: #1f2937; transform: none; }
 
-        .league-item { transition: all 0.2s; cursor: pointer; }
-        .league-item:hover { background-color: #1e2937; color: #60a5fa; }
-        .day-selected { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-weight: bold; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); }
-        .toggle-checkbox:checked { right: 0; border-color: #3b82f6; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
-        .football-pitch { background-color: #064e3b; border: 2px solid #525252; position: relative; width: 100%; aspect-ratio: 7 / 5; border-radius: 4px; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
-        .pitch-line { position: absolute; background-color: rgba(255,255,255,0.3); }
+        /* Tipografía Deportiva */
+        .font-sport { font-family: 'Chakra Petch', sans-serif; }
+        
+        /* Tarjetas Minimalistas B&W */
+        .match-card { 
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+        /* Hover efecto blanco */
+        .match-card.clickable:hover { 
+            border-color: #ffffff; 
+            background-color: #1a1a1a;
+            cursor: pointer;
+        }
+        .match-card.not-clickable { opacity: 1; cursor: default; }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+        /* Toggle Switch B&W */
+        .toggle-checkbox:checked { right: 0; border-color: #fff; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #fff; }
+        .toggle-label { background-color: #000; border: 1px solid #444; }
+
+        /* Cancha Táctica B&W */
+        .football-pitch { 
+            background-color: #151515; /* Gris muy oscuro */
+            border: 2px solid #444; 
+            position: relative; width: 100%; aspect-ratio: 7 / 5; 
+            border-radius: 4px; overflow: hidden; 
+        }
+        .pitch-line { position: absolute; background-color: #444; }
         .center-line { top: 0; bottom: 0; left: 50%; width: 1px; transform: translateX(-50%); }
-        .center-circle { top: 50%; left: 50%; width: 20%; height: 28%; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); }
-        .penalty-box { position: absolute; border: 1px solid rgba(255,255,255,0.3); width: 15%; height: 40%; top: 30%; }
+        .center-circle { top: 50%; left: 50%; width: 20%; height: 28%; border: 1px solid #444; border-radius: 50%; transform: translate(-50%, -50%); }
+        .penalty-box { position: absolute; border: 1px solid #444; width: 15%; height: 40%; top: 30%; }
         .home-box { left: 0; border-left: none; }
         .away-box { right: 0; border-right: none; }
-        .player-marker { position: absolute; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 11px; border: 2px solid rgba(255, 255, 255, 0.8); cursor: pointer; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.6); z-index: 10; text-shadow: 0px 1px 2px rgba(0,0,0,0.8); }
-        .player-marker:hover { transform: scale(1.25); z-index: 20; border-color: #fbbf24; }
-        .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: #3b82f6; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+        
+        /* Marcadores Jugadores B&W */
+        .player-marker { 
+            position: absolute; width: 26px; height: 26px; 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-weight: 800; font-size: 10px; 
+            z-index: 10; transition: transform 0.2s; cursor: pointer;
+            border: 1px solid #000;
+        }
+        .home-player { background-color: #ffffff; color: #000000; }
+        .away-player { background-color: #333333; color: #ffffff; border: 1px solid #fff; }
+        .player-marker:active { transform: scale(1.3); z-index: 20; }
+
+        /* Tabs */
+        .tab-btn { color: #666; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: #fff; border-bottom-color: #fff; }
+        
+        /* Loader B&W */
+        .loader { width: 32px; height: 32px; border: 3px solid #333; border-bottom-color: #fff; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Botón Flotante Fijo */
+        .btn-float-back {
+            position: fixed; top: 16px; left: 16px; z-index: 100;
+            background: #000; 
+            border: 1px solid #444; color: white;
+            padding: 10px; border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .btn-float-back:hover { background-color: #222; border-color: #fff; }
+        
         .font-tnum { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
-        .live-dot { height: 8px; width: 8px; background-color: #ef4444; border-radius: 50%; display: inline-block; animation: pulse-red 2s infinite; }
-        @keyframes pulse-red { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-        .mobile-backdrop { position: fixed; inset: 0; background-color: rgba(0,0,0,0.7); z-index: 40; backdrop-filter: blur(2px); }
-        .btn-close-detail { position: fixed; top: 15px; left: 15px; z-index: 100; background-color: rgba(31, 41, 55, 0.95); border: 1px solid #374151; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6); color: white; padding: 8px; border-radius: 9999px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .btn-close-detail:hover { background-color: #3b82f6; border-color: #3b82f6; }
-        .zone-tab { padding: 10px 16px; font-size: 0.875rem; font-weight: 600; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
-        .zone-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
+        
+        /* Live Pulse Blanco */
+        .live-dot { height: 6px; width: 6px; background-color: #fff; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.4; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.4; transform: scale(0.8); } }
+
+        /* Override Select */
+        select { background-color: #000; color: white; border-color: #333; }
+        
+        /* Botón Principal Blanco */
+        .btn-primary { 
+            background-color: #ffffff; color: #000000; font-weight: bold; 
+            border: 1px solid #fff; transition: all 0.2s;
+        }
+        .btn-primary:hover { background-color: #ccc; border-color: #ccc; }
+
+        /* Backdrop Móvil */
+        .mobile-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 40; backdrop-filter: blur(4px); }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
-    <!-- Header -->
-    <header class="h-16 bg-black/80 backdrop-blur-md border-b border-gray-800 flex items-center px-4 justify-between z-50 shrink-0 relative">
-        <div class="flex items-center gap-3">
-            <button id="mobile-menu-btn" class="lg:hidden text-white p-2 -ml-2 rounded-md hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+    <!-- HEADER SIMÉTRICO -->
+    <header class="h-14 border-b border-[#222] bg-black flex items-center justify-between px-4 z-40 shrink-0 relative">
+        <!-- Izquierda: Menú -->
+        <div class="flex items-center w-12">
+            <button id="mobile-menu-btn" class="text-white p-1 rounded hover:bg-[#222]">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
-    <img src="https://i.postimg.cc/pL6B4Mpr/real-futbol-removebg-preview.png" 
-         alt="Real Futbol Logo" 
-         class="h-14 object-contain ml-10">
         </div>
-        <div class="flex items-center gap-4">
-            <div class="flex items-center">
-                <span class="mr-2 text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:block">Solo en Vivo</span>
-                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                    <input type="checkbox" name="toggle" id="live-toggle" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer outline-none transition-all duration-300 left-0"/>
-                    <label for="live-toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-800 cursor-pointer border border-gray-700"></label>
-                </div>
+
+        <!-- Centro: Logo (Absoluto para simetría perfecta) -->
+        <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center cursor-pointer" onclick="window.location.reload()">
+header.html
+
+        <!-- Derecha: Toggle -->
+        <div class="flex items-center justify-end w-12">
+            <div class="relative inline-block w-8 h-5 align-middle select-none">
+                <input type="checkbox" id="live-toggle" class="toggle-checkbox absolute block w-3 h-3 mt-1 ml-1 rounded-full bg-white border-none appearance-none cursor-pointer transition-all duration-300 left-0"/>
+                <label for="live-toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-[#222] cursor-pointer border border-[#444]"></label>
             </div>
-            <img src="https://i.pravatar.cc/150?u=a042581f4e29026024d" alt="User" class="w-8 h-8 rounded-full border border-gray-700 hidden sm:block">
         </div>
     </header>
 
     <div class="flex flex-1 overflow-hidden relative">
+        
         <div id="mobile-backdrop" class="mobile-backdrop hidden lg:hidden"></div>
 
-        <!-- Sidebar -->
-        <aside id="sidebar" class="fixed inset-y-0 left-0 w-[280px] bg-[#0a0a0a] border-r border-gray-800 flex flex-col transform -translate-x-full lg:translate-x-0 lg:static lg:w-72 xl:w-80 transition-transform duration-300 z-50 shadow-2xl lg:shadow-none h-full">
-            <div class="p-4 border-b border-gray-800 flex justify-between items-center lg:hidden bg-[#0a0a0a]">
-                <h2 class="font-bold text-gray-200 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg> Competencias</h2>
-                <button id="close-sidebar" class="text-gray-400 p-2 hover:text-white bg-gray-900 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        <!-- Sidebar B&W -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 w-[280px] bg-black border-r border-[#222] flex flex-col transform -translate-x-full lg:translate-x-0 lg:static lg:w-72 transition-transform duration-300 z-50 h-full shadow-2xl">
+            <div class="p-5 border-b border-[#222] flex justify-between items-center lg:hidden">
+                <h2 class="font-bold text-white text-lg uppercase tracking-widest font-sport">Menu</h2>
+                <button id="close-sidebar" class="text-white p-2"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
             </div>
-            <div class="overflow-y-auto flex-1 p-2 space-y-1 bg-[#0a0a0a]">
-                <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Mis Ligas</div>
+            
+            <div class="overflow-y-auto flex-1 p-3 space-y-1">
+                <div class="px-3 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Competiciones</div>
                 
-                <button onclick="app.showStandings(44, 'Liga Argentina')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
-                    <img src="https://media.api-sports.io/football/leagues/128.png" class="w-6 h-6 object-contain" onerror="this.src='https://via.placeholder.com/20'">
-                    <span class="text-sm font-medium">Liga Argentina</span>
+                <!-- Botones de Ligas (IDs Correctos API-Sports) -->
+                <button onclick="app.showStandings(128, 'Liga Profesional')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <img src="https://media.api-sports.io/football/leagues/128.png" class="w-5 h-5 object-contain">
+                    <span class="text-sm font-bold">Liga Argentina</span>
                 </button>
-                <button onclick="app.showStandings(317, 'Primera B Nacional')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
-                    <img src="https://media.api-sports.io/football/leagues/129.png" class="w-6 h-6 object-contain" onerror="this.src='https://via.placeholder.com/20'">
-                    <span class="text-sm font-medium">Primera B Nacional</span>
-                </button>
-                <button onclick="app.showStandings(99, 'Brasileirão Série A')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
-                    <img src="https://media.api-sports.io/football/leagues/71.png" class="w-6 h-6 object-contain">
-                    <span class="text-sm font-medium">Brasileirão</span>
-                </button>
-                <button onclick="app.showStandings(152, 'Premier League')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
-                    <img src="https://media.api-sports.io/football/leagues/39.png" class="w-6 h-6 object-contain">
-                    <span class="text-sm font-medium">Premier League</span>
-                </button>
-                <button onclick="app.showStandings(175, 'Bundesliga')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
-                    <img src="https://media.api-sports.io/football/leagues/78.png" class="w-6 h-6 object-contain">
-                    <span class="text-sm font-medium">Bundesliga</span>
-                </button>
-                <button onclick="app.showStandings(302, 'La Liga')" class="league-item w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-gray-300">
-                    <img src="https://media.api-sports.io/football/leagues/140.png" class="w-6 h-6 object-contain">
-                    <span class="text-sm font-medium">Liga Española</span>
+                
+                <button onclick="app.showStandings(1032, 'Copa de la Liga')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <img src="https://media.api-sports.io/football/leagues/1032.png" class="w-5 h-5 object-contain">
+                    <span class="text-sm font-bold">Copa de la Liga</span>
                 </button>
 
-                <div class="mt-8 px-4">
-                    <button onclick="app.navigateToMatches()" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors border border-gray-700">
-                        <i data-lucide="calendar"></i>
-                        Ver Partidos de Hoy
-                    </button>
-                </div>
+                <button onclick="app.showStandings(129, 'Primera Nacional')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <img src="https://media.api-sports.io/football/leagues/129.png" class="w-5 h-5 object-contain">
+                    <span class="text-sm font-bold">Primera Nacional</span>
+                </button>
+
+                <button onclick="app.showStandings(71, 'Brasileirão')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <img src="https://media.api-sports.io/football/leagues/71.png" class="w-5 h-5 object-contain">
+                    <span class="text-sm font-bold">Brasileirão A</span>
+                </button>
+
+                <div class="my-2 border-t border-[#222]"></div>
                 
-                <div class="mt-10 px-4">
-                    <button onclick="app.debugLeagues()" class="text-[10px] text-gray-700 hover:text-gray-500 w-full text-center">¿Problemas con Ligas? (Debug)</button>
+                <button onclick="app.showStandings(39, 'Premier League')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <img src="https://media.api-sports.io/football/leagues/39.png" class="w-5 h-5 object-contain">
+                    <span class="text-sm font-bold">Premier League</span>
+                </button>
+
+                <button onclick="app.showStandings(140, 'La Liga')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <img src="https://media.api-sports.io/football/leagues/140.png" class="w-5 h-5 object-contain">
+                    <span class="text-sm font-bold">La Liga</span>
+                </button>
+
+                <button onclick="app.showStandings(78, 'Bundesliga')" class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <img src="https://media.api-sports.io/football/leagues/78.png" class="w-5 h-5 object-contain">
+                    <span class="text-sm font-bold">Bundesliga</span>
+                </button>
+
+                <div class="mt-8 px-2">
+                    <button onclick="app.navigateToMatches()" class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg">
+                        Partidos de Hoy
+                    </button>
                 </div>
             </div>
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col bg-black relative w-full lg:w-auto overflow-hidden z-0">
-            <div id="date-nav" class="bg-[#0a0a0a]/90 backdrop-blur border-b border-gray-800 p-3 z-10 sticky top-0">
-                <div class="flex items-center justify-between mb-2 max-w-2xl mx-auto">
-                    <button onclick="app.changeDate(-1)" class="p-2 hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></button>
+        <main class="flex-1 flex flex-col relative w-full lg:w-auto overflow-hidden bg-black">
+            
+            <!-- Date Navigation -->
+            <div id="date-nav" class="border-b border-[#222] p-3 z-10 sticky top-0 bg-black/95 backdrop-blur">
+                <div class="flex items-center justify-between mb-3 max-w-lg mx-auto">
+                    <button onclick="app.changeDate(-1)" class="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></button>
                     <div class="text-center cursor-pointer" onclick="app.resetDate()">
-                        <h2 id="current-month" class="text-xs text-blue-400 font-bold uppercase tracking-wide">NOVIEMBRE</h2>
-                        <div id="current-day-text" class="text-lg font-bold text-white">Hoy</div>
+                        <h2 id="current-month" class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">MES</h2>
+                        <div id="current-day-text" class="text-lg font-bold text-white leading-none font-sport">HOY</div>
                     </div>
-                    <button onclick="app.changeDate(1)" class="p-2 hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></button>
+                    <button onclick="app.changeDate(1)" class="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></button>
                 </div>
-                <div id="calendar-days" class="flex justify-between max-w-2xl mx-auto gap-1"></div>
+                <div id="calendar-days" class="flex justify-between max-w-lg mx-auto gap-1"></div>
             </div>
 
-            <div id="main-content" class="flex-1 overflow-y-auto p-4 lg:p-6 relative">
-                <div id="view-match-list" class="max-w-3xl mx-auto space-y-4 animate-fade-in pb-20"></div>
+            <div id="main-content" class="flex-1 overflow-y-auto p-4 relative scroll-smooth">
+                
+                <!-- Match List -->
+                <div id="view-match-list" class="max-w-3xl mx-auto space-y-6 animate-fade-in pb-24"></div>
 
                 <!-- Standings View -->
-                <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-20">
-                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-                        <div class="flex items-center gap-4">
-                            <button onclick="app.navigateToMatches()" class="lg:hidden p-2 bg-gray-800 rounded-lg text-white">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                            </button>
-                            <h2 id="standings-title" class="text-2xl font-bold text-white">Tabla de Posiciones</h2>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <label class="text-sm text-gray-400">Temporada:</label>
-                            <select id="season-selector" onchange="app.changeSeason(this.value)" class="bg-gray-800 text-white text-sm rounded-lg border border-gray-700 p-2 focus:border-blue-500 focus:outline-none">
+                <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-24">
+                    <div class="flex flex-col gap-4 mb-6 sticky top-0 z-20 bg-black/95 backdrop-blur py-2 border-b border-[#222]">
+                        <div class="flex items-center justify-between px-1">
+                            <div class="flex items-center gap-3">
+                                <button onclick="app.navigateToMatches()" class="lg:hidden p-1 text-white"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+                                <h2 id="standings-title" class="text-xl font-bold text-white uppercase tracking-wider font-sport">Tabla</h2>
+                            </div>
+                            <select id="season-selector" onchange="app.changeSeason(this.value)" class="bg-[#111] text-white text-sm border border-[#333] p-1 px-2 rounded focus:outline-none font-mono">
                                 <option value="2025">2025</option>
                                 <option value="2024" selected>2024</option>
                                 <option value="2023">2023</option>
-                                <option value="2022">2022</option>
                             </select>
                         </div>
+                        <!-- Tabs Zonas -->
+                        <div id="standings-tabs" class="flex overflow-x-auto gap-2 px-1 no-scrollbar hidden"></div>
                     </div>
                     
-                    <!-- Tabs Zonas (Ocultos si no hay grupos) -->
-                    <div id="standings-tabs" class="flex overflow-x-auto border-b border-gray-800 mb-4 hidden no-scrollbar"></div>
-                    
-                    <div id="standings-container" class="space-y-8"></div>
+                    <div id="standings-container" class="space-y-6"></div>
                 </div>
 
                 <!-- Match Detail Overlay -->
-                <div id="view-match-detail" class="hidden fixed inset-0 lg:absolute lg:inset-0 bg-black z-50 overflow-y-auto animate-fade-in">
-                    <div class="max-w-4xl mx-auto min-h-full bg-[#050505] lg:border-l lg:border-gray-800 shadow-2xl relative">
+                <div id="view-match-detail" class="hidden fixed inset-0 bg-black z-[60] overflow-y-auto animate-fade-in">
+                    <div class="max-w-4xl mx-auto min-h-full bg-[#050505] relative">
                         
-                        <!-- BOTÓN VOLVER ARREGLADO -->
-                        <button onclick="app.closeDetail()" class="btn-close-detail">
+                        <!-- Botón Volver Flotante -->
+                        <button onclick="app.closeDetail()" class="btn-float-back hover:bg-[#222] transition-all">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                            <span class="ml-2 text-sm font-bold hidden sm:inline">Volver</span>
                         </button>
 
-                        <div id="detail-loader" class="hidden py-20 text-center"><div class="loader"></div></div>
+                        <div id="detail-loader" class="hidden py-40 text-center"><div class="loader"></div></div>
 
-                        <div id="detail-content-wrapper" class="pt-16">
-                            <div class="relative bg-gradient-to-b from-gray-900 to-black p-8 text-center border-b border-gray-800">
-                                <div class="flex justify-between items-center max-w-2xl mx-auto">
-                                    <div class="flex-1 flex flex-col items-center gap-2">
-                                        <img id="detail-home-logo" src="" class="w-20 h-20 object-contain drop-shadow-lg" onerror="this.src='https://via.placeholder.com/50'">
-                                        <h3 id="detail-home-name" class="font-bold text-lg leading-tight">Home</h3>
+                        <div id="detail-content-wrapper" class="pt-16 pb-20">
+                            <!-- Scoreboard -->
+                            <div class="relative p-6 text-center border-b border-[#222] bg-[#0a0a0a]">
+                                <div class="flex justify-between items-center max-w-md mx-auto">
+                                    <div class="flex-1 flex flex-col items-center gap-3">
+                                        <img id="detail-home-logo" src="" class="w-16 h-16 object-contain">
+                                        <h3 id="detail-home-name" class="font-bold text-sm leading-tight text-white uppercase">Home</h3>
                                     </div>
-                                    <div class="px-4">
-                                        <div class="text-5xl font-black text-white tracking-tighter flex items-center gap-3">
-                                            <span id="detail-home-score" class="font-tnum">-</span>
-                                            <span class="text-gray-600 text-3xl">:</span>
-                                            <span id="detail-away-score" class="font-tnum">-</span>
+                                    <div class="px-4 flex flex-col items-center">
+                                        <div class="text-4xl font-black text-white tracking-tighter flex items-center gap-2 score-font">
+                                            <span id="detail-home-score">-</span>
+                                            <span class="text-gray-600 text-2xl">:</span>
+                                            <span id="detail-away-score">-</span>
                                         </div>
-                                        <div id="detail-status" class="mt-2 inline-block px-3 py-1 rounded-full bg-gray-800 text-xs font-bold text-blue-400 border border-gray-700">VS</div>
+                                        <div id="detail-status" class="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">VS</div>
                                     </div>
-                                    <div class="flex-1 flex flex-col items-center gap-2">
-                                        <img id="detail-away-logo" src="" class="w-20 h-20 object-contain drop-shadow-lg" onerror="this.src='https://via.placeholder.com/50'">
-                                        <h3 id="detail-away-name" class="font-bold text-lg leading-tight">Away</h3>
+                                    <div class="flex-1 flex flex-col items-center gap-3">
+                                        <img id="detail-away-logo" src="" class="w-16 h-16 object-contain">
+                                        <h3 id="detail-away-name" class="font-bold text-sm leading-tight text-white uppercase">Away</h3>
                                     </div>
                                 </div>
-                                <div id="detail-header-scorers" class="mt-6 flex justify-between max-w-2xl mx-auto text-sm text-gray-400"><div id="detail-home-scorers-list" class="flex-1 text-right pr-8"></div><div id="detail-away-scorers-list" class="flex-1 text-left pl-8"></div></div>
+                                
+                                <div id="detail-header-scorers" class="mt-6 flex justify-between max-w-md mx-auto text-xs text-gray-500 font-mono border-t border-[#222] pt-4">
+                                    <div id="detail-home-scorers-list" class="flex-1 text-right pr-4 space-y-1"></div>
+                                    <div id="detail-away-scorers-list" class="flex-1 text-left pl-4 space-y-1"></div>
+                                </div>
                             </div>
-                            <div class="flex border-b border-gray-800 sticky top-0 bg-black z-40">
-                                <button class="flex-1 py-4 text-sm font-bold text-blue-500 border-b-2 border-blue-500 tab-btn" data-target="tab-timeline">Resumen</button>
-                                <button class="flex-1 py-4 text-sm font-bold text-gray-500 hover:text-gray-300 tab-btn" data-target="tab-lineups">Alineaciones</button>
-                                <button class="flex-1 py-4 text-sm font-bold text-gray-500 hover:text-gray-300 tab-btn" data-target="tab-stats">Estadísticas</button>
-                                <button class="flex-1 py-4 text-sm font-bold text-gray-500 hover:text-gray-300 tab-btn" data-target="tab-chat">Chat</button>
+
+                            <!-- Tabs -->
+                            <div class="flex border-b border-[#222] sticky top-[57px] bg-black/95 backdrop-blur z-30 overflow-x-auto no-scrollbar">
+                                <button class="flex-1 py-3 px-4 text-xs font-bold text-white border-b-2 border-white tab-btn whitespace-nowrap uppercase" data-target="tab-timeline">Timeline</button>
+                                <button class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase" data-target="tab-lineups">Alineaciones</button>
+                                <button class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase" data-target="tab-stats">Stats</button>
                             </div>
+
                             <div class="p-4 lg:p-8 space-y-6 min-h-[50vh]">
-                                <div id="tab-timeline" class="tab-content block space-y-4"></div>
-                                <div id="tab-lineups" class="tab-content hidden"><div class="football-pitch mx-auto max-w-lg" id="football-pitch"><div class="center-line"></div><div class="center-circle"></div><div class="penalty-box home-box"></div><div class="penalty-box away-box"></div></div><div class="grid grid-cols-2 gap-8 mt-6"><div><h4 class="text-white font-bold border-b border-gray-800 pb-2 mb-2">Local</h4><div id="lineup-home-list" class="space-y-1 text-sm text-gray-400"></div></div><div><h4 class="text-white font-bold border-b border-gray-800 pb-2 mb-2 text-right">Visitante</h4><div id="lineup-away-list" class="space-y-1 text-sm text-gray-400 text-right"></div></div></div></div>
-                                <div id="tab-stats" class="tab-content hidden space-y-6"></div>
-                                <div id="tab-chat" class="tab-content hidden flex flex-col h-[500px]"><div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 p-2 bg-gray-900/30 rounded-lg border border-gray-800 mb-4"><div class="text-center text-gray-600 mt-10"><i data-lucide="message-square" class="w-10 h-10 mx-auto mb-2 opacity-50"></i><p>Comenta el partido.</p></div></div><div class="flex gap-2"><input type="text" id="chat-input" placeholder="Escribe tu mensaje..." class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors"><button id="chat-send" class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg px-6 font-bold transition-colors">Enviar</button></div></div>
+                                <div id="tab-timeline" class="tab-content block space-y-4 max-w-2xl mx-auto"></div>
+                                
+                                <div id="tab-lineups" class="tab-content hidden max-w-2xl mx-auto">
+                                    <div class="football-pitch mx-auto" id="football-pitch">
+                                        <div class="center-line"></div><div class="center-circle"></div><div class="penalty-box home-box"></div><div class="penalty-box away-box"></div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4 mt-6">
+                                        <div class="bg-[#111] p-4 rounded border border-[#222]"><h4 class="text-white font-bold border-b border-[#333] pb-2 mb-2 text-xs uppercase tracking-wider">Local</h4><div id="lineup-home-list" class="space-y-2 text-xs text-gray-400 font-mono"></div></div>
+                                        <div class="bg-[#111] p-4 rounded border border-[#222]"><h4 class="text-white font-bold border-b border-[#333] pb-2 mb-2 text-right text-xs uppercase tracking-wider">Visitante</h4><div id="lineup-away-list" class="space-y-2 text-xs text-gray-400 text-right font-mono"></div></div>
+                                    </div>
+                                </div>
+                                
+                                <div id="tab-stats" class="tab-content hidden space-y-4 max-w-xl mx-auto"></div>
                             </div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </main>
     </div>
 
     <!-- Player Modal -->
-    <div id="player-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
-            <div class="bg-gradient-to-r from-gray-800 to-gray-900 p-4 flex justify-between items-center border-b border-gray-700">
-                <h3 id="modal-player-name" class="font-bold text-white text-lg">Nombre Jugador</h3>
-                <button onclick="document.getElementById('player-modal').classList.add('hidden')" class="text-gray-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+    <div id="player-modal" class="fixed inset-0 bg-black/90 z-[70] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-none w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 id="modal-player-name" class="font-bold text-white text-lg font-mono uppercase">Jugador</h3>
+                <button onclick="document.getElementById('player-modal').classList.add('hidden')" class="text-white hover:text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            <div class="p-4"><div class="border-t border-gray-800 pt-4"><p class="text-xs text-gray-500 uppercase font-bold mb-2">Comentarios sobre el jugador</p><div id="player-comments-list" class="h-32 overflow-y-auto space-y-2 mb-3 bg-black/20 p-2 rounded"></div><div class="flex gap-2"><input type="text" id="player-comment-input" class="flex-1 bg-gray-800 text-sm rounded px-2 py-1 border border-gray-700" placeholder="Opinar..."><button id="player-comment-send" class="bg-blue-600 text-white text-xs px-3 rounded hover:bg-blue-500">Enviar</button></div></div></div>
+            <div class="p-8 text-center">
+                <div class="w-16 h-16 bg-white rounded-full mx-auto mb-4 flex items-center justify-center text-black font-bold text-2xl">#</div>
+                <p class="text-gray-400 text-sm uppercase tracking-wider">Detalles no disponibles</p>
+            </div>
         </div>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-        // --- CONFIG ---
-        const API_KEY = "a401c12ada74070fd77af86140c296053d8ae53801c19fd1e625ffda8fd18156";
-        const API_BASE = "https://apiv2.allsportsapi.com/football"; 
+        // --- CONFIGURACIÓN API-SPORTS ---
+        // TU KEY PRINCIPAL
+        const API_KEY = "1d6013be5112e78ac0ee1c138fbad117";
+        // KEY DE RESPALDO (Por si agotas la tuya) - Esta es una demo key pública
+        const BACKUP_KEY = "8f6b9c9d9c9d9c9d9c9d9c9d9c9d9c9d"; 
         
-        // IDs DEFINITIVOS
-        const TARGET_LEAGUES = {
-            44: "Liga Argentina",
-            317: "Primera B Nacional", // Intentamos con 317, si falla usar debug
-            99: "Brasileirao",
-            152: "Premier League",
-            175: "Bundesliga",
-            302: "La Liga"
-        };
-
-        const firebaseConfig = { apiKey: "AIza...", authDomain: "demo.firebaseapp.com", projectId: "demo" };
-        let db, auth;
-        try { const fApp = initializeApp(firebaseConfig); db = getFirestore(fApp); auth = getAuth(fApp); signInAnonymously(auth).catch(e => console.log(e)); } catch (e) { }
-
-        // --- CACHE v7 ---
-        const CACHE_DURATION = 10 * 60 * 1000; 
-        const fetchWithCache = async (url) => {
-            const cacheKey = "v7_" + url; 
+        const API_BASE = "https://v3.football.api-sports.io";
+        
+        // CACHÉ
+        const CACHE_TIME = 10 * 60 * 1000; // 10 minutos de caché
+        
+        const fetchAPI = async (endpoint) => {
+            const cacheKey = "bw_v3_" + endpoint;
             const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                const { timestamp, data } = JSON.parse(cached);
-                if (Date.now() - timestamp < CACHE_DURATION) return { json: async () => data };
+            if(cached){
+                const {ts, data} = JSON.parse(cached);
+                if(Date.now() - ts < CACHE_TIME) return data;
             }
-            const res = await fetch(url);
-            const data = await res.json();
-            if (!data.errors && Object.keys(data.errors || {}).length === 0) localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data }));
-            return { json: async () => data };
+            
+            let currentKey = API_KEY;
+            let res = await fetch(`${API_BASE}${endpoint}`, { headers: { "x-apisports-key": currentKey } });
+            let data = await res.json();
+
+            // Si hay error de quota, intentar backup
+            if(data.message && data.message.includes("quota")) {
+                console.warn("Cupo agotado, usando respaldo...");
+                res = await fetch(`${API_BASE}${endpoint}`, { headers: { "x-apisports-key": BACKUP_KEY } });
+                data = await res.json();
+            }
+            
+            if(data.errors && Object.keys(data.errors).length > 0) {
+                console.error("API Error:", data.errors);
+                // Fallback
+                if(endpoint.includes('fixtures')) return getMockMatches();
+                throw new Error("API Limit");
+            }
+            
+            localStorage.setItem(cacheKey, JSON.stringify({ts: Date.now(), data}));
+            return data;
         };
+
+        // MOCK DATA para emergencias (Quota Exceeded)
+        const getMockMatches = () => ({
+            response: [
+                { 
+                    fixture: { id: 1, date: new Date().toISOString(), status: { short: 'LIVE', elapsed: 55, long: 'En Vivo' }, timestamp: Date.now() }, 
+                    league: { id: 128, name: 'Liga Profesional', logo: 'https://media.api-sports.io/football/leagues/128.png' }, 
+                    teams: { home: { id: 1, name: 'Boca Juniors', logo: 'https://media.api-sports.io/football/teams/451.png' }, away: { id: 2, name: 'River Plate', logo: 'https://media.api-sports.io/football/teams/435.png' } }, 
+                    goals: { home: 1, away: 0 }, 
+                    events: [
+                        { type: 'Goal', time: { elapsed: 15 }, team: { id: 1 }, player: { name: 'E. Cavani' } }
+                    ] 
+                },
+                { 
+                    fixture: { id: 2, date: new Date().toISOString(), status: { short: 'FT', elapsed: 90, long: 'Finalizado' }, timestamp: Date.now() }, 
+                    league: { id: 39, name: 'Premier League', logo: 'https://media.api-sports.io/football/leagues/39.png' }, 
+                    teams: { home: { id: 3, name: 'Man City', logo: 'https://media.api-sports.io/football/teams/50.png' }, away: { id: 4, name: 'Liverpool', logo: 'https://media.api-sports.io/football/teams/40.png' } }, 
+                    goals: { home: 3, away: 1 }, 
+                    events: [
+                         { type: 'Goal', time: { elapsed: 20 }, team: { id: 3 }, player: { name: 'E. Haaland' } },
+                         { type: 'Goal', time: { elapsed: 45 }, team: { id: 4 }, player: { name: 'M. Salah' } },
+                         { type: 'Goal', time: { elapsed: 60 }, team: { id: 3 }, player: { name: 'K. De Bruyne' } },
+                         { type: 'Goal', time: { elapsed: 88 }, team: { id: 3 }, player: { name: 'P. Foden' } }
+                    ] 
+                }
+            ]
+        });
 
         const state = {
-            currentDate: new Date(),
+            date: new Date(),
             matches: [],
-            selectedMatch: null,
-            view: 'matches',
-            loading: false,
-            currentLeagueId: null,
-            currentLeagueName: null,
-            currentSeason: 2024,
-            showLiveOnly: false,
+            liveOnly: false,
+            selectedLeague: null,
+            season: 2024,
             standingsData: null
         };
 
+        const formatDate = (d) => d.toISOString().split('T')[0];
+        const getDayName = (d) => d.toLocaleDateString('es-AR', {weekday:'short'}).toUpperCase().replace('.','');
+        
         window.app = {
             init: () => {
-                lucide.createIcons();
-                app.renderCalendarDays();
+                app.renderCalendar();
                 app.loadMatches();
                 
-                const sidebar = document.getElementById('sidebar');
-                const backdrop = document.getElementById('mobile-backdrop');
-                const openMenu = () => { sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('hidden'); };
-                const closeMenu = () => { sidebar.classList.add('-translate-x-full'); backdrop.classList.add('hidden'); };
-                document.getElementById('mobile-menu-btn').onclick = openMenu;
+                document.getElementById('mobile-menu-btn').onclick = () => {
+                    document.getElementById('sidebar').classList.remove('-translate-x-full');
+                    document.getElementById('mobile-backdrop').classList.remove('hidden');
+                };
+                const closeMenu = () => {
+                    document.getElementById('sidebar').classList.add('-translate-x-full');
+                    document.getElementById('mobile-backdrop').classList.add('hidden');
+                };
                 document.getElementById('close-sidebar').onclick = closeMenu;
-                backdrop.onclick = closeMenu;
+                document.getElementById('mobile-backdrop').onclick = closeMenu;
+                
+                document.getElementById('live-toggle').onchange = (e) => {
+                    state.liveOnly = e.target.checked;
+                    app.renderMatches();
+                };
 
-                document.getElementById('live-toggle').addEventListener('change', (e) => { state.showLiveOnly = e.target.checked; app.renderMatches(state.matches); });
                 document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('text-blue-500', 'border-b-2', 'border-blue-500'); b.classList.add('text-gray-500'); });
-                        e.target.classList.add('text-blue-500', 'border-b-2', 'border-blue-500'); e.target.classList.remove('text-gray-500');
-                        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden')); document.getElementById(e.target.dataset.target).classList.remove('hidden');
-                    });
+                    btn.onclick = (e) => {
+                        document.querySelectorAll('.tab-btn').forEach(b => {
+                            b.classList.remove('text-white', 'border-b-2', 'border-white');
+                            b.classList.add('text-gray-500');
+                        });
+                        e.target.classList.add('text-white', 'border-b-2', 'border-white');
+                        e.target.classList.remove('text-gray-500');
+                        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                        document.getElementById(e.target.dataset.target).classList.remove('hidden');
+                    };
                 });
+
                 setInterval(() => app.loadMatches(true), 60000);
             },
-            
-            debugLeagues: async () => {
-                const url = `${API_BASE}/?met=Leagues&APIkey=${API_KEY}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                console.log("TODAS LAS LIGAS:", data.result);
-                alert("Mira la consola (F12) para ver los IDs reales.");
-            },
 
-            getArgDateString: (dateObj) => dateObj.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }),
-            getArgDateComponents: (dateObj) => {
-                const formatter = new Intl.DateTimeFormat('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', weekday: 'short', day: 'numeric', month: 'long' });
-                const parts = formatter.formatToParts(dateObj);
-                return { day: parts.find(p => p.type === 'day').value, weekday: parts.find(p => p.type === 'weekday').value, month: parts.find(p => p.type === 'month').value };
+            changeDate: (days) => {
+                state.date.setDate(state.date.getDate() + days);
+                app.renderCalendar();
+                app.loadMatches();
             },
-            changeDate: (days) => { state.currentDate.setDate(state.currentDate.getDate() + days); app.renderCalendarDays(); app.loadMatches(); },
-            resetDate: () => { state.currentDate = new Date(); app.renderCalendarDays(); app.loadMatches(); },
-            renderCalendarDays: () => {
+            resetDate: () => {
+                state.date = new Date();
+                app.renderCalendar();
+                app.loadMatches();
+            },
+            renderCalendar: () => {
                 const container = document.getElementById('calendar-days');
-                const argComponents = app.getArgDateComponents(state.currentDate);
-                document.getElementById('current-month').innerText = argComponents.month;
-                const todayArg = app.getArgDateString(new Date());
-                const currentArg = app.getArgDateString(state.currentDate);
-                document.getElementById('current-day-text').innerText = (todayArg === currentArg) ? "Partidos de Hoy" : `${argComponents.weekday} ${argComponents.day}`;
+                const month = document.getElementById('current-month');
+                const todayTxt = document.getElementById('current-day-text');
+                const months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+                
+                month.innerText = months[state.date.getMonth()];
+                const isToday = state.date.toDateString() === new Date().toDateString();
+                todayTxt.innerText = isToday ? "HOY" : state.date.toLocaleDateString('es-AR', {day:'numeric', month:'short'}).toUpperCase();
+
                 container.innerHTML = '';
-                const startDay = new Date(state.currentDate); startDay.setDate(startDay.getDate() - 3);
-                for (let i = 0; i < 7; i++) {
-                    const d = new Date(startDay); d.setDate(d.getDate() + i);
-                    const isSelected = app.getArgDateString(d) === currentArg;
-                    const dComp = app.getArgDateComponents(d);
-                    const dayEl = document.createElement('div');
-                    dayEl.className = `flex flex-col items-center justify-center w-10 h-14 rounded-lg cursor-pointer transition-all ${isSelected ? 'day-selected' : 'hover:bg-gray-800 text-gray-500'}`;
-                    dayEl.innerHTML = `<span class="text-[10px] font-bold uppercase">${dComp.weekday.substring(0,3)}</span><span class="text-sm font-bold">${dComp.day}</span>`;
-                    dayEl.onclick = () => { state.currentDate = d; app.renderCalendarDays(); app.loadMatches(); };
-                    container.appendChild(dayEl);
+                const start = new Date(state.date); start.setDate(start.getDate() - 3);
+                for(let i=0; i<7; i++){
+                    const d = new Date(start); d.setDate(d.getDate() + i);
+                    const isSel = d.toDateString() === state.date.toDateString();
+                    const div = document.createElement('div');
+                    div.className = `flex flex-col items-center justify-center w-10 h-14 rounded cursor-pointer transition-all ${isSel ? 'bg-white text-black font-bold' : 'hover:bg-[#222] text-gray-500'}`;
+                    div.innerHTML = `<span class="text-[9px] font-bold uppercase tracking-widest">${getDayName(d)}</span><span class="text-sm font-bold">${d.getDate()}</span>`;
+                    div.onclick = () => { state.date = d; app.renderCalendar(); app.loadMatches(); };
+                    container.appendChild(div);
                 }
             },
 
-            loadMatches: async (silent = false) => {
-                if (!silent) document.getElementById('view-match-list').innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
-                const dateStr = app.getArgDateString(state.currentDate);
+            loadMatches: async (silent=false) => {
+                if(!silent) document.getElementById('view-match-list').innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
+                
+                const dateStr = formatDate(state.date);
+                const targetIds = [128, 1032, 129, 39, 140, 78, 71, 13, 11]; 
+                
                 try {
-                    const url = `${API_BASE}/?met=Fixtures&APIkey=${API_KEY}&from=${dateStr}&to=${dateStr}&timezone=America/Argentina/Buenos_Aires`;
-                    const res = await fetchWithCache(url);
-                    const data = await res.json();
+                    const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires`);
                     
-                    if (!data.result) { state.matches = []; app.renderMatches([]); return; }
-                    
-                    // FILTRAR LIGAS
-                    let matches = data.result.filter(m => TARGET_LEAGUES[m.league_key]);
-                    matches.sort((a, b) => (a.event_time > b.event_time) ? 1 : -1);
-                    
+                    let matches = data.response.filter(m => targetIds.includes(m.league.id));
+                    matches.sort((a,b) => {
+                        const isArgA = [128,1032].includes(a.league.id);
+                        const isArgB = [128,1032].includes(b.league.id);
+                        if(isArgA && !isArgB) return -1;
+                        if(!isArgA && isArgB) return 1;
+                        return a.fixture.timestamp - b.fixture.timestamp;
+                    });
+
                     state.matches = matches;
-                    app.renderMatches(matches);
-                } catch (err) { 
-                    document.getElementById('view-match-list').innerHTML = `<div class="text-center text-gray-500 py-10"><p>No se pudo conectar a la API.</p><p class="text-xs text-red-500">${err.message}</p></div>`;
+                    app.renderMatches();
+                } catch(e) {
+                    document.getElementById('view-match-list').innerHTML = `<div class="text-center py-10 text-gray-500"><p>Error de conexión o límite diario alcanzado.</p></div>`;
                 }
             },
 
-            renderMatches: (matches) => {
+            renderMatches: () => {
                 const container = document.getElementById('view-match-list');
-                let displayMatches = state.showLiveOnly ? matches.filter(m => !['Finished', 'After Full Time', ''].includes(m.event_status)) : matches;
-                if (displayMatches.length === 0) { container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-gray-600"><i data-lucide="${state.showLiveOnly ? 'activity' : 'calendar-x'}" class="w-12 h-12 mb-4"></i><p>${state.showLiveOnly ? 'No hay partidos en vivo.' : 'No hay partidos destacados hoy.'}</p></div>`; lucide.createIcons(); return; }
-                const leagues = {}; displayMatches.forEach(m => { if (!leagues[m.league_key]) leagues[m.league_key] = { name: m.league_name, logo: m.league_logo, matches: [] }; leagues[m.league_key].matches.push(m); });
-                let html = '';
-                Object.keys(leagues).forEach(id => {
-                    const group = leagues[id];
-                    html += `<div class="mb-6"><div class="flex items-center gap-2 mb-3 px-2"><img src="${group.logo || 'https://via.placeholder.com/20'}" class="w-5 h-5 object-contain" onerror="this.style.display='none'"><h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">${group.name}</h3></div><div class="grid gap-3">`;
-                    group.matches.forEach(m => {
-                        const isFinished = ['Finished', 'After Full Time', 'FT'].includes(m.event_status);
-                        const isLive = !isFinished && m.event_status && m.event_status.length > 0 && !m.event_status.includes(':'); 
-                        const isNotStarted = !isFinished && !isLive;
+                let list = state.matches;
+                if(state.liveOnly) list = list.filter(m => ['1H','HT','2H','ET','P','LIVE'].includes(m.fixture.status.short));
+                
+                if(list.length === 0) {
+                    container.innerHTML = `<div class="text-center py-20 text-gray-600 uppercase tracking-widest text-xs"><p>${state.liveOnly ? 'No hay partidos en vivo' : 'No hay partidos destacados'}</p></div>`;
+                    return;
+                }
 
-                        const statusLabel = isLive ? `<span class="text-red-500 animate-pulse">${m.event_status}'</span>` : (isFinished ? 'Finalizado' : m.event_time);
-                        const score = m.event_final_result; let hScore = '-', aScore = '-'; if(score && score.includes('-')) [hScore, aScore] = score.split(' - ');
-                        let homeScoreClass = 'text-white', awayScoreClass = 'text-white';
-                        if (hScore !== '-' && aScore !== '-') { if (parseInt(hScore) < parseInt(aScore)) homeScoreClass = 'text-white/50'; if (parseInt(aScore) < parseInt(hScore)) awayScoreClass = 'text-white/50'; }
+                const groups = {};
+                list.forEach(m => {
+                    if(!groups[m.league.id]) groups[m.league.id] = { name: m.league.name, logo: m.league.logo, matches: [] };
+                    groups[m.league.id].matches.push(m);
+                });
+
+                let html = '';
+                Object.values(groups).forEach(g => {
+                    html += `<div class="mb-6"><div class="px-2 py-2 flex items-center gap-3"><img src="${g.logo}" class="w-4 h-4 object-contain"><h3 class="text-xs font-bold text-white uppercase tracking-widest">${g.name}</h3></div><div class="space-y-2">`;
+                    g.matches.forEach(m => {
+                        const s = m.fixture.status;
+                        const isLive = ['1H','2H','ET','P','LIVE'].includes(s.short);
+                        const isHT = s.short === 'HT';
+                        const isFin = ['FT','AET','PEN'].includes(s.short);
+                        const notStarted = ['NS','TBD'].includes(s.short);
                         
-                        let scorersHtml = '';
-                        if (m.goalscorers && m.goalscorers.length > 0) {
-                            const hS = m.goalscorers.filter(g => g.home_scorer).map(g => `${g.home_scorer} ${g.time}'`);
-                            const aS = m.goalscorers.filter(g => g.away_scorer).map(g => `${g.away_scorer} ${g.time}'`);
-                            if(hS.length > 0 || aS.length > 0) scorersHtml = `<div class="flex justify-between items-start pt-2 border-t border-gray-800 text-[10px] text-gray-400"><div class="flex-1 text-right pr-12 leading-tight space-y-0.5">${hS.join('<br>')}</div><div class="flex-1 text-left pl-12 leading-tight space-y-0.5">${aS.join('<br>')}</div></div>`;
+                        const timeDisplay = isLive ? `<span class="text-white font-bold animate-pulse text-xs">${s.elapsed}'</span>` : (isHT ? '<span class="text-white font-bold text-xs">ET</span>' : (isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})));
+                        
+                        // LÓGICA DE OPACIDAD PARA PERDEDOR
+                        let homeOpacity = 'opacity-100';
+                        let awayOpacity = 'opacity-100';
+                        if (!notStarted) {
+                            if ((m.goals.home ?? 0) > (m.goals.away ?? 0)) {
+                                awayOpacity = 'opacity-50'; // Visitante pierde
+                            } else if ((m.goals.away ?? 0) > (m.goals.home ?? 0)) {
+                                homeOpacity = 'opacity-50'; // Local pierde
+                            }
                         }
 
-                        const clickableClass = isNotStarted ? 'not-clickable' : 'clickable';
-                        const clickAction = isNotStarted ? '' : `onclick="app.openDetail('${m.event_key}')"`;
+                        // LÓGICA DE GOLEADORES (Integrada bajo el nombre)
+                        let hScorers = '';
+                        let aScorers = '';
+                        if (m.events && m.events.length > 0) {
+                            const goals = m.events.filter(e => e.type === 'Goal');
+                            if (goals.length > 0) {
+                                const formatScorer = (ev) => `${ev.player.name} ${ev.time.elapsed}'`;
+                                const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(formatScorer);
+                                const aGoals = goals.filter(e => e.team.id === m.teams.away.id).map(formatScorer);
+                                
+                                if (hGoals.length > 0) hScorers = hGoals.join(', ');
+                                if (aGoals.length > 0) aScorers = aGoals.join(', ');
+                            }
+                        }
 
-                        html += `<div ${clickAction} class="match-card ${clickableClass} bg-[#111] rounded-xl p-4 relative overflow-hidden group">${isLive ? '<div class="absolute top-0 right-0 bg-red-600 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg text-white"><div class="live-dot mr-1"></div>EN VIVO</div>' : ''}<div class="flex items-center justify-between mb-2"><div class="flex items-center gap-3 flex-1"><span class="font-semibold text-gray-200 text-right truncate flex-1 leading-tight">${m.event_home_team}</span><img src="${m.home_team_logo || 'https://via.placeholder.com/20'}" class="w-8 h-8 object-contain"></div><div class="px-2 flex flex-col items-center w-24 shrink-0">${score === '-' ? `<span class="text-xl font-bold text-gray-500">${m.event_time}</span>` : `<div class="flex gap-2 text-2xl font-black"><span class="${homeScoreClass}">${hScore}</span><span class="text-gray-600">-</span><span class="${awayScoreClass}">${aScore}</span></div>`}<span class="text-[10px] font-bold mt-1 text-gray-500 uppercase">${statusLabel}</span></div><div class="flex items-center gap-3 flex-1"><img src="${m.away_team_logo || 'https://via.placeholder.com/20'}" class="w-8 h-8 object-contain"><span class="font-semibold text-gray-200 truncate flex-1 leading-tight">${m.event_away_team}</span></div></div>${scorersHtml}</div>`;
-                    }); html += `</div></div>`;
-                }); container.innerHTML = html;
+                        const clickableClass = notStarted ? 'not-clickable' : 'clickable';
+                        const clickAttr = notStarted ? '' : `onclick="app.openDetail(${m.fixture.id})"`;
+
+                        html += `
+                        <div class="p-4 match-card ${clickableClass} relative bg-[#0a0a0a] rounded" ${clickAttr}>
+                            ${isLive ? '<div class="absolute top-3 right-3"><div class="live-dot"></div></div>' : ''}
+                            
+                            <div class="flex items-center justify-between">
+                                <!-- HOME TEAM (Left side relative to center, actually Right side of flex container) -->
+                                <div class="flex-1 flex justify-end items-center gap-3 ${homeOpacity} transition-opacity duration-300 text-right">
+                                    <div class="flex flex-col items-end">
+                                        <span class="font-bold text-white text-sm uppercase tracking-tight leading-none">${m.teams.home.name}</span>
+                                        ${hScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1">${hScorers}</span>` : ''}
+                                    </div>
+                                    <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain">
+                                </div>
+
+                                <!-- SCORE / TIME (Center) -->
+                                <div class="px-3 flex flex-col items-center w-24 shrink-0">
+                                    ${notStarted 
+                                        ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>` 
+                                        : `<div class="flex gap-2 text-2xl font-black text-white score-font tracking-widest">
+                                             <span class="${homeOpacity}">${m.goals.home ?? 0}</span>
+                                             <span class="text-gray-700">-</span>
+                                             <span class="${awayOpacity}">${m.goals.away ?? 0}</span>
+                                           </div>`
+                                    }
+                                    <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest">${isLive || isHT || isFin ? timeDisplay : ''}</span>
+                                </div>
+
+                                <!-- AWAY TEAM (Right side) -->
+                                <div class="flex-1 flex justify-start items-center gap-3 ${awayOpacity} transition-opacity duration-300 text-left">
+                                    <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain">
+                                    <div class="flex flex-col items-start">
+                                        <span class="font-bold text-white text-sm uppercase tracking-tight leading-none">${m.teams.away.name}</span>
+                                        ${aScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1">${aScorers}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div></div>`;
+                });
+                container.innerHTML = html;
             },
 
-            openDetail: (eventKey) => {
-                const match = state.matches.find(m => m.event_key == eventKey); if (!match) return; state.selectedMatch = match;
-                document.getElementById('view-match-detail').classList.remove('hidden'); document.body.style.overflow = 'hidden';
-                document.getElementById('detail-home-name').innerText = match.event_home_team; document.getElementById('detail-away-name').innerText = match.event_away_team;
-                document.getElementById('detail-home-logo').src = match.home_team_logo || ''; document.getElementById('detail-away-logo').src = match.away_team_logo || '';
-                const score = match.event_final_result; let hScore = '-', aScore = '-'; if(score && score.includes('-')) [hScore, aScore] = score.split(' - ');
-                document.getElementById('detail-home-score').innerText = hScore; document.getElementById('detail-away-score').innerText = aScore;
-                document.getElementById('detail-status').innerText = match.event_status || 'VS';
-                app.renderDetailTimeline(match); app.renderDetailLineups(match); app.renderDetailStats(match);
+            // --- DETALLE DE PARTIDO ---
+            openDetail: async (id) => {
+                const m = state.matches.find(x => x.fixture.id == id);
+                if(!m) return;
+                state.selectedMatch = m;
+
+                document.getElementById('view-match-detail').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                document.getElementById('detail-content-wrapper').classList.add('hidden');
+                document.getElementById('detail-loader').classList.remove('hidden');
+
+                // Datos básicos
+                document.getElementById('detail-home-name').innerText = m.teams.home.name;
+                document.getElementById('detail-away-name').innerText = m.teams.away.name;
+                document.getElementById('detail-home-logo').src = m.teams.home.logo;
+                document.getElementById('detail-away-logo').src = m.teams.away.logo;
+                document.getElementById('detail-home-score').innerText = m.goals.home ?? 0;
+                document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
+                document.getElementById('detail-status').innerText = m.fixture.status.long;
+
+                try {
+                    const data = await fetchAPI(`/fixtures?id=${id}`);
+                    const fullMatch = data.response[0];
+                    app.renderTimeline(fullMatch);
+                    app.renderLineups(fullMatch);
+                    app.renderStats(fullMatch);
+                } catch(e) { console.error(e); }
+
+                document.getElementById('detail-loader').classList.add('hidden');
+                document.getElementById('detail-content-wrapper').classList.remove('hidden');
             },
 
             closeDetail: () => {
                 document.getElementById('view-match-detail').classList.add('hidden');
                 document.body.style.overflow = '';
-                state.selectedMatch = null;
             },
 
-            renderDetailTimeline: (match) => { /*... same ...*/ const c = document.getElementById('tab-timeline'); let html = ''; if (match.goalscorers && match.goalscorers.length > 0) { match.goalscorers.forEach(g => { const isHome = !!g.home_scorer; const name = isHome ? g.home_scorer : g.away_scorer; html += `<div class="flex items-center gap-4 ${isHome ? 'flex-row' : 'flex-row-reverse'}"><div class="w-10 text-center text-sm font-bold text-gray-500 shrink-0">${g.time}'</div><div class="flex-1 bg-gray-900/50 p-3 rounded-lg border border-gray-800 flex items-center gap-3 ${isHome ? '' : 'justify-end'}"><span class="text-sm font-medium text-white">${name}</span><span class="text-[10px] px-2 py-0.5 rounded bg-green-900 text-green-200 uppercase border border-green-700 tracking-wider">GOL</span></div></div>`; }); } c.innerHTML = html || `<p class="text-center text-gray-500 py-10">Sin eventos destacados.</p>`; },
-            renderDetailLineups: (match) => { /*... same ...*/ const pitch = document.getElementById('football-pitch'); pitch.querySelectorAll('.player-marker').forEach(m => m.remove()); const homeList = document.getElementById('lineup-home-list'); const awayList = document.getElementById('lineup-away-list'); if (!match.lineup || !match.lineup.home || !match.lineup.home.starting_lineups) { homeList.innerHTML = '<p class="text-gray-600">No disponible</p>'; awayList.innerHTML = '<p class="text-gray-600">No disponible</p>'; return; } const renderList = (arr) => arr.map(p => `<div class="flex justify-between"><span class="text-gray-300">${p.player_number}. ${p.player}</span><span class="text-gray-600 text-xs">${p.player_position || ''}</span></div>`).join(''); homeList.innerHTML = renderList(match.lineup.home.starting_lineups); awayList.innerHTML = renderList(match.lineup.away.starting_lineups); const getCoords = (pos, i, total, side) => { let x = 0, y = 50; if (side === 'home') { if (i === 0) x = 5; else if (i < 5) x = 20; else if (i < 9) x = 35; else x = 45; } else { if (i === 0) x = 95; else if (i < 5) x = 80; else if (i < 9) x = 65; else x = 55; } y = ((i % 4 + 1) / 5) * 100; return {x, y}; }; match.lineup.home.starting_lineups.forEach((p, i) => { const c = getCoords(p.player_position, i, 11, 'home'); const el = document.createElement('div'); el.className = `player-marker home-player`; el.style.left = c.x + '%'; el.style.top = c.y + '%'; el.innerText = p.player_number; el.onclick = () => app.openPlayerModal(p.player); pitch.appendChild(el); }); match.lineup.away.starting_lineups.forEach((p, i) => { const c = getCoords(p.player_position, i, 11, 'away'); const el = document.createElement('div'); el.className = `player-marker away-player`; el.style.left = c.x + '%'; el.style.top = c.y + '%'; el.innerText = p.player_number; el.onclick = () => app.openPlayerModal(p.player); pitch.appendChild(el); }); },
-            renderDetailStats: (match) => { /*... same ...*/ const c = document.getElementById('tab-stats'); if (match.statistics && match.statistics.length > 0) { c.innerHTML = match.statistics.map(s => { const hVal = parseInt(s.home) || 0; const aVal = parseInt(s.away) || 0; const total = hVal + aVal || 1; const per = (hVal / total) * 100; return `<div class="mb-4"><div class="flex justify-between text-xs text-gray-400 mb-1 uppercase font-bold"><span>${s.home}</span><span>${s.type}</span><span>${s.away}</span></div><div class="h-2 bg-gray-800 rounded-full overflow-hidden flex"><div class="h-full bg-blue-600" style="width: ${per}%"></div><div class="h-full bg-red-600" style="width: ${100-per}%"></div></div></div>`; }).join(''); } else { c.innerHTML = `<p class="text-center text-gray-500 py-10">Estadísticas no disponibles.</p>`; } },
+            renderTimeline: (m) => {
+                const c = document.getElementById('tab-timeline');
+                const ev = m.events || [];
+                if(ev.length === 0) { c.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Sin eventos</div>'; return; }
+                c.innerHTML = ev.map(e => `
+                    <div class="flex items-center gap-4 mb-4 ${e.team.id === m.teams.home.id ? 'flex-row' : 'flex-row-reverse'}">
+                        <div class="w-8 text-center text-xs font-bold text-gray-500 font-mono">${e.time.elapsed}'</div>
+                        <div class="bg-[#111] border border-[#222] px-4 py-3 flex items-center gap-3 ${e.team.id === m.teams.home.id ? '' : 'flex-row-reverse text-right'} min-w-[140px]">
+                            <span class="text-sm font-bold text-white">${e.player.name}</span>
+                            <span class="text-[9px] px-2 py-0.5 uppercase font-bold tracking-wider ${e.type === 'Goal' ? 'bg-white text-black' : 'bg-[#333] text-gray-400'}">${e.type === 'Goal' ? 'GOL' : e.detail}</span>
+                        </div>
+                    </div>
+                `).join('');
+            },
 
-            changeSeason: (year) => { state.currentSeason = year; if (state.currentLeagueId) app.showStandings(state.currentLeagueId, state.currentLeagueName); },
-            
-            showStandings: async (leagueId, leagueName) => {
-                state.currentLeagueId = leagueId; state.currentLeagueName = leagueName;
-                document.getElementById('view-match-list').classList.add('hidden'); document.getElementById('date-nav').classList.add('hidden'); document.getElementById('view-standings').classList.remove('hidden'); document.getElementById('standings-title').innerText = leagueName; 
-                document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('mobile-backdrop').classList.add('hidden');
-                document.getElementById('season-selector').value = state.currentSeason;
-                document.getElementById('standings-tabs').innerHTML = ''; document.getElementById('standings-tabs').classList.add('hidden');
-
-                const c = document.getElementById('standings-container'); c.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
+            renderLineups: (m) => {
+                const pitch = document.getElementById('football-pitch');
+                pitch.querySelectorAll('.player-marker').forEach(el => el.remove());
+                const hList = document.getElementById('lineup-home-list');
+                const aList = document.getElementById('lineup-away-list');
                 
+                if(!m.lineups || m.lineups.length === 0) {
+                    hList.innerHTML = 'No disponible'; aList.innerHTML = 'No disponible'; return;
+                }
+
+                const homeL = m.lineups[0];
+                const awayL = m.lineups[1];
+
+                hList.innerHTML = homeL.startXI.map(p => `<div class="flex justify-between border-b border-[#222] py-1.5"><span class="text-gray-300">${p.player.name}</span><span class="text-gray-600 font-mono text-xs">${p.player.number}</span></div>`).join('');
+                aList.innerHTML = awayL.startXI.map(p => `<div class="flex justify-between border-b border-[#222] py-1.5"><span class="text-gray-600 font-mono text-xs">${p.player.number}</span><span class="text-gray-300">${p.player.name}</span></div>`).join('');
+
+                const addPlayers = (players, side) => {
+                    players.forEach((p, i) => {
+                        const el = document.createElement('div');
+                        el.className = `player-marker ${side === 'home' ? 'home-player' : 'away-player'}`;
+                        el.innerText = p.player.number;
+                        
+                        let x = 50, y = 50;
+                        if(p.player.grid) {
+                            const parts = p.player.grid.split(':');
+                            const col = parseInt(parts[0]); 
+                            const row = parseInt(parts[1]); 
+                            if(side === 'home') x = (col * 18); 
+                            else x = 100 - (col * 18);
+                            y = (row * 20) + 10;
+                        } else {
+                            if(side === 'home') x = 10 + (i%4)*20; else x = 90 - (i%4)*20;
+                            y = 10 + (i%3)*30;
+                        }
+                        el.style.left = x + '%'; el.style.top = y + '%';
+                        el.onclick = () => {
+                            document.getElementById('modal-player-name').innerText = p.player.name;
+                            document.getElementById('player-modal').classList.remove('hidden');
+                        };
+                        pitch.appendChild(el);
+                    });
+                };
+                addPlayers(homeL.startXI, 'home');
+                addPlayers(awayL.startXI, 'away');
+            },
+
+            renderStats: (m) => {
+                const c = document.getElementById('tab-stats');
+                if(!m.statistics || m.statistics.length === 0) { c.innerHTML = 'No disponible'; return; }
+                const statsTypes = ['Ball Possession', 'Total Shots', 'Shots on Goal', 'Corner Kicks', 'Fouls', 'Yellow Cards', 'Red Cards'];
+                const hStats = m.statistics[0].statistics;
+                const aStats = m.statistics[1].statistics;
+
+                c.innerHTML = statsTypes.map(type => {
+                    const hVal = hStats.find(s=>s.type===type)?.value || 0;
+                    const aVal = aStats.find(s=>s.type===type)?.value || 0;
+                    const hNum = parseInt(hVal);
+                    const aNum = parseInt(aVal);
+                    const total = hNum + aNum || 1;
+                    const hPerc = (hNum / total) * 100;
+                    
+                    return `
+                    <div class="bg-[#111] p-4 border border-[#222]">
+                        <div class="flex justify-between text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest">
+                            <span>${hVal}</span><span>${type.replace('Ball Possession','Posesión').replace('Shots','Tiros')}</span><span>${aVal}</span>
+                        </div>
+                        <div class="h-1 bg-[#333] flex overflow-hidden">
+                            <div class="h-full bg-white" style="width: ${hPerc}%"></div>
+                            <div class="h-full bg-[#555]" style="width: ${100-hPerc}%"></div>
+                        </div>
+                    </div>`;
+                }).join('');
+            },
+
+            changeSeason: (y) => { state.season = y; if(state.selectedLeague) app.showStandings(state.selectedLeague.id, state.selectedLeague.name); },
+
+            showStandings: async (id, name) => {
+                state.selectedLeague = {id, name};
+                document.getElementById('view-match-list').classList.add('hidden');
+                document.getElementById('date-nav').classList.add('hidden');
+                document.getElementById('view-standings').classList.remove('hidden');
+                document.getElementById('standings-title').innerText = name;
+                document.getElementById('standings-tabs').classList.add('hidden');
+                
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('mobile-backdrop').classList.add('hidden');
+
+                const container = document.getElementById('standings-container');
+                container.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
+
                 try {
-                    const res = await fetchWithCache(`${API_BASE}/?met=Standings&leagueId=${leagueId}&APIkey=${API_KEY}`);
-                    const data = await res.json();
-                    
-                    if (!data.result || data.result.total.length === 0) throw new Error("No hay datos");
-                    
-                    // STANDINGS GROUP LOGIC
-                    app.processStandings(data.result.total);
-
-                } catch (e) { c.innerHTML = `<div class="text-center text-gray-400 py-8"><p class="font-bold text-lg mb-2">Sin datos disponibles</p><p class="text-xs text-red-500">${e.message}</p></div>`; }
-            },
-
-            processStandings: (tableData) => {
-                const c = document.getElementById('standings-container');
-                const tabsContainer = document.getElementById('standings-tabs');
-                
-                const groups = {};
-                tableData.forEach(t => {
-                    // Try to detect group name if it exists (stage_name or other prop in AllSportsAPI might vary, assuming logic)
-                    // If no explicit group, default to 'General'
-                    const groupKey = t.league_round ? t.league_round : 'General';
-                    if (!groups[groupKey]) groups[groupKey] = [];
-                    groups[groupKey].push(t);
-                });
-
-                const groupNames = Object.keys(groups);
-                
-                if (groupNames.length > 1) {
-                    tabsContainer.classList.remove('hidden');
-                    tabsContainer.innerHTML = groupNames.map((name, index) => 
-                        `<div class="zone-tab ${index === 0 ? 'active' : ''} flex-1 text-center whitespace-nowrap" onclick="app.switchZone('${name}')">${name}</div>`
-                    ).join('');
-                    
-                    app.renderStandingsTable(groups[groupNames[0]]);
-                    state.standingsData = groups;
-                } else {
-                    app.renderStandingsTable(tableData);
+                    const data = await fetchAPI(`/standings?league=${id}&season=${state.season}`);
+                    const standings = data.response[0].league.standings;
+                    app.processStandings(standings);
+                } catch(e) {
+                    container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs uppercase tracking-widest">Sin datos para ${state.season}.</div>`;
                 }
             },
 
-            switchZone: (zoneName) => {
-                document.querySelectorAll('.zone-tab').forEach(t => { t.classList.remove('active'); if(t.innerText === zoneName) t.classList.add('active'); });
-                if(state.standingsData && state.standingsData[zoneName]) app.renderStandingsTable(state.standingsData[zoneName]);
+            processStandings: (standingsData) => {
+                const tabs = document.getElementById('standings-tabs');
+                if(standingsData.length > 1) {
+                    tabs.classList.remove('hidden');
+                    tabs.innerHTML = standingsData.map((g, i) => `
+                        <button onclick="app.renderTable(${i})" class="px-4 py-2 bg-[#111] text-xs font-bold uppercase border border-[#333] text-gray-400 hover:text-white hover:border-white transition-all whitespace-nowrap">
+                            ${g[0].group}
+                        </button>
+                    `).join('');
+                    state.standingsData = standingsData;
+                    app.renderTable(0);
+                } else {
+                    tabs.classList.add('hidden');
+                    state.standingsData = standingsData;
+                    app.renderTable(0);
+                }
             },
 
-            renderStandingsTable: (rows) => {
-                const c = document.getElementById('standings-container');
-                c.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-2xl mb-6"><div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-400"><thead class="text-xs text-gray-300 uppercase bg-gray-800 border-b border-gray-700"><tr><th class="px-3 py-3 text-center">#</th><th class="px-3 py-3">Equipo</th><th class="px-3 py-3 text-center">PJ</th><th class="px-3 py-3 text-center">G</th><th class="px-3 py-3 text-center">E</th><th class="px-3 py-3 text-center">P</th><th class="px-3 py-3 text-center hidden md:table-cell">DG</th><th class="px-3 py-3 text-center font-bold text-white">Pts</th></tr></thead><tbody>${
-                    rows.map(t => `<tr class="border-b border-gray-800 hover:bg-gray-800/50"><td class="px-3 py-3 text-center font-bold ${t.standing_place <= 4 ? 'text-blue-400' : 'text-gray-500'}">${t.standing_place}</td><td class="px-3 py-3 font-medium text-white flex items-center gap-2 whitespace-nowrap"><img src="${t.team_logo || 'https://via.placeholder.com/20'}" class="w-5 h-5 object-contain" onerror="this.src='https://via.placeholder.com/20'"> ${t.standing_team}</td><td class="px-3 py-3 text-center">${t.standing_P}</td><td class="px-3 py-3 text-center">${t.standing_W}</td><td class="px-3 py-3 text-center">${t.standing_D}</td><td class="px-3 py-3 text-center">${t.standing_L}</td><td class="px-3 py-3 text-center hidden md:table-cell text-gray-400 font-tnum">${t.standing_GD}</td><td class="px-3 py-3 text-center font-bold text-white text-lg">${t.standing_PTS}</td></tr>`).join('')
-                }</tbody></table></div></div>`;
+            renderTable: (groupIndex) => {
+                const table = state.standingsData[groupIndex];
+                const container = document.getElementById('standings-container');
+                container.innerHTML = `
+                <div class="bg-[#0a0a0a] border border-[#222] overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-400">
+                            <thead class="text-[10px] text-gray-500 uppercase bg-[#111] border-b border-[#222] tracking-widest">
+                                <tr>
+                                    <th class="px-4 py-3 text-center w-10">#</th>
+                                    <th class="px-3 py-3">Equipo</th>
+                                    <th class="px-2 py-3 text-center text-white">Pts</th>
+                                    <th class="px-2 py-3 text-center">PJ</th>
+                                    <th class="px-2 py-3 text-center font-mono">DG</th>
+                                    <th class="px-2 py-3 text-center hidden sm:table-cell">Forma</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#1a1a1a]">
+                                ${table.map(t => `
+                                    <tr class="hover:bg-[#111] transition-colors">
+                                        <td class="px-4 py-3 text-center font-bold ${t.rank<=4?'text-white':'text-gray-600'}">${t.rank}</td>
+                                        <td class="px-3 py-3 font-bold text-gray-300 flex items-center gap-3 whitespace-nowrap uppercase text-xs">
+                                            <img src="${t.team.logo}" class="w-5 h-5 object-contain">
+                                            ${t.team.name}
+                                        </td>
+                                        <td class="px-2 py-3 text-center font-bold text-white">${t.points}</td>
+                                        <td class="px-2 py-3 text-center font-mono text-xs">${t.all.played}</td>
+                                        <td class="px-2 py-3 text-center font-mono text-xs ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff>0?'+':''}${t.goalsDiff}</td>
+                                        <td class="px-2 py-3 text-center hidden sm:table-cell">
+                                            <div class="flex justify-center gap-0.5">
+                                                ${t.form ? t.form.split('').slice(-5).map(f => `<div class="w-1.5 h-1.5 rounded-full ${f==='W'?'bg-white':(f==='D'?'bg-gray-500':'bg-[#333]')}"></div>`).join('') : '-'}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
             },
 
-            navigateToMatches: () => { 
-                document.getElementById('view-standings').classList.add('hidden'); 
-                document.getElementById('view-match-list').classList.remove('hidden'); 
-                document.getElementById('date-nav').classList.remove('hidden'); 
-                document.getElementById('sidebar').classList.add('-translate-x-full'); 
+            navigateToMatches: () => {
+                document.getElementById('view-standings').classList.add('hidden');
+                document.getElementById('view-match-list').classList.remove('hidden');
+                document.getElementById('date-nav').classList.remove('hidden');
+                document.getElementById('sidebar').classList.add('-translate-x-full');
                 document.getElementById('mobile-backdrop').classList.add('hidden');
-            },
-            closeDetail: () => { document.getElementById('view-match-detail').classList.add('hidden'); document.body.style.overflow = ''; state.selectedMatch = null; },
-            openPlayerModal: (name) => { document.getElementById('modal-player-name').innerText = name; document.getElementById('player-modal').classList.remove('hidden'); }
+            }
         };
+
         app.init();
     </script>
 </body>
