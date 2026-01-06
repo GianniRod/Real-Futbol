@@ -614,7 +614,21 @@
                 throw new Error("API Limit");
             }
 
-            localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data }));
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data }));
+            } catch (e) {
+                console.warn("Storage full, clearing old cache...");
+                try {
+                    // Limpiar todo lo que empiece con bw_v3_ (nuestro prefijo)
+                    Object.keys(localStorage).forEach(key => {
+                        if (key.startsWith('bw_v3_')) localStorage.removeItem(key);
+                    });
+                    // Reintentar guardar
+                    localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data }));
+                } catch (retryErr) {
+                    console.error("No se pudo liberar espacio, continuando sin caché.", retryErr);
+                }
+            }
             return data;
         };
 
