@@ -1061,34 +1061,100 @@
                 hList.innerHTML = homeL.startXI.map(p => `<div class="flex justify-between border-b border-[#222] py-1.5"><span class="text-gray-300">${p.player.name}</span><span class="text-gray-600 font-mono text-xs">${p.player.number}</span></div>`).join('');
                 aList.innerHTML = awayL.startXI.map(p => `<div class="flex justify-between border-b border-[#222] py-1.5"><span class="text-gray-600 font-mono text-xs">${p.player.number}</span><span class="text-gray-300">${p.player.name}</span></div>`).join('');
 
-                const addPlayers = (players, side) => {
-                    players.forEach((p, i) => {
-                        const el = document.createElement('div');
-                        el.className = `player-marker ${side === 'home' ? 'home-player' : 'away-player'}`;
-                        el.innerText = p.player.number;
+                const addPlayers = (lineup, side) => {
+                    const players = lineup.startXI;
+                    const formation = lineup.formation;
 
-                        let x = 50, y = 50;
-                        if (p.player.grid) {
+                    // Agrupar jugadores por LINEA (Columna en grid)
+                    // Si grid existe: "1:1" -> Linea 1.
+                    // Si no, parseamos formación "4-3-3" -> [1, 4, 3, 3] y asignamos secuencialmente.
+
+                    let lines = {};
+                    let hasGrid = players.every(p => p.player.grid);
+
+                    if (hasGrid) {
+                        players.forEach(p => {
                             const parts = p.player.grid.split(':');
-                            const col = parseInt(parts[0]);
-                            const row = parseInt(parts[1]);
-                            if (side === 'home') x = (col * 18);
-                            else x = 100 - (col * 18);
-                            y = (row * 20) + 10;
-                        } else {
-                            if (side === 'home') x = 10 + (i % 4) * 20; else x = 90 - (i % 4) * 20;
-                            y = 10 + (i % 3) * 30;
+                            const lineIdx = parseInt(parts[0]);
+                            if (!lines[lineIdx]) lines[lineIdx] = [];
+                            lines[lineIdx].push(p);
+                        });
+                    } else {
+                        // Fallback: Parsear formacion
+                        // "4-3-3" -> [4, 3, 3] -> + GK = [1, 4, 3, 3]
+                        let formationParts = formation ? formation.split('-').map(Number) : [4, 4, 2]; // Default
+                        formationParts.unshift(1); // Agregar Portero siempre al inicio
+
+                        let playerIdx = 0;
+                        formationParts.forEach((count, i) => {
+                            const lineIdx = i + 1;
+                            lines[lineIdx] = [];
+                            for (let k = 0; k < count; k++) {
+                                if (playerIdx < players.length) {
+                                    lines[lineIdx].push(players[playerIdx]);
+                                    playerIdx++;
+                                }
+                            }
+                        });
+                    }
+
+                    // Renderizar cada linea
+                    Object.keys(lines).forEach(lineKey => {
+                        const lineIdx = parseInt(lineKey);
+                        const linePlayers = lines[lineKey];
+                        // Ordenar jugadores en la linea (si hay grid, por la 2da coordenada 'row', sino default)
+                        if (hasGrid) {
+                            linePlayers.sort((a, b) => {
+                                const rowA = parseInt(a.player.grid.split(':')[1]);
+                                const rowB = parseInt(b.player.grid.split(':')[1]);
+                                return rowA - rowB;
+                            });
                         }
-                        el.style.left = x + '%'; el.style.top = y + '%';
-                        el.onclick = () => {
-                            document.getElementById('modal-player-name').innerText = p.player.name;
-                            document.getElementById('player-modal').classList.remove('hidden');
-                        };
-                        pitch.appendChild(el);
+
+                        const count = linePlayers.length;
+                        linePlayers.forEach((p, index) => {
+                            const el = document.createElement('div');
+                            el.className = `player-marker ${side === 'home' ? 'home-player' : 'away-player'}`;
+                            el.innerText = p.player.number;
+
+                            // Calcular X (Posicion horizontal en la cancha)
+                            // Home: GK (Left) -> Attack (Right)
+                            // Away: GK (Right) -> Attack (Left)
+                            // Line 1 es GK. Max Line variable (usually 4-5).
+                            // Ajustamos rangos: Home 5% - 45%, Away 95% - 55%
+
+                            // Simplificado: Multiplicador basico por Linea
+                            let x;
+                            if (side === 'home') {
+                                x = 4 + (lineIdx - 1) * 11; // 1->4%, 2->15%, 3->26% ...
+                                if (lineIdx === 1) x = 2; // GK mas pegado
+                            } else {
+                                x = 96 - (lineIdx - 1) * 11;
+                                if (lineIdx === 1) x = 98;
+                            }
+
+                            // Calcular Y (Centrado Verticalmente)
+                            // Espacio total 100%. Dividir en count + 1 segmentos.
+                            const segment = 100 / (count + 1);
+                            let y = segment * (index + 1);
+
+                            // Ajuste visual para evitar que queden muy en bordes si son muchos
+                            if (y < 5) y = 5;
+                            if (y > 95) y = 95;
+
+                            el.style.left = x + '%';
+                            el.style.top = y + '%';
+                            el.onclick = () => {
+                                document.getElementById('modal-player-name').innerText = p.player.name;
+                                document.getElementById('player-modal').classList.remove('hidden');
+                            };
+                            pitch.appendChild(el);
+                        });
                     });
                 };
-                addPlayers(homeL.startXI, 'home');
-                addPlayers(awayL.startXI, 'away');
+
+                addPlayers(homeL, 'home');
+                addPlayers(awayL, 'away');
             },
 
             renderStats: (m) => {
