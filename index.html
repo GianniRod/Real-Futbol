@@ -649,7 +649,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, limit, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, limit, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- CONFIGURACIÓN FIREBASE ---
         const firebaseConfig = {
@@ -856,6 +856,7 @@
 
                     state.matches = matches;
                     app.renderMatches();
+                    app.loadMessageCounts();
                 } catch (e) {
                     console.error("Full API Error:", e);
                     document.getElementById('view-match-list').innerHTML = `<div class="text-center py-10 text-gray-500"><p>Error: ${e.message || "Conexión fallida"}</p><p class="text-xs mt-2">Revisa la consola para más detalles.</p></div>`;
@@ -955,15 +956,35 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Chat Icon for Match -->
+                            <div class="absolute bottom-2 right-2 md:bottom-3 md:right-3 px-2 py-1 bg-[#111] hover:bg-[#222] border border-[#222] rounded flex items-center gap-1.5 transition-colors cursor-pointer z-10" onclick="app.openDetail(${m.fixture.id}, 'tab-forum'); event.stopPropagation();">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                <span id="msg-count-${m.fixture.id}" class="text-[9px] font-bold text-gray-500 font-mono">...</span>
+                            </div>
                         </div>`;
                     });
                     html += `</div></div>`;
                 });
                 container.innerHTML = html;
+                app.loadMessageCounts();
+            },
+
+            loadMessageCounts: async () => {
+                const matches = state.matches;
+                const batchPromises = matches.map(async m => {
+                    try {
+                        const q = query(collection(db, "forum_messages"), where("context", "==", `match_${m.fixture.id}`));
+                        const snapshot = await getCountFromServer(q);
+                        const count = snapshot.data().count;
+                        const el = document.getElementById(`msg-count-${m.fixture.id}`);
+                        if (el) el.innerText = count > 0 ? count : '';
+                    } catch (e) { console.error(e); }
+                });
             },
 
             // --- DETALLE DE PARTIDO ---
-            openDetail: async (id) => {
+            openDetail: async (id, initialTab = null) => {
                 const m = state.matches.find(x => x.fixture.id == id);
                 if (!m) return;
                 state.selectedMatch = m;
@@ -992,6 +1013,16 @@
 
                 document.getElementById('detail-loader').classList.add('hidden');
                 document.getElementById('detail-content-wrapper').classList.remove('hidden');
+
+                // Switch to requested tab if any
+                if (initialTab) {
+                    const btn = document.querySelector(`.tab-btn[data-target="${initialTab}"]`);
+                    if (btn) btn.click();
+                } else {
+                    // Default to timeline
+                    const btn = document.querySelector(`.tab-btn[data-target="tab-timeline"]`);
+                    if (btn) btn.click();
+                }
             },
 
             closeDetail: () => {
@@ -1190,16 +1221,30 @@
                 document.getElementById('sidebar').classList.add('-translate-x-full');
                 document.getElementById('mobile-backdrop').classList.add('hidden');
 
-                if (!state.forumInitialized) {
-                    app.initForum();
-                    state.forumInitialized = true;
-                }
+                document.getElementById('mobile-backdrop').classList.add('hidden');
+
+                app.initForum('global', 'forum-messages', 'forum-username');
             },
 
-            initForum: () => {
-                const q = query(collection(db, "forum_messages"), orderBy("timestamp", "asc"), limit(50));
-                const unsubscribe = onSnapshot(q, (snapshot) => {
-                    const container = document.getElementById('forum-messages');
+            initForum: (context, containerId, usernameInputId) => {
+                // Desuscribirse del anterior si existe
+                if (app.activeForumUnsubscribe) {
+                    app.activeForumUnsubscribe();
+                    app.activeForumUnsubscribe = null;
+                }
+
+                app.currentForumContext = context;
+
+                // Query con filtro de contexto SIN orderBy para evitar indice
+                const q = query(
+                    collection(db, "forum_messages"),
+                    where("context", "==", context)
+                );
+
+                app.activeForumUnsubscribe = onSnapshot(q, (snapshot) => {
+                    const container = document.getElementById(containerId);
+                    if (!container) return;
+
                     if (snapshot.empty) {
                         container.innerHTML = '<div class="text-center text-gray-600 py-10 text-xs uppercase tracking-widest">Sé el primero en escribir.</div>';
                         return;
@@ -1207,6 +1252,9 @@
 
                     const messages = [];
                     snapshot.forEach(doc => messages.push(doc.data()));
+
+                    // Client-side Sort
+                    messages.sort((a, b) => a.timestamp - b.timestamp);
 
                     container.innerHTML = messages.map(msg => {
                         const isMe = localStorage.getItem('chat_username') === msg.user;
@@ -1226,12 +1274,15 @@
 
                 // Pre-fill username if exists
                 const savedUser = localStorage.getItem('chat_username');
-                if (savedUser) document.getElementById('forum-username').value = savedUser;
+                if (savedUser) {
+                    const inp = document.getElementById(usernameInputId);
+                    if (inp) inp.value = savedUser;
+                }
             },
 
-            sendMessage: async () => {
-                const userInp = document.getElementById('forum-username');
-                const textInp = document.getElementById('forum-input');
+            sendMessage: async (userFieldId, textFieldId) => {
+                const userInp = document.getElementById(userFieldId);
+                const textInp = document.getElementById(textFieldId);
                 const user = userInp.value.trim();
                 const text = textInp.value.trim();
 
@@ -1242,6 +1293,7 @@
 
                 try {
                     await addDoc(collection(db, "forum_messages"), {
+                        context: app.currentForumContext || 'global',
                         user: user,
                         text: text,
                         timestamp: Date.now()
