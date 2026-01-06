@@ -380,9 +380,17 @@
                     <span class="text-sm font-bold">Bundesliga</span>
                 </button>
 
-                <div class="mt-8 px-2">
+                <div class="mt-8 px-2 space-y-3">
+                    <button onclick="app.navigateToForum()"
+                        class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        Foro Global
+                    </button>
                     <button onclick="app.navigateToMatches()"
-                        class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg">
+                        class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg border-t-0 opacity-80 hover:opacity-100">
                         Partidos de Hoy
                     </button>
                 </div>
@@ -449,6 +457,42 @@
                     </div>
 
                     <div id="standings-container" class="space-y-6"></div>
+                </div>
+
+                <!-- Forum View -->
+                <div id="view-forum" class="hidden max-w-4xl mx-auto animate-fade-in pb-24 h-full flex flex-col">
+                    <div
+                        class="flex items-center gap-3 mb-6 sticky top-0 z-20 bg-black/95 backdrop-blur py-2 border-b border-[#222]">
+                        <button onclick="app.navigateToMatches()" class="lg:hidden p-1 text-white"><svg
+                                xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg></button>
+                        <h2 class="text-xl font-bold text-white uppercase tracking-wider font-sport">Foro Global</h2>
+                    </div>
+
+                    <div id="forum-messages" class="flex-1 overflow-y-auto space-y-4 pr-1 mb-4 min-h-[300px]">
+                        <!-- Messages inserted here -->
+                        <div class="text-center text-gray-600 py-10 text-xs uppercase tracking-widest">Cargando
+                            mensajes...</div>
+                    </div>
+
+                    <div class="bg-[#111] p-4 border border-[#222] rounded-lg sticky bottom-0 z-10 w-full">
+                        <div class="flex flex-col gap-3">
+                            <input type="text" id="forum-username" placeholder="Tu Nombre / Usuario"
+                                class="bg-[#0a0a0a] border border-[#333] text-white text-xs p-3 rounded focus:outline-none focus:border-white font-mono"
+                                maxlength="20">
+                            <div class="flex gap-2">
+                                <input type="text" id="forum-input" placeholder="Escribe un mensaje..."
+                                    class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-white">
+                                <button onclick="app.sendMessage()"
+                                    class="btn-primary px-6 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-gray-200 transition-colors">
+                                    Enviar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Match Detail Overlay -->
@@ -577,6 +621,23 @@
     </div>
 
     <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // --- CONFIGURACIÓN FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDiRY9xyTiQWeJuFCjU7CTBDWcJxDUcVVo",
+            authDomain: "real-futbol-950e9.firebaseapp.com",
+            projectId: "real-futbol-950e9",
+            storageBucket: "real-futbol-950e9.firebasestorage.app",
+            messagingSenderId: "997733956346",
+            appId: "1:997733956346:web:af680c55a189c9114fe743",
+            measurementId: "G-JNGMN81PHB"
+        };
+
+        const fbApp = initializeApp(firebaseConfig);
+        const db = getFirestore(fbApp);
+
         // --- CONFIGURACIÓN API-SPORTS ---
         // TU KEY PRINCIPAL
         const API_KEY = "1d6013be5112e78ac0ee1c138fbad117";
@@ -1079,10 +1140,83 @@
 
             navigateToMatches: () => {
                 document.getElementById('view-standings').classList.add('hidden');
+                document.getElementById('view-forum').classList.add('hidden');
                 document.getElementById('view-match-list').classList.remove('hidden');
                 document.getElementById('date-nav').classList.remove('hidden');
                 document.getElementById('sidebar').classList.add('-translate-x-full');
                 document.getElementById('mobile-backdrop').classList.add('hidden');
+            },
+
+            navigateToForum: () => {
+                document.getElementById('view-match-list').classList.add('hidden');
+                document.getElementById('view-standings').classList.add('hidden');
+                document.getElementById('date-nav').classList.add('hidden');
+                document.getElementById('view-forum').classList.remove('hidden');
+
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('mobile-backdrop').classList.add('hidden');
+
+                if (!state.forumInitialized) {
+                    app.initForum();
+                    state.forumInitialized = true;
+                }
+            },
+
+            initForum: () => {
+                const q = query(collection(db, "forum_messages"), orderBy("timestamp", "asc"), limit(50));
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const container = document.getElementById('forum-messages');
+                    if (snapshot.empty) {
+                        container.innerHTML = '<div class="text-center text-gray-600 py-10 text-xs uppercase tracking-widest">Sé el primero en escribir.</div>';
+                        return;
+                    }
+
+                    const messages = [];
+                    snapshot.forEach(doc => messages.push(doc.data()));
+
+                    container.innerHTML = messages.map(msg => {
+                        const isMe = localStorage.getItem('chat_username') === msg.user;
+                        const date = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                        return `
+                        <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-3 animate-fade-in">
+                            <span class="text-[10px] text-gray-500 font-bold uppercase mb-1 px-1">${msg.user} <span class="font-normal text-[#444] ml-1">${date}</span></span>
+                            <div class="${isMe ? 'bg-white text-black border-white' : 'bg-[#111] text-gray-300 border-[#333]'} border px-3 py-2 rounded-lg max-w-[85%] text-sm break-words shadow-sm">
+                                ${msg.text}
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                    // Auto scroll to bottom
+                    container.scrollTop = container.scrollHeight;
+                });
+
+                // Pre-fill username if exists
+                const savedUser = localStorage.getItem('chat_username');
+                if (savedUser) document.getElementById('forum-username').value = savedUser;
+            },
+
+            sendMessage: async () => {
+                const userInp = document.getElementById('forum-username');
+                const textInp = document.getElementById('forum-input');
+                const user = userInp.value.trim();
+                const text = textInp.value.trim();
+
+                if (!user) { alert("Por favor ingresa un nombre o usuario."); return; }
+                if (!text) return;
+
+                localStorage.setItem('chat_username', user);
+
+                try {
+                    await addDoc(collection(db, "forum_messages"), {
+                        user: user,
+                        text: text,
+                        timestamp: Date.now()
+                    });
+                    textInp.value = '';
+                } catch (e) {
+                    console.error("Error sending message: ", e);
+                    alert("Error al enviar mensaje.");
+                }
             }
         };
 
