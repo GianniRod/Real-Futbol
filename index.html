@@ -13,7 +13,7 @@
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2312798559341043"
-     crossorigin="anonymous"></script>
+        crossorigin="anonymous"></script>
     <style>
         :root {
             --bg-main: #000000;
@@ -928,33 +928,33 @@
                             
                             <div class="flex items-center justify-between">
                                 <!-- HOME TEAM (Left side relative to center, actually Right side of flex container) -->
-                                <div class="flex-1 flex justify-end items-center gap-3 ${homeOpacity} transition-opacity duration-300 text-right">
-                                    <div class="flex flex-col items-end">
-                                        <span class="font-bold text-white text-sm uppercase tracking-tight leading-none">${m.teams.home.name}</span>
-                                        ${hScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1">${hScorers}</span>` : ''}
+                                <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 ${homeOpacity} transition-opacity duration-300 text-right min-w-0">
+                                    <div class="flex flex-col items-end min-w-0">
+                                        <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate max-w-full">${m.teams.home.name}</span>
+                                        ${hScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1 text-right truncate max-w-full">${hScorers}</span>` : ''}
                                     </div>
-                                    <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain">
+                                    <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain shrink-0">
                                 </div>
 
                                 <!-- SCORE / TIME (Center) -->
-                                <div class="px-3 flex flex-col items-center w-24 shrink-0">
+                                <div class="px-2 md:px-3 flex flex-col items-center w-20 md:w-24 shrink-0">
                                     ${notStarted
                                 ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
-                                : `<div class="flex gap-2 text-2xl font-black text-white score-font tracking-widest">
+                                : `<div class="flex gap-2 text-xl md:text-2xl font-black text-white score-font tracking-widest">
                                              <span class="${homeOpacity}">${m.goals.home ?? 0}</span>
                                              <span class="text-gray-700">-</span>
                                              <span class="${awayOpacity}">${m.goals.away ?? 0}</span>
                                            </div>`
                             }
-                                    <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest">${isLive || isHT || isFin ? timeDisplay : ''}</span>
+                                    <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap">${isLive || isHT || isFin ? timeDisplay : ''}</span>
                                 </div>
 
                                 <!-- AWAY TEAM (Right side) -->
-                                <div class="flex-1 flex justify-start items-center gap-3 ${awayOpacity} transition-opacity duration-300 text-left">
-                                    <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain">
-                                    <div class="flex flex-col items-start">
-                                        <span class="font-bold text-white text-sm uppercase tracking-tight leading-none">${m.teams.away.name}</span>
-                                        ${aScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1">${aScorers}</span>` : ''}
+                                <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 ${awayOpacity} transition-opacity duration-300 text-left min-w-0">
+                                    <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain shrink-0">
+                                    <div class="flex flex-col items-start min-w-0">
+                                        <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate max-w-full">${m.teams.away.name}</span>
+                                        ${aScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1 text-left truncate max-w-full">${aScorers}</span>` : ''}
                                     </div>
                                 </div>
                             </div>
