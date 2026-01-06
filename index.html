@@ -486,7 +486,7 @@
                             <div class="flex gap-2">
                                 <input type="text" id="forum-input" placeholder="Escribe un mensaje..."
                                     class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-white">
-                                <button onclick="app.sendMessage()"
+                                <button onclick="app.sendMessage('forum-username', 'forum-input')"
                                     class="btn-primary px-6 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-gray-200 transition-colors">
                                     Enviar
                                 </button>
@@ -558,10 +558,37 @@
                                 <button
                                     class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
                                     data-target="tab-stats">Stats</button>
+                                <button
+                                    class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
+                                    data-target="tab-forum">Foro</button>
                             </div>
 
                             <div class="p-4 lg:p-8 space-y-6 min-h-[50vh]">
                                 <div id="tab-timeline" class="tab-content block space-y-4 max-w-2xl mx-auto"></div>
+
+                                <div id="tab-forum"
+                                    class="tab-content hidden h-[400px] flex flex-col max-w-2xl mx-auto">
+                                    <div id="match-forum-messages"
+                                        class="flex-1 overflow-y-auto space-y-3 pr-1 mb-4 border border-[#222] rounded p-3 bg-[#0a0a0a]">
+                                        <div class="text-center text-gray-600 py-10 text-xs uppercase tracking-widest">
+                                            Cargando charla del partido...</div>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <input type="text" id="match-forum-username" placeholder="Tu Nombre"
+                                            class="bg-[#111] border border-[#333] text-white text-xs p-2 rounded focus:outline-none focus:border-white font-mono"
+                                            maxlength="20">
+                                        <div class="flex gap-2">
+                                            <input type="text" id="match-forum-input"
+                                                placeholder="Comenta sobre el partido..."
+                                                class="flex-1 bg-[#111] border border-[#333] text-white text-sm p-2 rounded focus:outline-none focus:border-white">
+                                            <button
+                                                onclick="app.sendMessage('match-forum-username', 'match-forum-input')"
+                                                class="btn-primary px-4 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-gray-200 transition-colors">
+                                                Enviar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div id="tab-lineups" class="tab-content hidden max-w-2xl mx-auto">
                                     <div class="football-pitch mx-auto" id="football-pitch">
@@ -622,7 +649,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, limit, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- CONFIGURACIÓN FIREBASE ---
         const firebaseConfig = {
@@ -762,7 +789,14 @@
                         e.target.classList.add('text-white', 'border-b-2', 'border-white');
                         e.target.classList.remove('text-gray-500');
                         document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-                        document.getElementById(e.target.dataset.target).classList.remove('hidden');
+                        const targetId = e.target.dataset.target;
+                        document.getElementById(targetId).classList.remove('hidden');
+
+                        // Si abre el foro del partido, inicializarlo
+                        if (targetId === 'tab-forum' && state.selectedMatch) {
+                            // Usar un contexto único para este partido
+                            app.initForum(`match_${state.selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
+                        }
                     };
                 });
 
