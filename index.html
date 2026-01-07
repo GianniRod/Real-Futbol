@@ -1180,7 +1180,7 @@
                     let html = lineup.startXI.map(p => {
                         // Check if subbed out
                         const subOut = events.find(e => e.type === 'subst' && e.assist && idsMatch(e.assist.id, p.player.id));
-                        const subInfo = subOut ? `<span class="text-red-500 text-[10px] ml-1 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
+                        const subInfo = subOut ? `<span class="inline-flex items-center gap-1 text-red-500 text-[10px] ml-2 font-bold"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg> ${subOut.time.elapsed}'</span>` : '';
 
                         return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
                             <div class="flex items-center"><span class="text-gray-300 transition-colors">${p.player.name}</span>${subInfo}</div>
@@ -1193,7 +1193,7 @@
                         html += lineup.substitutes.map(p => {
                             // Check if subbed in
                             const subIn = events.find(e => e.type === 'subst' && e.player && idsMatch(e.player.id, p.player.id));
-                            const subInfo = subIn ? `<span class="text-green-500 text-[10px] ml-1 font-bold">▲ ${subIn.time.elapsed}'</span>` : '';
+                            const subInfo = subIn ? `<span class="inline-flex items-center gap-1 text-green-500 text-[10px] ml-2 font-bold"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg> ${subIn.time.elapsed}'</span>` : '';
 
                             return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
                                 <div class="flex items-center"><span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}</div>
