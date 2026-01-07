@@ -904,9 +904,12 @@
                 const targetIds = [128, 1032, 129, 39, 140, 78, 71, 13, 11];
 
                 try {
+                    // 1. Initial List Fetch (Basic)
                     const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires`);
 
                     let matches = data.response.filter(m => targetIds.includes(m.league.id));
+
+                    // Sort Basic
                     matches.sort((a, b) => {
                         const isArgA = [128, 1032].includes(a.league.id);
                         const isArgB = [128, 1032].includes(b.league.id);
@@ -915,13 +918,58 @@
                         return a.fixture.timestamp - b.fixture.timestamp;
                     });
 
+                    // Render Basic IMMEDIATELY
                     state.matches = matches;
                     app.renderMatches();
                     app.loadMessageCounts();
+
+                    // 2. Background Fetch for Details (Scorers)
+                    if (matches.length > 0) {
+                        const ids = matches.map(m => m.fixture.id);
+                        app.fetchBatchDetails(ids).then(detailedMatches => {
+                            if (detailedMatches && detailedMatches.length > 0) {
+                                // Re-sort Detailed
+                                detailedMatches.sort((a, b) => {
+                                    const isArgA = [128, 1032].includes(a.league.id);
+                                    const isArgB = [128, 1032].includes(b.league.id);
+                                    if (isArgA && !isArgB) return -1;
+                                    if (!isArgA && isArgB) return 1;
+                                    return a.fixture.timestamp - b.fixture.timestamp;
+                                });
+                                // Silent Update
+                                state.matches = detailedMatches;
+                                app.renderMatches();
+                            }
+                        }).catch(err => console.error("Background scorers fetch failed", err));
+                    }
+
                 } catch (e) {
                     console.error("Full API Error:", e);
                     document.getElementById('view-match-list').innerHTML = `<div class="text-center py-10 text-gray-500"><p>Error: ${e.message || "Conexión fallida"}</p><p class="text-xs mt-2">Revisa la consola para más detalles.</p></div>`;
                 }
+            },
+
+            fetchBatchDetails: async (ids) => {
+                if (!ids || ids.length === 0) return [];
+                const chunks = [];
+                const chunkSize = 20;
+                for (let i = 0; i < ids.length; i += chunkSize) {
+                    chunks.push(ids.slice(i, i + chunkSize));
+                }
+
+                let allDetails = [];
+                for (let chunk of chunks) {
+                    try {
+                        const idStr = chunk.join('-');
+                        const res = await fetchAPI(`/fixtures?ids=${idStr}&timezone=America/Argentina/Buenos_Aires`);
+                        if (res.response) {
+                            allDetails = allDetails.concat(res.response);
+                        }
+                    } catch (e) {
+                        console.error("Error fetching chunk details", e);
+                    }
+                }
+                return allDetails;
             },
 
             renderMatches: () => {
