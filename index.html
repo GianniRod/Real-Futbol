@@ -918,9 +918,11 @@
                         if (m.events && m.events.length > 0) {
                             const goals = m.events.filter(e => e.type === 'Goal');
                             if (goals.length > 0) {
-                                const formatScorer = (ev) => `<div class="truncate leading-tight">${ev.player.name} ${ev.time.elapsed}'</div>`;
-                                const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(formatScorer);
-                                const aGoals = goals.filter(e => e.team.id === m.teams.away.id).map(formatScorer);
+                                // Formatting with alignment classes
+                                const formatScorer = (ev, align) => `<div class="truncate leading-tight ${align}">${ev.player.name} ${ev.time.elapsed}'</div>`;
+
+                                const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(g => formatScorer(g, 'text-right'));
+                                const aGoals = goals.filter(e => e.team.id === m.teams.away.id).map(g => formatScorer(g, 'text-left'));
 
                                 if (hGoals.length > 0) hScorers = `<div class="flex flex-col items-end gap-0.5 mt-1 min-w-0 w-full">${hGoals.join('')}</div>`;
                                 if (aGoals.length > 0) aScorers = `<div class="flex flex-col items-start gap-0.5 mt-1 min-w-0 w-full">${aGoals.join('')}</div>`;
@@ -1013,7 +1015,7 @@
                 document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
                 document.getElementById('detail-status').innerText = m.fixture.status.long;
 
-                // Goleadores Header (Actualización Inmediata)
+                // Goleadores Header (Actualización Inmediata) - Centrado
                 const hList = document.getElementById('detail-home-scorers-list');
                 const aList = document.getElementById('detail-away-scorers-list');
                 hList.innerHTML = '';
@@ -1021,7 +1023,7 @@
 
                 if (m.events && m.events.length > 0) {
                     const goals = m.events.filter(e => e.type === 'Goal');
-                    const formatScorer = (ev) => `<div class="truncate leading-tight max-w-[120px]">${ev.player.name} ${ev.time.elapsed}'</div>`;
+                    const formatScorer = (ev) => `<div class="truncate leading-tight max-w-[120px] text-center">${ev.player.name} ${ev.time.elapsed}'</div>`;
 
                     const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(formatScorer);
                     if (hGoals.length > 0) hList.innerHTML = hGoals.join('');
