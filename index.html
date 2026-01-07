@@ -966,6 +966,9 @@
                         // LÓGICA DE GOLEADORES (Lista Vertical)
                         let hScorers = '';
                         let aScorers = '';
+                        // LÓGICA DE TARJETAS ROJAS
+                        let hRedCards = '';
+                        let aRedCards = '';
                         if (m.events && m.events.length > 0) {
                             const goals = m.events.filter(e => e.type === 'Goal');
                             if (goals.length > 0) {
@@ -978,6 +981,14 @@
                                 if (hGoals.length > 0) hScorers = `<div class="flex flex-col items-end gap-0.5 mt-1 min-w-0 w-full">${hGoals.join('')}</div>`;
                                 if (aGoals.length > 0) aScorers = `<div class="flex flex-col items-start gap-0.5 mt-1 min-w-0 w-full">${aGoals.join('')}</div>`;
                             }
+
+                            // Count red cards
+                            const redCards = m.events.filter(e => e.type === 'Card' && e.detail === 'Red Card');
+                            const hReds = redCards.filter(e => e.team.id === m.teams.home.id).length;
+                            const aReds = redCards.filter(e => e.team.id === m.teams.away.id).length;
+
+                            if (hReds > 0) hRedCards = `<div class="flex gap-0.5 ml-1">${'<div class="w-2 h-3 bg-red-600 rounded-sm"></div>'.repeat(hReds)}</div>`;
+                            if (aReds > 0) aRedCards = `<div class="flex gap-0.5 mr-1">${'<div class="w-2 h-3 bg-red-600 rounded-sm"></div>'.repeat(aReds)}</div>`;
                         }
 
                         const clickableClass = notStarted ? 'not-clickable' : 'clickable';
@@ -991,7 +1002,10 @@
                                 <!-- HOME TEAM -->
                                 <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 ${homeOpacity} transition-opacity duration-300 text-right min-w-0">
                                     <div class="flex flex-col items-end min-w-0 max-w-full">
-                                        <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate w-full">${m.teams.home.name}</span>
+                                        <div class="flex items-center gap-1 w-full justify-end">
+                                            <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate">${m.teams.home.name}</span>
+                                            ${hRedCards}
+                                        </div>
                                         ${hScorers ? `<div class="text-[9px] text-gray-500 font-mono w-full overflow-hidden">${hScorers}</div>` : ''}
                                     </div>
                                     <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain shrink-0">
@@ -1014,7 +1028,10 @@
                                 <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 ${awayOpacity} transition-opacity duration-300 text-left min-w-0">
                                     <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain shrink-0">
                                     <div class="flex flex-col items-start min-w-0 max-w-full">
-                                        <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate w-full">${m.teams.away.name}</span>
+                                        <div class="flex items-center gap-1 w-full justify-start">
+                                            ${aRedCards}
+                                            <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate">${m.teams.away.name}</span>
+                                        </div>
                                         ${aScorers ? `<div class="text-[9px] text-gray-500 font-mono w-full overflow-hidden">${aScorers}</div>` : ''}
                                     </div>
                                 </div>
@@ -1058,13 +1075,26 @@
                 document.getElementById('detail-loader').classList.remove('hidden');
 
                 // Datos básicos
-                document.getElementById('detail-home-name').innerText = m.teams.home.name;
-                document.getElementById('detail-away-name').innerText = m.teams.away.name;
                 document.getElementById('detail-home-logo').src = m.teams.home.logo;
                 document.getElementById('detail-away-logo').src = m.teams.away.logo;
                 document.getElementById('detail-home-score').innerText = m.goals.home ?? 0;
                 document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
                 document.getElementById('detail-status').innerText = m.fixture.status.long;
+
+                // Count red cards for detail view
+                let homeRedCardsHTML = '';
+                let awayRedCardsHTML = '';
+                if (m.events && m.events.length > 0) {
+                    const redCards = m.events.filter(e => e.type === 'Card' && e.detail === 'Red Card');
+                    const hReds = redCards.filter(e => e.team.id === m.teams.home.id).length;
+                    const aReds = redCards.filter(e => e.team.id === m.teams.away.id).length;
+
+                    if (hReds > 0) homeRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(hReds) + '</div>';
+                    if (aReds > 0) awayRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(aReds) + '</div>';
+                }
+
+                document.getElementById('detail-home-name').innerHTML = m.teams.home.name + homeRedCardsHTML;
+                document.getElementById('detail-away-name').innerHTML = m.teams.away.name + awayRedCardsHTML;
 
                 // Goleadores Header (Actualización Inmediata) - Centrado
                 const hList = document.getElementById('detail-home-scorers-list');
