@@ -519,10 +519,14 @@
                             <!-- Scoreboard -->
                             <div class="relative p-6 text-center border-b border-[#222] bg-[#0a0a0a]">
                                 <div class="flex justify-between items-center max-w-md mx-auto">
-                                    <div class="flex-1 flex flex-col items-center gap-3">
-                                        <img id="detail-home-logo" src="" class="w-16 h-16 object-contain">
+                                    <div class="flex-1 flex flex-col items-center min-w-0">
+                                        <img id="detail-home-logo" src="" class="w-16 h-16 object-contain mb-3">
                                         <h3 id="detail-home-name"
-                                            class="font-bold text-sm leading-tight text-white uppercase">Home</h3>
+                                            class="font-bold text-sm leading-tight text-white uppercase text-center w-full truncate">
+                                            Home</h3>
+                                        <div id="detail-home-scorers-list"
+                                            class="mt-2 text-xs text-gray-500 font-mono space-y-0.5 flex flex-col items-center w-full">
+                                        </div>
                                     </div>
                                     <div class="px-4 flex flex-col items-center">
                                         <div
@@ -535,17 +539,15 @@
                                             class="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                                             VS</div>
                                     </div>
-                                    <div class="flex-1 flex flex-col items-center gap-3">
-                                        <img id="detail-away-logo" src="" class="w-16 h-16 object-contain">
+                                    <div class="flex-1 flex flex-col items-center min-w-0">
+                                        <img id="detail-away-logo" src="" class="w-16 h-16 object-contain mb-3">
                                         <h3 id="detail-away-name"
-                                            class="font-bold text-sm leading-tight text-white uppercase">Away</h3>
+                                            class="font-bold text-sm leading-tight text-white uppercase text-center w-full truncate">
+                                            Away</h3>
+                                        <div id="detail-away-scorers-list"
+                                            class="mt-2 text-xs text-gray-500 font-mono space-y-0.5 flex flex-col items-center w-full">
+                                        </div>
                                     </div>
-                                </div>
-
-                                <div id="detail-header-scorers"
-                                    class="mt-6 flex justify-between max-w-md mx-auto text-xs text-gray-500 font-mono border-t border-[#222] pt-4">
-                                    <div id="detail-home-scorers-list" class="flex-1 text-right pr-4 space-y-1"></div>
-                                    <div id="detail-away-scorers-list" class="flex-1 text-left pl-4 space-y-1"></div>
                                 </div>
                             </div>
 
@@ -1019,7 +1021,7 @@
 
                 if (m.events && m.events.length > 0) {
                     const goals = m.events.filter(e => e.type === 'Goal');
-                    const formatScorer = (ev) => `<div class="truncate leading-tight">${ev.player.name} ${ev.time.elapsed}'</div>`;
+                    const formatScorer = (ev) => `<div class="truncate leading-tight max-w-[120px]">${ev.player.name} ${ev.time.elapsed}'</div>`;
 
                     const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(formatScorer);
                     if (hGoals.length > 0) hList.innerHTML = hGoals.join('');
