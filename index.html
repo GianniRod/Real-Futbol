@@ -901,7 +901,7 @@
                 if (!silent) document.getElementById('view-match-list').innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
 
                 const dateStr = formatDate(state.date);
-                const targetIds = [128, 1032, 129, 39, 140, 78, 71, 13, 11];
+                const targetIds = [128, 1032, 129, 39, 140, 78, 71, 13, 11, 135, 556];
 
                 try {
                     const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires`);
