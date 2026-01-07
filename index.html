@@ -906,26 +906,17 @@
                 try {
                     // 1. Initial List Fetch
                     const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires`);
-
+                    
                     // 2. Filter interesting matches
                     let basicMatches = data.response.filter(m => targetIds.includes(m.league.id));
-
+                    
                     if (basicMatches.length > 0) {
                         // 3. Extract IDs for batch detail fetch (to get events/scorers)
                         const ids = basicMatches.map(m => m.fixture.id);
-                        let detailedMatches = [];
-
-                        try {
-                            detailedMatches = await app.fetchBatchDetails(ids);
-                        } catch (err) {
-                            console.error("Batch fetch failed, falling back to basic", err);
-                        }
-
-                        // Fallback: If detailed fetch returns empty (error or rate limit), use basic
-                        const finalMatches = (detailedMatches && detailedMatches.length > 0) ? detailedMatches : basicMatches;
-
+                        const detailedMatches = await app.fetchBatchDetails(ids);
+                        
                         // 4. Sort
-                        finalMatches.sort((a, b) => {
+                        detailedMatches.sort((a, b) => {
                             const isArgA = [128, 1032].includes(a.league.id);
                             const isArgB = [128, 1032].includes(b.league.id);
                             if (isArgA && !isArgB) return -1;
@@ -933,7 +924,7 @@
                             return a.fixture.timestamp - b.fixture.timestamp;
                         });
 
-                        state.matches = finalMatches;
+                        state.matches = detailedMatches;
                     } else {
                         state.matches = [];
                     }
