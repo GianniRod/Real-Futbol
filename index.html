@@ -1115,15 +1115,14 @@
 
                 const homeL = m.lineups[0];
                 const awayL = m.lineups[1];
-
                 const events = m.events || [];
 
                 // Render Lists (Starters + Subs)
                 const renderList = (lineup) => {
                     // Starters
                     let html = lineup.startXI.map(p => {
-                        // Check if subbed out
-                        const subOut = events.find(e => e.type === 'subst' && e.assist && e.assist.id === p.player.id);
+                        // Check if subbed out (using loose equality == for IDs)
+                        const subOut = events.find(e => e.type === 'subst' && e.assist && e.assist.id == p.player.id);
                         const subInfo = subOut ? `<span class="text-red-500 text-[10px] ml-1 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
 
                         return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
@@ -1136,7 +1135,7 @@
                         html += `<div class="mt-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Suplentes</div>`;
                         html += lineup.substitutes.map(p => {
                             // Check if subbed in
-                            const subIn = events.find(e => e.type === 'subst' && e.player.id === p.player.id);
+                            const subIn = events.find(e => e.type === 'subst' && e.player && e.player.id == p.player.id);
                             const subInfo = subIn ? `<span class="text-green-500 text-[10px] ml-1 font-bold">▲ ${subIn.time.elapsed}'</span>` : '';
 
                             return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
@@ -1188,7 +1187,10 @@
                             linePlayers.sort((a, b) => {
                                 const rowA = parseInt(a.player.grid.split(':')[1]);
                                 const rowB = parseInt(b.player.grid.split(':')[1]);
-                                return rowA - rowB;
+                                const rowDiff = rowA - rowB;
+                                if (rowDiff === 0 && side === 'away') { // Mirror logic for away density if needed, generally row sort is enough
+                                }
+                                return rowDiff;
                             });
                         }
 
@@ -1196,38 +1198,36 @@
                         linePlayers.forEach((p, index) => {
                             const el = document.createElement('div');
                             el.className = `player-marker ${side === 'home' ? 'home-player' : 'away-player'}`;
+
                             // Substitution Logic for Marker
-                            // Default: Starter info
                             let displayNumber = p.player.number;
                             let displayName = p.player.name;
                             let isSubbed = false;
                             let subInName = '';
 
-                            // Check if this starter was subbed OUT
-                            const subOutEvent = events.find(e => e.type === 'subst' && e.assist && e.assist.id === p.player.id);
+                            // Check if this starter was subbed OUT (ID loose check)
+                            const subOutEvent = events.find(e => e.type === 'subst' && e.assist && e.assist.id == p.player.id);
+
                             if (subOutEvent) {
                                 isSubbed = true;
                                 // Find who came IN (Jersey number needs lookup in subs list)
-                                // We rely on subOutEvent.player.name usually, but to get number we strictly need the lineup object
-                                const subInPlayer = lineup.substitutes.find(s => s.player.id === subOutEvent.player.id);
+                                const subInPlayer = lineup.substitutes.find(s => s.player.id == subOutEvent.player.id);
                                 if (subInPlayer) {
                                     displayNumber = subInPlayer.player.number;
                                     subInName = subInPlayer.player.name;
                                 } else {
-                                    // Fallback if not found in subs list (rare)
+                                    // Fallback
                                     subInName = subOutEvent.player.name;
                                     displayNumber = "⇄";
                                 }
                             }
 
-                            el.innerText = displayNumber;
+                            el.innerHTML = `<span class="text-xs font-bold font-mono pointer-events-none">${displayNumber}</span>`;
 
-                            // Goal Check (logic remains but applied to the marker position)
-                            // Note: Ideally check if goal was by starter OR sub, but keeping simple for now (attach to position)
-                            const playerGoals = events.filter(e => e.type === 'Goal' && (e.player.id === p.player.id || (isSubbed && e.player.name === subInName)));
+                            // Goal Check
+                            const playerGoals = events.filter(e => e.type === 'Goal' && (e.player.id == p.player.id || (isSubbed && subOutEvent && e.player.id == subOutEvent.player.id)));
 
                             if (playerGoals.length > 0) {
-                                // For simplicity re-using the ball icon logic
                                 const ballIcon = document.createElement('div');
                                 ballIcon.className = `absolute -top-2 -right-2 w-3.5 h-3.5 flex items-center justify-center rounded-full bg-black shadow-sm z-20`;
                                 const isOwn = playerGoals[playerGoals.length - 1].detail === 'Own Goal';
@@ -1254,14 +1254,14 @@
                             el.style.left = x + '%';
                             el.style.top = y + '%';
 
-                            // Name Label Rendering
+                            // Name Label Rendering with Stacked opacity
                             const nameEl = document.createElement('div');
-                            nameEl.className = `absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap bg-black/80 px-1.5 py-0.5 rounded flex flex-col items-center leading-tight z-30 border border-[#333]`;
+                            nameEl.className = `absolute -bottom-7 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap bg-black/80 px-2 py-1 rounded flex flex-col items-center leading-none z-30 border border-[#333] pointer-events-none`;
 
                             if (isSubbed) {
                                 const inNameShort = subInName.split(' ').pop();
                                 const outNameShort = displayName.split(' ').pop();
-                                nameEl.innerHTML = `<span class="text-white">${inNameShort}</span><span class="text-gray-400 opacity-50 text-[7px]">${outNameShort}</span>`;
+                                nameEl.innerHTML = `<span class="text-white mb-0.5">${inNameShort}</span><span class="text-gray-400 opacity-50 text-[7px]">${outNameShort}</span>`;
                             } else {
                                 const shortName = displayName.split(' ').pop();
                                 nameEl.innerHTML = `<span class="text-white">${shortName}</span>`;
