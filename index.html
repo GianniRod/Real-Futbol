@@ -1061,17 +1061,46 @@
 
             renderTimeline: (m) => {
                 const c = document.getElementById('tab-timeline');
-                const ev = m.events || [];
+                let ev = [...(m.events || [])];
+
+                // Ordenar: Más reciente arriba (Descendente)
+                ev.sort((a, b) => {
+                    const tA = a.time.elapsed + (a.time.extra || 0);
+                    const tB = b.time.elapsed + (b.time.extra || 0);
+                    if (tA === tB) return 0;
+                    return tA > tB ? -1 : 1;
+                });
+
                 if (ev.length === 0) { c.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Sin eventos</div>'; return; }
-                c.innerHTML = ev.map(e => `
-                    <div class="flex items-center gap-4 mb-4 ${e.team.id === m.teams.home.id ? 'flex-row' : 'flex-row-reverse'}">
-                        <div class="w-8 text-center text-xs font-bold text-gray-500 font-mono">${e.time.elapsed}'</div>
-                        <div class="bg-[#111] border border-[#222] px-4 py-3 flex items-center gap-3 ${e.team.id === m.teams.home.id ? '' : 'flex-row-reverse text-right'} min-w-[140px]">
+
+                c.innerHTML = ev.map(e => {
+                    const isHome = e.team.id === m.teams.home.id;
+                    const sideClass = isHome ? 'flex-row' : 'flex-row-reverse';
+                    const boxClass = isHome ? '' : 'flex-row-reverse text-right';
+
+                    let content = '';
+                    if (e.type === 'subst') {
+                        content = `
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-xs font-bold text-green-400 uppercase">Entra: ${e.player.name}</span>
+                                <span class="text-[10px] font-bold text-red-400 uppercase opacity-70">Sale: ${e.assist.name}</span>
+                            </div>
+                        `;
+                    } else {
+                        content = `
                             <span class="text-sm font-bold text-white">${e.player.name}</span>
                             <span class="text-[9px] px-2 py-0.5 uppercase font-bold tracking-wider ${e.type === 'Goal' ? 'bg-white text-black' : 'bg-[#333] text-gray-400'}">${e.type === 'Goal' ? 'GOL' : e.detail}</span>
+                        `;
+                    }
+
+                    return `
+                    <div class="flex items-center gap-4 mb-4 ${sideClass}">
+                        <div class="w-8 text-center text-xs font-bold text-gray-500 font-mono">${e.time.elapsed}'</div>
+                        <div class="bg-[#111] border border-[#222] px-4 py-3 flex items-center gap-3 ${boxClass} min-w-[140px]">
+                            ${content}
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
             },
 
             renderLineups: (m) => {
@@ -1193,9 +1222,19 @@
 
                             // Name Label
                             const nameEl = document.createElement('div');
-                            const shortName = p.player.name.split(' ').pop(); // Just last name for space
-                            nameEl.className = `absolute -bottom-4 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white whitespace-nowrap bg-black/50 px-1 rounded`;
-                            nameEl.innerText = shortName;
+                            nameEl.className = `absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap bg-black/80 px-1.5 py-0.5 rounded flex flex-col items-center leading-tight z-30 border border-[#333]`;
+
+                            // Check for subst
+                            const subEvent = events.find(e => e.type === 'subst' && e.assist && e.assist.id === p.player.id);
+
+                            if (subEvent) {
+                                const inName = subEvent.player.name.split(' ').pop();
+                                const outName = p.player.name.split(' ').pop();
+                                nameEl.innerHTML = `<span class="text-white">${inName}</span><span class="text-gray-400 opacity-50 text-[7px]">${outName}</span>`;
+                            } else {
+                                const shortName = p.player.name.split(' ').pop();
+                                nameEl.innerHTML = `<span class="text-white">${shortName}</span>`;
+                            }
                             el.appendChild(nameEl);
 
                             el.onclick = () => {
