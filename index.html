@@ -1170,6 +1170,9 @@
 
                 // Debugging for User
                 console.log("Processing Lineups & Events", { eventsCount: events.length, lineups: m.lineups });
+                console.log("All Events:", events);
+                console.log("Substitution Events:", events.filter(e => e.type === 'subst'));
+                console.log("Event Types Found:", [...new Set(events.map(e => e.type))]);
 
                 // Helper to safely check ID match
                 const idsMatch = (id1, id2) => String(id1) === String(id2);
@@ -1178,8 +1181,11 @@
                 const renderList = (lineup) => {
                     // Starters
                     let html = lineup.startXI.map(p => {
-                        // Check if subbed out
-                        const subOut = events.find(e => e.type === 'subst' && e.assist && idsMatch(e.assist.id, p.player.id));
+                        // Check if subbed out - handle multiple event type names
+                        const subOut = events.find(e => {
+                            const eventType = (e.type || '').toLowerCase();
+                            return (eventType === 'subst' || eventType === 'substitution') && e.assist && idsMatch(e.assist.id, p.player.id);
+                        });
                         const subInfo = subOut ? `<span class="text-red-400 text-[10px] ml-2 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
 
                         return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
@@ -1191,8 +1197,11 @@
                     if (lineup.substitutes && lineup.substitutes.length > 0) {
                         html += `<div class="mt-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Suplentes</div>`;
                         html += lineup.substitutes.map(p => {
-                            // Check if subbed in
-                            const subIn = events.find(e => e.type === 'subst' && e.player && idsMatch(e.player.id, p.player.id));
+                            // Check if subbed in - handle multiple event type names
+                            const subIn = events.find(e => {
+                                const eventType = (e.type || '').toLowerCase();
+                                return (eventType === 'subst' || eventType === 'substitution') && e.player && idsMatch(e.player.id, p.player.id);
+                            });
                             const subInfo = subIn ? `<span class="text-green-400 text-[10px] ml-2 font-bold">▲ ${subIn.time.elapsed}'</span>` : '';
 
                             return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
