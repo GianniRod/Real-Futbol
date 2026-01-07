@@ -783,9 +783,12 @@
                     fixture: { id: 1, date: new Date().toISOString(), status: { short: 'LIVE', elapsed: 55, long: 'En Vivo' }, timestamp: Date.now() },
                     league: { id: 128, name: 'Liga Profesional', logo: 'https://media.api-sports.io/football/leagues/128.png' },
                     teams: { home: { id: 1, name: 'River Plate', logo: 'https://media.api-sports.io/football/teams/435.png' }, away: { id: 2, name: 'Boca Juniors', logo: 'https://media.api-sports.io/football/teams/451.png' } },
-                    goals: { home: 1, away: 0 },
+                    goals: { home: 3, away: 1 },
                     events: [
                         { type: 'Goal', time: { elapsed: 44 }, team: { id: 2 }, player: { name: 'D. Benedetto' } }
+                        { type: 'Goal', time: { elapsed: 68 }, team: { id: 1 }, player: { name: 'L. Pratto' } }
+                        { type: 'Goal', time: { elapsed: 109 }, team: { id: 1 }, player: { name: 'J. Quintero' } }
+                        { type: 'Goal', time: { elapsed: 120+3 }, team: { id: 1 }, player: { name: 'G. Martinez' } }
                     ]
                 },
                 {
