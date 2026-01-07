@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="icon" href="https://i.postimg.cc/vBgSB9tn/favicon.jpg" type="image/jpg">
+    <link rel="icon" href="https://limewire.com/d/Wdyyx#QGI9T5DXGQ" type="image/x-icon">
     <link
         href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;600;800&display=swap"
         rel="stylesheet">
@@ -899,10 +899,10 @@
 
                         const timeDisplay = isLive ? `<span class="text-white font-bold animate-pulse text-xs">${s.elapsed}'</span>` : (isHT ? '<span class="text-white font-bold text-xs">ET</span>' : (isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })));
 
-                        // LÓGICA DE OPACIDAD PARA PERDEDOR
+                        // LÓGICA DE OPACIDAD PARA PERDEDOR (Solo Finalizados)
                         let homeOpacity = 'opacity-100';
                         let awayOpacity = 'opacity-100';
-                        if (!notStarted) {
+                        if (isFin) {
                             if ((m.goals.home ?? 0) > (m.goals.away ?? 0)) {
                                 awayOpacity = 'opacity-50'; // Visitante pierde
                             } else if ((m.goals.away ?? 0) > (m.goals.home ?? 0)) {
@@ -910,18 +910,18 @@
                             }
                         }
 
-                        // LÓGICA DE GOLEADORES (Integrada bajo el nombre)
+                        // LÓGICA DE GOLEADORES (Lista Vertical)
                         let hScorers = '';
                         let aScorers = '';
                         if (m.events && m.events.length > 0) {
                             const goals = m.events.filter(e => e.type === 'Goal');
                             if (goals.length > 0) {
-                                const formatScorer = (ev) => `${ev.player.name} ${ev.time.elapsed}'`;
+                                const formatScorer = (ev) => `<div class="truncate leading-tight">${ev.player.name} ${ev.time.elapsed}'</div>`;
                                 const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(formatScorer);
                                 const aGoals = goals.filter(e => e.team.id === m.teams.away.id).map(formatScorer);
 
-                                if (hGoals.length > 0) hScorers = hGoals.join(', ');
-                                if (aGoals.length > 0) aScorers = aGoals.join(', ');
+                                if (hGoals.length > 0) hScorers = `<div class="flex flex-col items-end gap-0.5 mt-1 min-w-0 w-full">${hGoals.join('')}</div>`;
+                                if (aGoals.length > 0) aScorers = `<div class="flex flex-col items-start gap-0.5 mt-1 min-w-0 w-full">${aGoals.join('')}</div>`;
                             }
                         }
 
@@ -933,16 +933,16 @@
                             ${isLive ? '<div class="absolute top-3 right-3"><div class="live-dot"></div></div>' : ''}
                             
                             <div class="flex items-center justify-between">
-                                <!-- HOME TEAM (Left side relative to center, actually Right side of flex container) -->
+                                <!-- HOME TEAM -->
                                 <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 ${homeOpacity} transition-opacity duration-300 text-right min-w-0">
-                                    <div class="flex flex-col items-end min-w-0">
-                                        <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate max-w-full">${m.teams.home.name}</span>
-                                        ${hScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1 text-right truncate max-w-full">${hScorers}</span>` : ''}
+                                    <div class="flex flex-col items-end min-w-0 max-w-full">
+                                        <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate w-full">${m.teams.home.name}</span>
+                                        ${hScorers ? `<div class="text-[9px] text-gray-500 font-mono w-full overflow-hidden">${hScorers}</div>` : ''}
                                     </div>
                                     <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain shrink-0">
                                 </div>
 
-                                <!-- SCORE / TIME (Center) -->
+                                <!-- SCORE / TIME -->
                                 <div class="px-2 md:px-3 flex flex-col items-center w-20 md:w-24 shrink-0">
                                     ${notStarted
                                 ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
@@ -955,12 +955,12 @@
                                     <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap">${isLive || isHT || isFin ? timeDisplay : ''}</span>
                                 </div>
 
-                                <!-- AWAY TEAM (Right side) -->
+                                <!-- AWAY TEAM -->
                                 <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 ${awayOpacity} transition-opacity duration-300 text-left min-w-0">
                                     <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain shrink-0">
-                                    <div class="flex flex-col items-start min-w-0">
-                                        <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate max-w-full">${m.teams.away.name}</span>
-                                        ${aScorers ? `<span class="text-[9px] text-gray-500 font-mono mt-1 text-left truncate max-w-full">${aScorers}</span>` : ''}
+                                    <div class="flex flex-col items-start min-w-0 max-w-full">
+                                        <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate w-full">${m.teams.away.name}</span>
+                                        ${aScorers ? `<div class="text-[9px] text-gray-500 font-mono w-full overflow-hidden">${aScorers}</div>` : ''}
                                     </div>
                                 </div>
                             </div>
@@ -1010,6 +1010,23 @@
                 document.getElementById('detail-home-score').innerText = m.goals.home ?? 0;
                 document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
                 document.getElementById('detail-status').innerText = m.fixture.status.long;
+
+                // Goleadores Header (Actualización Inmediata)
+                const hList = document.getElementById('detail-home-scorers-list');
+                const aList = document.getElementById('detail-away-scorers-list');
+                hList.innerHTML = '';
+                aList.innerHTML = '';
+
+                if (m.events && m.events.length > 0) {
+                    const goals = m.events.filter(e => e.type === 'Goal');
+                    const formatScorer = (ev) => `<div class="truncate leading-tight">${ev.player.name} ${ev.time.elapsed}'</div>`;
+
+                    const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(formatScorer);
+                    if (hGoals.length > 0) hList.innerHTML = hGoals.join('');
+
+                    const aGoals = goals.filter(e => e.team.id === m.teams.away.id).map(formatScorer);
+                    if (aGoals.length > 0) aList.innerHTML = aGoals.join('');
+                }
 
                 try {
                     const data = await fetchAPI(`/fixtures?id=${id}`);
