@@ -904,24 +904,61 @@
                 const targetIds = [128, 1032, 129, 39, 140, 78, 71, 13, 11];
 
                 try {
+                    // 1. Initial List Fetch
                     const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires`);
 
-                    let matches = data.response.filter(m => targetIds.includes(m.league.id));
-                    matches.sort((a, b) => {
-                        const isArgA = [128, 1032].includes(a.league.id);
-                        const isArgB = [128, 1032].includes(b.league.id);
-                        if (isArgA && !isArgB) return -1;
-                        if (!isArgA && isArgB) return 1;
-                        return a.fixture.timestamp - b.fixture.timestamp;
-                    });
+                    // 2. Filter interesting matches
+                    let basicMatches = data.response.filter(m => targetIds.includes(m.league.id));
 
-                    state.matches = matches;
+                    if (basicMatches.length > 0) {
+                        // 3. Extract IDs for batch detail fetch (to get events/scorers)
+                        const ids = basicMatches.map(m => m.fixture.id);
+                        const detailedMatches = await app.fetchBatchDetails(ids);
+
+                        // 4. Sort
+                        detailedMatches.sort((a, b) => {
+                            const isArgA = [128, 1032].includes(a.league.id);
+                            const isArgB = [128, 1032].includes(b.league.id);
+                            if (isArgA && !isArgB) return -1;
+                            if (!isArgA && isArgB) return 1;
+                            return a.fixture.timestamp - b.fixture.timestamp;
+                        });
+
+                        state.matches = detailedMatches;
+                    } else {
+                        state.matches = [];
+                    }
+
                     app.renderMatches();
                     app.loadMessageCounts();
                 } catch (e) {
                     console.error("Full API Error:", e);
                     document.getElementById('view-match-list').innerHTML = `<div class="text-center py-10 text-gray-500"><p>Error: ${e.message || "Conexión fallida"}</p><p class="text-xs mt-2">Revisa la consola para más detalles.</p></div>`;
                 }
+            },
+
+            fetchBatchDetails: async (ids) => {
+                if (ids.length === 0) return [];
+                // Chunk IDs because API allows max 20 per call usually, we'll implement safe chunks
+                const chunks = [];
+                const chunkSize = 20;
+                for (let i = 0; i < ids.length; i += chunkSize) {
+                    chunks.push(ids.slice(i, i + chunkSize));
+                }
+
+                let allDetails = [];
+                for (let chunk of chunks) {
+                    try {
+                        const idStr = chunk.join('-');
+                        const res = await fetchAPI(`/fixtures?ids=${idStr}&timezone=America/Argentina/Buenos_Aires`);
+                        if (res.response) {
+                            allDetails = allDetails.concat(res.response);
+                        }
+                    } catch (e) {
+                        console.error("Error fetching chunk details", e);
+                    }
+                }
+                return allDetails;
             },
 
             renderMatches: () => {
