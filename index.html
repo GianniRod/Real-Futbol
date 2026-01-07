@@ -396,6 +396,16 @@
                         class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg border-t-0 opacity-80 hover:opacity-100">
                         Partidos de Hoy
                     </button>
+                    <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
+                        class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg border-t-0 bg-yellow-500 border-yellow-500 text-black hover:bg-yellow-400 hover:border-yellow-400 font-bold flex items-center justify-center gap-2 mt-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
+                            <path d="M12 18V6"></path>
+                        </svg>
+                        Donar
+                    </button>
                 </div>
             </div>
         </aside>
@@ -648,6 +658,47 @@
                     class="w-16 h-16 bg-white rounded-full mx-auto mb-4 flex items-center justify-center text-black font-bold text-2xl">
                     #</div>
                 <p class="text-gray-400 text-sm uppercase tracking-wider">Detalles no disponibles</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Donation Modal -->
+    <div id="donation-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase text-yellow-500">Apoyar Real Futbol</h3>
+                <button onclick="document.getElementById('donation-modal').classList.add('hidden')"
+                    class="text-white hover:text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-xs text-center mb-4 leading-relaxed">Tu aporte nos ayuda a mantener los
+                    servidores y mejorar la aplicación cada día.</p>
+
+                <a href="https://mpago.la/2K2nHrX" target="_blank"
+                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
+                    Donar $1.000
+                </a>
+                <a href="https://mpago.la/2K2nHrX" target="_blank"
+                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
+                    Donar $2.500
+                </a>
+                <a href="https://mpago.la/31xAk5T" target="_blank"
+                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
+                    Donar $5.000
+                </a>
+                <a href="https://mpago.la/28LhXrY" target="_blank"
+                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
+                    Donar $10.000
+                </a>
+
+                <div class="pt-4 flex justify-center">
+                    <span class="text-[10px] text-gray-600 font-mono">Powered by MercadoPago</span>
+                </div>
             </div>
         </div>
     </div>
