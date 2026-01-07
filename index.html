@@ -1118,10 +1118,30 @@
 
                 // Render Lists (Starters + Subs)
                 const renderList = (lineup) => {
-                    let html = lineup.startXI.map(p => `<div class="flex justify-between border-b border-[#222] py-1.5"><span class="text-gray-300">${p.player.name}</span><span class="text-gray-600 font-mono text-xs">${p.player.number}</span></div>`).join('');
+                    // Starters
+                    let html = lineup.startXI.map(p => {
+                        // Check if subbed out
+                        const subOut = events.find(e => e.type === 'subst' && e.assist && e.assist.id === p.player.id);
+                        const subInfo = subOut ? `<span class="text-red-500 text-[10px] ml-1 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
+
+                        return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
+                            <div class="flex items-center"><span class="text-gray-300 transition-colors">${p.player.name}</span>${subInfo}</div>
+                            <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
+                        </div>`;
+                    }).join('');
+
                     if (lineup.substitutes && lineup.substitutes.length > 0) {
                         html += `<div class="mt-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Suplentes</div>`;
-                        html += lineup.substitutes.map(p => `<div class="flex justify-between border-b border-[#222] py-1.5"><span class="text-gray-400 text-sm">${p.player.name}</span><span class="text-gray-600 font-mono text-xs">${p.player.number}</span></div>`).join('');
+                        html += lineup.substitutes.map(p => {
+                            // Check if subbed in
+                            const subIn = events.find(e => e.type === 'subst' && e.player.id === p.player.id);
+                            const subInfo = subIn ? `<span class="text-green-500 text-[10px] ml-1 font-bold">▲ ${subIn.time.elapsed}'</span>` : '';
+
+                            return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
+                                <div class="flex items-center"><span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}</div>
+                                <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
+                            </div>`;
+                        }).join('');
                     }
                     return html;
                 };
@@ -1176,30 +1196,44 @@
                         linePlayers.forEach((p, index) => {
                             const el = document.createElement('div');
                             el.className = `player-marker ${side === 'home' ? 'home-player' : 'away-player'}`;
-                            el.innerText = p.player.number;
+                            // Substitution Logic for Marker
+                            // Default: Starter info
+                            let displayNumber = p.player.number;
+                            let displayName = p.player.name;
+                            let isSubbed = false;
+                            let subInName = '';
 
-                            // Goal Check
-                            const playerGoals = events.filter(e => e.type === 'Goal' && e.player.id === p.player.id);
+                            // Check if this starter was subbed OUT
+                            const subOutEvent = events.find(e => e.type === 'subst' && e.assist && e.assist.id === p.player.id);
+                            if (subOutEvent) {
+                                isSubbed = true;
+                                // Find who came IN (Jersey number needs lookup in subs list)
+                                // We rely on subOutEvent.player.name usually, but to get number we strictly need the lineup object
+                                const subInPlayer = lineup.substitutes.find(s => s.player.id === subOutEvent.player.id);
+                                if (subInPlayer) {
+                                    displayNumber = subInPlayer.player.number;
+                                    subInName = subInPlayer.player.name;
+                                } else {
+                                    // Fallback if not found in subs list (rare)
+                                    subInName = subOutEvent.player.name;
+                                    displayNumber = "⇄";
+                                }
+                            }
+
+                            el.innerText = displayNumber;
+
+                            // Goal Check (logic remains but applied to the marker position)
+                            // Note: Ideally check if goal was by starter OR sub, but keeping simple for now (attach to position)
+                            const playerGoals = events.filter(e => e.type === 'Goal' && (e.player.id === p.player.id || (isSubbed && e.player.name === subInName)));
+
                             if (playerGoals.length > 0) {
-                                let goalHTML = '';
-                                playerGoals.forEach(g => {
-                                    const isOwn = g.detail === 'Own Goal';
-                                    goalHTML += `<div class="absolute -top-2 -right-2 w-3 h-3 rounded-full ${isOwn ? 'bg-red-600' : 'bg-white'} border border-black shadow-sm" title="${isOwn ? 'Gol en contra' : 'Gol'}"></div>`;
-                                });
-                                // Si hay multiples, solo mostramos indicativo visual simple o apilados
-                                // Vamos a poner uno solo 'compuesto' si queremos simplicidad o iterar.
-                                // Simplificado: Un icono de bola, si es own goal rojo.
-                                const lastGoal = playerGoals[playerGoals.length - 1];
-                                const isOwn = lastGoal.detail === 'Own Goal';
-
-                                // Better visual: small soccer ball icon using CSS radial gradient or unicode
+                                // For simplicity re-using the ball icon logic
                                 const ballIcon = document.createElement('div');
                                 ballIcon.className = `absolute -top-2 -right-2 w-3.5 h-3.5 flex items-center justify-center rounded-full bg-black shadow-sm z-20`;
+                                const isOwn = playerGoals[playerGoals.length - 1].detail === 'Own Goal';
                                 ballIcon.innerHTML = isOwn
                                     ? `<div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>`
-                                    : `<div class="w-full h-full rounded-full bg-white flex items-center justify-center"><div class="w-1.5 h-1.5 bg-black rounded-full opacity-80"></div></div>`; // Abstract simple ball
-
-                                // Alternatively use emoji but might be inconsistent across OS. using CSS shapes.
+                                    : `<div class="w-full h-full rounded-full bg-white flex items-center justify-center"><div class="w-1.5 h-1.5 bg-black rounded-full opacity-80"></div></div>`;
                                 el.appendChild(ballIcon);
                             }
 
@@ -1220,19 +1254,16 @@
                             el.style.left = x + '%';
                             el.style.top = y + '%';
 
-                            // Name Label
+                            // Name Label Rendering
                             const nameEl = document.createElement('div');
                             nameEl.className = `absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap bg-black/80 px-1.5 py-0.5 rounded flex flex-col items-center leading-tight z-30 border border-[#333]`;
 
-                            // Check for subst
-                            const subEvent = events.find(e => e.type === 'subst' && e.assist && e.assist.id === p.player.id);
-
-                            if (subEvent) {
-                                const inName = subEvent.player.name.split(' ').pop();
-                                const outName = p.player.name.split(' ').pop();
-                                nameEl.innerHTML = `<span class="text-white">${inName}</span><span class="text-gray-400 opacity-50 text-[7px]">${outName}</span>`;
+                            if (isSubbed) {
+                                const inNameShort = subInName.split(' ').pop();
+                                const outNameShort = displayName.split(' ').pop();
+                                nameEl.innerHTML = `<span class="text-white">${inNameShort}</span><span class="text-gray-400 opacity-50 text-[7px]">${outNameShort}</span>`;
                             } else {
-                                const shortName = p.player.name.split(' ').pop();
+                                const shortName = displayName.split(' ').pop();
                                 nameEl.innerHTML = `<span class="text-white">${shortName}</span>`;
                             }
                             el.appendChild(nameEl);
