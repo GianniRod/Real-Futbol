@@ -1116,6 +1116,8 @@
                 const homeL = m.lineups[0];
                 const awayL = m.lineups[1];
 
+                const events = m.events || [];
+
                 // Render Lists (Starters + Subs)
                 const renderList = (lineup) => {
                     // Starters
@@ -1148,8 +1150,6 @@
 
                 hList.innerHTML = renderList(homeL);
                 aList.innerHTML = renderList(awayL);
-
-                const events = m.events || [];
 
                 const addPlayers = (lineup, side) => {
                     const players = lineup.startXI;
