@@ -1207,45 +1207,6 @@
                 // Helper to safely check ID match
                 const idsMatch = (id1, id2) => String(id1) === String(id2);
 
-                // Country name to ISO code mapping
-                const countryToISO = {
-                    'Argentina': 'ar', 'Brazil': 'br', 'Uruguay': 'uy', 'Paraguay': 'py', 'Chile': 'cl',
-                    'Colombia': 'co', 'Peru': 'pe', 'Ecuador': 'ec', 'Venezuela': 've', 'Bolivia': 'bo',
-                    'Spain': 'es', 'England': 'gb-eng', 'France': 'fr', 'Germany': 'de', 'Italy': 'it',
-                    'Portugal': 'pt', 'Netherlands': 'nl', 'Belgium': 'be', 'Croatia': 'hr', 'Poland': 'pl',
-                    'Mexico': 'mx', 'USA': 'us', 'Canada': 'ca', 'Costa Rica': 'cr', 'Panama': 'pa',
-                    'Japan': 'jp', 'Korea Republic': 'kr', 'Australia': 'au', 'Iran': 'ir', 'Saudi Arabia': 'sa',
-                    'Senegal': 'sn', 'Ghana': 'gh', 'Cameroon': 'cm', 'Nigeria': 'ng', 'Morocco': 'ma',
-                    'Egypt': 'eg', 'Algeria': 'dz', 'Tunisia': 'tn', 'Ivory Coast': 'ci', 'South Africa': 'za',
-                    'Denmark': 'dk', 'Sweden': 'se', 'Norway': 'no', 'Finland': 'fi', 'Switzerland': 'ch',
-                    'Austria': 'at', 'Czech Republic': 'cz', 'Serbia': 'rs', 'Turkey': 'tr', 'Greece': 'gr',
-                    'Ukraine': 'ua', 'Russia': 'ru', 'Romania': 'ro', 'Slovakia': 'sk', 'Hungary': 'hu',
-                    'Scotland': 'gb-sct', 'Wales': 'gb-wls', 'Northern Ireland': 'gb-nir', 'Republic of Ireland': 'ie',
-                    'Jamaica': 'jm', 'Trinidad and Tobago': 'tt', 'Honduras': 'hn', 'El Salvador': 'sv',
-                    'Guatemala': 'gt', 'Cuba': 'cu', 'Haiti': 'ht', 'Dominican Republic': 'do',
-                    'China PR': 'cn', 'India': 'in', 'Thailand': 'th', 'Vietnam': 'vn', 'Indonesia': 'id',
-                    'New Zealand': 'nz', 'Qatar': 'qa', 'United Arab Emirates': 'ae', 'Iraq': 'iq',
-                    'Israel': 'il', 'Lebanon': 'lb', 'Jordan': 'jo', 'Syria': 'sy', 'Palestine': 'ps',
-                    'Albania': 'al', 'Bosnia-Herzegovina': 'ba', 'North Macedonia': 'mk', 'Slovenia': 'si',
-                    'Montenegro': 'me', 'Kosovo': 'xk', 'Bulgaria': 'bg', 'Iceland': 'is', 'Luxembourg': 'lu',
-                    'Mali': 'ml', 'Burkina Faso': 'bf', 'Guinea': 'gn', 'Congo DR': 'cd', 'Zambia': 'zm',
-                    'Zimbabwe': 'zw', 'Kenya': 'ke', 'Tanzania': 'tz', 'Uganda': 'ug', 'Angola': 'ao',
-                    'Mozambique': 'mz', 'Madagascar': 'mg', 'Benin': 'bj', 'Togo': 'tg', 'Cape Verde': 'cv',
-                    'Gabon': 'ga', 'Equatorial Guinea': 'gq', 'Libya': 'ly', 'Sudan': 'sd', 'Ethiopia': 'et'
-                };
-
-                // Helper to get flag from nationality
-                const getFlag = (nationality) => {
-                    if (!nationality) return '';
-                    // Convert country name to ISO code
-                    const isoCode = countryToISO[nationality];
-                    if (!isoCode) {
-                        console.log('Missing country code for:', nationality);
-                        return '';
-                    }
-                    return `<img src="https://flagcdn.com/w20/${isoCode}.png" class="w-4 h-3 object-cover rounded-sm" alt="${nationality}" onerror="this.style.display='none'" />`;
-                };
-
                 // Render Lists (Starters + Subs)
                 const renderList = (lineup) => {
                     // Starters
@@ -1257,11 +1218,8 @@
                         });
                         const subInfo = subOut ? `<span class="text-red-400 text-[10px] ml-2 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
 
-                        // Debug: log nationality data
-                        console.log('Player:', p.player.name, 'Nationality:', p.player.nationality);
-                        const flag = getFlag(p.player.nationality);
                         return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
-                            <div class="flex items-center gap-2">${flag}<span class="text-gray-300 transition-colors">${p.player.name}</span>${subInfo}</div>
+                            <div class="flex items-center gap-2"><span class="text-gray-300 transition-colors">${p.player.name}</span>${subInfo}</div>
                             <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
                         </div>`;
                     }).join('');
@@ -1276,9 +1234,8 @@
                             });
                             const subInfo = subIn ? `<span class="text-green-400 text-[10px] ml-2 font-bold">▲ ${subIn.time.elapsed}'</span>` : '';
 
-                            const flag = getFlag(p.player.nationality);
                             return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
-                                <div class="flex items-center gap-2">${flag}<span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}</div>
+                                <div class="flex items-center gap-2"><span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}</div>
                                 <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
                             </div>`;
                         }).join('');
