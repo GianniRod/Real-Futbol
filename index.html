@@ -1116,6 +1116,19 @@
                 try {
                     const data = await fetchAPI(`/fixtures?id=${id}`);
                     const fullMatch = data.response[0];
+
+                    // Debug: Log full match data to see what's available
+                    console.log('=== FULL MATCH DATA ===');
+                    console.log('Full Match Object:', fullMatch);
+                    if (fullMatch.lineups && fullMatch.lineups.length > 0) {
+                        console.log('Lineup Sample:', fullMatch.lineups[0]);
+                        if (fullMatch.lineups[0].startXI && fullMatch.lineups[0].startXI.length > 0) {
+                            console.log('First Player Sample:', fullMatch.lineups[0].startXI[0]);
+                            console.log('Player Object:', fullMatch.lineups[0].startXI[0].player);
+                        }
+                    }
+                    console.log('======================');
+
                     app.renderTimeline(fullMatch);
                     app.renderLineups(fullMatch);
                     app.renderStats(fullMatch);
