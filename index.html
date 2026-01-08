@@ -721,17 +721,10 @@
         const fbApp = initializeApp(firebaseConfig);
         const db = getFirestore(fbApp);
 
-        // --- CONFIGURACIÓN API-SPORTS ---
-        // TU KEY PRINCIPAL
-        const API_KEY = "1d6013be5112e78ac0ee1c138fbad117";
-        // KEY DE RESPALDO (Por si agotas la tuya) - Esta es una demo key pública
-        const BACKUP_KEY = "8f6b9c9d9c9d9c9d9c9d9c9d9c9d9c9d";
+        const API_BASE = "https://api-proxy.giannirodbol07.workers.dev/api";
 
-        const API_BASE = "https://v3.football.api-sports.io";
 
-        // CACHÉ
-        const CACHE_TIME = 10 * 60 * 1000; // 10 minutos de caché
-
+        const CACHE_TIME = 10 * 60 * 1000;
         const fetchAPI = async (endpoint) => {
             const cacheKey = "bw_v3_" + endpoint;
             const cached = localStorage.getItem(cacheKey);
