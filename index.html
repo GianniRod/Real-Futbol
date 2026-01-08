@@ -1207,6 +1207,14 @@
                 // Helper to safely check ID match
                 const idsMatch = (id1, id2) => String(id1) === String(id2);
 
+                // Helper to get flag from nationality
+                const getFlag = (nationality) => {
+                    if (!nationality) return '';
+                    // Using flagcdn.com for flag images
+                    const countryCode = nationality.toLowerCase();
+                    return `<img src="https://flagcdn.com/w20/${countryCode}.png" class="w-4 h-3 object-cover rounded-sm" alt="${nationality}" onerror="this.style.display='none'" />`;
+                };
+
                 // Render Lists (Starters + Subs)
                 const renderList = (lineup) => {
                     // Starters
@@ -1218,8 +1226,9 @@
                         });
                         const subInfo = subOut ? `<span class="text-red-400 text-[10px] ml-2 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
 
+                        const flag = getFlag(p.player.nationality);
                         return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
-                            <div class="flex items-center"><span class="text-gray-300 transition-colors">${p.player.name}</span>${subInfo}</div>
+                            <div class="flex items-center gap-2">${flag}<span class="text-gray-300 transition-colors">${p.player.name}</span>${subInfo}</div>
                             <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
                         </div>`;
                     }).join('');
@@ -1234,8 +1243,9 @@
                             });
                             const subInfo = subIn ? `<span class="text-green-400 text-[10px] ml-2 font-bold">▲ ${subIn.time.elapsed}'</span>` : '';
 
+                            const flag = getFlag(p.player.nationality);
                             return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
-                                <div class="flex items-center"><span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}</div>
+                                <div class="flex items-center gap-2">${flag}<span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}</div>
                                 <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
                             </div>`;
                         }).join('');
