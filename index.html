@@ -733,8 +733,7 @@
                 if (Date.now() - ts < CACHE_TIME) return data;
             }
 
-            let currentKey = API_KEY;
-            let res = await fetch(`${API_BASE}${endpoint}`, { headers: { "x-apisports-key": currentKey } });
+            let res = await fetch(`${API_BASE}${endpoint}`);
             let data = await res.json();
 
             // Si hay error de quota, intentar backup
