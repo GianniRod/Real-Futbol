@@ -1257,6 +1257,8 @@
                         });
                         const subInfo = subOut ? `<span class="text-red-400 text-[10px] ml-2 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
 
+                        // Debug: log nationality data
+                        console.log('Player:', p.player.name, 'Nationality:', p.player.nationality);
                         const flag = getFlag(p.player.nationality);
                         return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
                             <div class="flex items-center gap-2">${flag}<span class="text-gray-300 transition-colors">${p.player.name}</span>${subInfo}</div>
