@@ -901,7 +901,15 @@
                 if (!silent) document.getElementById('view-match-list').innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
 
                 const dateStr = formatDate(state.date);
-                const targetIds = [128, 1032, 129, 39, 140, 78, 71, 13, 11, 135, 556];
+                // Liga IDs:
+                // 128: Liga Profesional Argentina, 1032: Trofeo de Campeones Argentina
+                // 129: Copa Libertadores, 39: Premier League, 140: La Liga, 78: Bundesliga
+                // 71: Serie A, 13: Ligue 1, 11: Serie A Brasil, 135: Serie A Italia, 556: Supercopa España
+                // 152: FA Cup, 150: Carabao Cup, 77: Championship
+                // 335: Copa del Rey, 61: Ligue 1 Francia
+                // 48: Liga Uruguaya, 51: Liga Colombiana, 25: Liga Chilena
+                // 371: Club Friendlies
+                const targetIds = [128, 1032, 129, 39, 140, 78, 71, 13, 11, 135, 556, 152, 150, 77, 335, 61, 48, 51, 25, 371];
 
                 try {
                     const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires`);
