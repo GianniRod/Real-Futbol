@@ -1209,6 +1209,7 @@
                 const idsMatch = (id1, id2) => String(id1) === String(id2);
 
                 const getFlagEmoji = (country) => {
+                    if (!country) return '';
                     const map = {
                         'Argentina': '🇦🇷', 'Brazil': '🇧🇷', 'Germany': '🇩🇪', 'France': '🇫🇷', 'Spain': '🇪🇸', 'Italy': '🇮🇹',
                         'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Portugal': '🇵🇹', 'Netherlands': '🇳🇱', 'Belgium': '🇧🇪', 'Uruguay': '🇺🇾',
@@ -1217,21 +1218,39 @@
                         'South Korea': '🇰🇷', 'China': '🇨🇳', 'Australia': '🇦🇺', 'Senegal': '🇸🇳', 'Morocco': '🇲🇦',
                         'Egypt': '🇪🇬', 'Nigeria': '🇳🇬', 'Cameroon': '🇨🇲', 'Ivory Coast': '🇨🇮', 'Ghana': '🇬🇭',
                         'Croatia': '🇭🇷', 'Serbia': '🇷🇸', 'Switzerland': '🇨🇭', 'Austria': '🇦🇹', 'Poland': '🇵🇱',
-                        'Denmark': '🇩🇰', 'Sweden': '🇸🇪', 'Norway': '🇳🇴', 'Turkey': '🇹🇷', 'Russia': '🇷🇺', 'Ukraine': '🇺🇦'
+                        'Denmark': '🇩🇰', 'Sweden': '🇸🇪', 'Norway': '🇳🇴', 'Turkey': '🇹🇷', 'Russia': '🇷🇺', 'Ukraine': '🇺🇦',
+                        'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Ireland': '🇮🇪', 'Costa Rica': '🇨🇷', 'Panama': '🇵🇦',
+                        'Algeria': '🇩🇿', 'Tunisia': '🇹🇳', 'Saudi Arabia': '🇸🇦', 'Iran': '🇮🇷', 'Qatar': '🇶🇦'
                     };
-                    return map[country] ? `<span class="ml-1.5 text-[10px] md:text-xs grayscale-[0.2]" title="${country}">${map[country]}</span>` : '';
+                    return map[country] || '';
                 };
 
                 const natMap = {};
+                let debugCount = 0;
                 if (m.players && m.players.length > 0) {
                     m.players.forEach(team => {
                         if (team.players) {
                             team.players.forEach(pData => {
-                                if (pData.player.nationality) natMap[pData.player.id] = pData.player.nationality;
+                                if (pData.player.nationality) {
+                                    natMap[pData.player.id] = pData.player.nationality;
+                                    debugCount++;
+                                }
                             });
                         }
                     });
                 }
+
+                // Visual Debug
+                const pitchContainer = document.getElementById('football-pitch');
+                let debugEl = document.getElementById('debug-flags-info');
+                if (!debugEl) {
+                    debugEl = document.createElement('div');
+                    debugEl.id = 'debug-flags-info';
+                    debugEl.className = 'text-[9px] text-gray-400 text-center mb-2 font-mono';
+                    pitchContainer.parentNode.insertBefore(debugEl, pitchContainer);
+                }
+                const hasStats = m.players && m.players.length > 0;
+                debugEl.innerHTML = hasStats ? `Info: ${debugCount} banderas cargadas.` : `Info: Sin datos de nacionalidad (API).`;
 
                 // Render Lists (Starters + Subs)
                 const renderList = (lineup) => {
