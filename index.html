@@ -306,7 +306,7 @@
         <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center cursor-pointer"
             onclick="window.location.reload()">
             <img src="https://i.postimg.cc/pL6B4Mpr/real-futbol-removebg-preview.png" alt="Real Futbol Logo"
-                class="h-14 object-contain ml-10">
+                class="h-14 object-contain lg:ml-10">
         </div>
 
         <!-- Derecha: Toggle -->
@@ -1003,7 +1003,7 @@
                                 <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 ${homeOpacity} transition-opacity duration-300 text-right min-w-0">
                                     <div class="flex flex-col items-end min-w-0 max-w-full">
                                         <div class="flex items-center gap-1 w-full justify-end">
-                                            <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate">${m.teams.home.name}</span>
+                                            <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap">${m.teams.home.name}</span>
                                             ${hRedCards}
                                         </div>
                                         ${hScorers ? `<div class="text-[9px] text-gray-500 font-mono w-full overflow-hidden">${hScorers}</div>` : ''}
@@ -1030,7 +1030,7 @@
                                     <div class="flex flex-col items-start min-w-0 max-w-full">
                                         <div class="flex items-center gap-1 w-full justify-start">
                                             ${aRedCards}
-                                            <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none truncate">${m.teams.away.name}</span>
+                                            <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap">${m.teams.away.name}</span>
                                         </div>
                                         ${aScorers ? `<div class="text-[9px] text-gray-500 font-mono w-full overflow-hidden">${aScorers}</div>` : ''}
                                     </div>
