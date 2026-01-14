@@ -1134,6 +1134,29 @@
                     const btn = document.querySelector(`.tab-btn[data-target="tab-timeline"]`);
                     if (btn) btn.click();
                 }
+
+                // EXPERIMENTAL: Probe Squads Data for Nationality
+                const debugSquads = async () => {
+                    const hId = m.teams.home.id;
+                    const debugEl = document.getElementById('debug-flags-info');
+                    try {
+                        if (debugEl) debugEl.innerHTML += " [Probing Squads...]";
+                        const res = await fetchAPI(`/players/squads?team=${hId}`);
+                        const squad = res.response[0]?.players || [];
+                        if (squad.length > 0) {
+                            const sample = squad[0];
+                            console.log("Squad Sample:", sample);
+                            const hasNat = !!sample.nationality;
+                            if (debugEl) debugEl.innerHTML += ` [Squad Nat: ${hasNat ? sample.nationality : 'NO'}]`;
+                        } else {
+                            if (debugEl) debugEl.innerHTML += " [Squad Empty]";
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        if (debugEl) debugEl.innerHTML += " [Squad Error]";
+                    }
+                };
+                debugSquads();
             },
 
             closeDetail: () => {
