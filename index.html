@@ -1134,29 +1134,6 @@
                     const btn = document.querySelector(`.tab-btn[data-target="tab-timeline"]`);
                     if (btn) btn.click();
                 }
-
-                // EXPERIMENTAL: Probe Squads Data for Nationality
-                const debugSquads = async () => {
-                    const hId = m.teams.home.id;
-                    const debugEl = document.getElementById('debug-flags-info');
-                    try {
-                        if (debugEl) debugEl.innerHTML += " [Probing Squads...]";
-                        const res = await fetchAPI(`/players/squads?team=${hId}`);
-                        const squad = res.response[0]?.players || [];
-                        if (squad.length > 0) {
-                            const sample = squad[0];
-                            console.log("Squad Sample:", sample);
-                            const hasNat = !!sample.nationality;
-                            if (debugEl) debugEl.innerHTML += ` [Squad Nat: ${hasNat ? sample.nationality : 'NO'}]`;
-                        } else {
-                            if (debugEl) debugEl.innerHTML += " [Squad Empty]";
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        if (debugEl) debugEl.innerHTML += " [Squad Error]";
-                    }
-                };
-                debugSquads();
             },
 
             closeDetail: () => {
@@ -1231,70 +1208,6 @@
                 // Helper to safely check ID match
                 const idsMatch = (id1, id2) => String(id1) === String(id2);
 
-                const getFlagEmoji = (country) => {
-                    if (!country) return '';
-                    const map = {
-                        'Argentina': '🇦🇷', 'Brazil': '🇧🇷', 'Germany': '🇩🇪', 'France': '🇫🇷', 'Spain': '🇪🇸', 'Italy': '🇮🇹',
-                        'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Portugal': '🇵🇹', 'Netherlands': '🇳🇱', 'Belgium': '🇧🇪', 'Uruguay': '🇺🇾',
-                        'Colombia': '🇨🇴', 'Chile': '🇨🇱', 'Mexico': '🇲🇽', 'USA': '🇺🇸', 'Canada': '🇨🇦', 'Peru': '🇵🇪',
-                        'Ecuador': '🇪🇨', 'Paraguay': '🇵🇾', 'Bolivia': '🇧🇴', 'Venezuela': '🇻🇪', 'Japan': '🇯🇵',
-                        'South Korea': '🇰🇷', 'China': '🇨🇳', 'Australia': '🇦🇺', 'Senegal': '🇸🇳', 'Morocco': '🇲🇦',
-                        'Egypt': '🇪🇬', 'Nigeria': '🇳🇬', 'Cameroon': '🇨🇲', 'Ivory Coast': '🇨🇮', 'Ghana': '🇬🇭',
-                        'Croatia': '🇭🇷', 'Serbia': '🇷🇸', 'Switzerland': '🇨🇭', 'Austria': '🇦🇹', 'Poland': '🇵🇱',
-                        'Denmark': '🇩🇰', 'Sweden': '🇸🇪', 'Norway': '🇳🇴', 'Turkey': '🇹🇷', 'Russia': '🇷🇺', 'Ukraine': '🇺🇦',
-                        'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Ireland': '🇮🇪', 'Costa Rica': '🇨🇷', 'Panama': '🇵🇦',
-                        'Algeria': '🇩🇿', 'Tunisia': '🇹🇳', 'Saudi Arabia': '🇸🇦', 'Iran': '🇮🇷', 'Qatar': '🇶🇦'
-                    };
-                    return map[country] || '';
-                };
-
-                const natMap = {};
-                let debugCount = 0;
-                if (m.players && m.players.length > 0) {
-                    m.players.forEach(team => {
-                        if (team.players) {
-                            team.players.forEach(pData => {
-                                if (pData.player.nationality) {
-                                    natMap[pData.player.id] = pData.player.nationality;
-                                    debugCount++;
-                                }
-                            });
-                        }
-                    });
-                }
-
-                // Visual Debug
-                const pitchContainer = document.getElementById('football-pitch');
-                let debugEl = document.getElementById('debug-flags-info');
-                if (!debugEl) {
-                    debugEl = document.createElement('div');
-                    debugEl.id = 'debug-flags-info';
-                    debugEl.className = 'text-[9px] text-gray-400 text-center mb-2 font-mono break-all px-4';
-                    pitchContainer.parentNode.insertBefore(debugEl, pitchContainer);
-                }
-
-                let debugMsg = "";
-                if (!m.players || m.players.length === 0) {
-                    debugMsg = "Sin datos de m.players (API)";
-                } else {
-                    let pSample = "N/A";
-                    let teamCount = m.players.length;
-                    let pCount = 0;
-                    m.players.forEach(t => {
-                        if (t.players) {
-                            pCount += t.players.length;
-                            if (pSample === "N/A" && t.players.length > 0) {
-                                // Log first player keys and nationality value
-                                const p = t.players[0].player;
-                                pSample = JSON.stringify({ id: p.id, name: p.name, nat: p.nationality });
-                            }
-                        }
-                    });
-                    debugMsg = `Teams: ${teamCount}, Players: ${pCount}, Sample: ${pSample}`;
-                }
-
-                debugEl.innerHTML = `Debug: ${debugCount} mapped. ${debugMsg}`;
-
                 // Render Lists (Starters + Subs)
                 const renderList = (lineup) => {
                     // Starters
@@ -1306,11 +1219,8 @@
                         });
                         const subInfo = subOut ? `<span class="text-red-400 text-[10px] ml-2 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
 
-                        const nat = natMap[p.player.id];
-                        const flag = nat ? getFlagEmoji(nat) : '';
-
                         return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
-                            <div class="flex items-center gap-2"><span class="text-gray-300 transition-colors">${p.player.name}</span>${flag}${subInfo}</div>
+                            <div class="flex items-center gap-2"><span class="text-gray-300 transition-colors">${p.player.name}</span>${subInfo}</div>
                             <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
                         </div>`;
                     }).join('');
@@ -1325,11 +1235,8 @@
                             });
                             const subInfo = subIn ? `<span class="text-green-400 text-[10px] ml-2 font-bold">▲ ${subIn.time.elapsed}'</span>` : '';
 
-                            const nat = natMap[p.player.id];
-                            const flag = nat ? getFlagEmoji(nat) : '';
-
                             return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
-                                <div class="flex items-center gap-2"><span class="text-gray-400 text-sm">${p.player.name}</span>${flag}${subInfo}</div>
+                                <div class="flex items-center gap-2"><span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}</div>
                                 <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
                             </div>`;
                         }).join('');
