@@ -1246,11 +1246,31 @@
                 if (!debugEl) {
                     debugEl = document.createElement('div');
                     debugEl.id = 'debug-flags-info';
-                    debugEl.className = 'text-[9px] text-gray-400 text-center mb-2 font-mono';
+                    debugEl.className = 'text-[9px] text-gray-400 text-center mb-2 font-mono break-all px-4';
                     pitchContainer.parentNode.insertBefore(debugEl, pitchContainer);
                 }
-                const hasStats = m.players && m.players.length > 0;
-                debugEl.innerHTML = hasStats ? `Info: ${debugCount} banderas cargadas.` : `Info: Sin datos de nacionalidad (API).`;
+
+                let debugMsg = "";
+                if (!m.players || m.players.length === 0) {
+                    debugMsg = "Sin datos de m.players (API)";
+                } else {
+                    let pSample = "N/A";
+                    let teamCount = m.players.length;
+                    let pCount = 0;
+                    m.players.forEach(t => {
+                        if (t.players) {
+                            pCount += t.players.length;
+                            if (pSample === "N/A" && t.players.length > 0) {
+                                // Log first player keys and nationality value
+                                const p = t.players[0].player;
+                                pSample = JSON.stringify({ id: p.id, name: p.name, nat: p.nationality });
+                            }
+                        }
+                    });
+                    debugMsg = `Teams: ${teamCount}, Players: ${pCount}, Sample: ${pSample}`;
+                }
+
+                debugEl.innerHTML = `Debug: ${debugCount} mapped. ${debugMsg}`;
 
                 // Render Lists (Starters + Subs)
                 const renderList = (lineup) => {
