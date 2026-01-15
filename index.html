@@ -140,6 +140,35 @@
             border-right: none;
         }
 
+        /* Corner Arcs */
+        .corner-arc {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 1px solid #444;
+            border-radius: 50%;
+        }
+
+        .corner-top-left {
+            top: -15px;
+            left: -15px;
+        }
+
+        .corner-top-right {
+            top: -15px;
+            right: -15px;
+        }
+
+        .corner-bottom-left {
+            bottom: -15px;
+            left: -15px;
+        }
+
+        .corner-bottom-right {
+            bottom: -15px;
+            right: -15px;
+        }
+
         /* Marcadores Jugadores B&W */
         .player-marker {
             position: absolute;
@@ -597,6 +626,11 @@
                                         <div class="center-circle"></div>
                                         <div class="penalty-box home-box"></div>
                                         <div class="penalty-box away-box"></div>
+                                        <!-- Corner Arcs -->
+                                        <div class="corner-arc corner-top-left"></div>
+                                        <div class="corner-arc corner-top-right"></div>
+                                        <div class="corner-arc corner-bottom-left"></div>
+                                        <div class="corner-arc corner-bottom-right"></div>
                                     </div>
                                     <div class="grid grid-cols-2 gap-4 mt-6">
                                         <div class="bg-[#111] p-4 rounded border border-[#222]">
