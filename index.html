@@ -952,8 +952,12 @@
                     app.loadMessageCounts();
                 } catch (e) {
                     console.error("Full API Error:", e);
-                    document.getElementById('view-match-list').innerHTML = `
-                        <div class="flex justify-center items-start pt-10 px-4 min-h-[400px]">
+                    // Bloquear scroll del contenedor
+                    const container = document.getElementById('view-match-list');
+                    container.style.overflow = 'hidden';
+                    container.style.height = '100%';
+                    container.innerHTML = `
+                        <div class="flex justify-center items-start pt-4 px-4 h-full">
                             <div class="max-w-md w-full bg-[#0a0a0a] p-8 text-center">
                                 <div class="mb-6">
                                     <h2 class="text-2xl font-black text-white mb-2">¡Estamos a tope! 🚀</h2>
@@ -965,7 +969,7 @@
                                 </p>
                                 <div class="border-t border-[#222] my-6"></div>
                                 <p class="text-gray-400 text-xs mb-4">
-                                    Si te gustaría ayudarnos para que esto no vuelva a suceder, podrías considerar realizar un aporte en la sección
+                                    Si te gustaría ayudarnos para que esto no vuelva a suceder, podrías considerar realizar un aporte en la sección donar.
                                 </p>
                                 <button 
                                     onclick="document.getElementById('donation-modal').classList.remove('hidden')"
