@@ -550,16 +550,18 @@
                                 class="flex border-b border-[#222] sticky top-[57px] bg-black/95 backdrop-blur z-30 overflow-x-auto no-scrollbar">
                                 <button
                                     class="flex-1 py-3 px-4 text-xs font-bold text-white border-b-2 border-white tab-btn whitespace-nowrap uppercase"
-                                    data-target="tab-timeline">Timeline</button>
+                                    data-target="tab-timeline"
+                                    onclick="app.switchTab(this, 'tab-timeline')">Timeline</button>
                                 <button
                                     class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
-                                    data-target="tab-lineups">Alineaciones</button>
+                                    data-target="tab-lineups"
+                                    onclick="app.switchTab(this, 'tab-lineups')">Alineaciones</button>
                                 <button
                                     class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
-                                    data-target="tab-stats">Stats</button>
+                                    data-target="tab-stats" onclick="app.switchTab(this, 'tab-stats')">Stats</button>
                                 <button
                                     class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
-                                    data-target="tab-forum">Foro</button>
+                                    data-target="tab-forum" onclick="app.switchTab(this, 'tab-forum')">Foro</button>
                             </div>
 
                             <div class="p-4 lg:p-8 space-y-6 min-h-[50vh]">
@@ -836,6 +838,21 @@
         const getDayName = (d) => d.toLocaleDateString('es-AR', { weekday: 'short' }).toUpperCase().replace('.', '');
 
         window.app = {
+            switchTab: (btn, targetId) => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('text-white', 'border-b-2', 'border-white');
+                    b.classList.add('text-gray-500');
+                });
+                btn.classList.add('text-white', 'border-b-2', 'border-white');
+                btn.classList.remove('text-gray-500');
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById(targetId).classList.remove('hidden');
+
+                if (targetId === 'tab-forum' && state.selectedMatch) {
+                    app.initForum(`match_${state.selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
+                }
+            },
+
             init: () => {
                 app.renderCalendar();
                 app.loadMatches();
@@ -856,25 +873,7 @@
                     app.renderMatches();
                 };
 
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.onclick = (e) => {
-                        document.querySelectorAll('.tab-btn').forEach(b => {
-                            b.classList.remove('text-white', 'border-b-2', 'border-white');
-                            b.classList.add('text-gray-500');
-                        });
-                        e.target.classList.add('text-white', 'border-b-2', 'border-white');
-                        e.target.classList.remove('text-gray-500');
-                        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-                        const targetId = e.target.dataset.target;
-                        document.getElementById(targetId).classList.remove('hidden');
 
-                        // Si abre el foro del partido, inicializarlo
-                        if (targetId === 'tab-forum' && state.selectedMatch) {
-                            // Usar un contexto único para este partido
-                            app.initForum(`match_${state.selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
-                        }
-                    };
-                });
 
                 setInterval(() => app.loadMatches(true), 60000);
             },
