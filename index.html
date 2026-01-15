@@ -70,10 +70,12 @@
             border-radius: 2px;
         }
 
-        /* Toggle Switch B&W */
+        /* Toggle Switch B&W & Red Live */
         .toggle-checkbox:checked {
             right: 0;
-            border-color: #fff;
+            border-color: #ef4444;
+            background-color: #ef4444;
+            box-shadow: 0 0 10px #ef4444;
         }
 
         .toggle-checkbox:checked+.toggle-label {
@@ -300,9 +302,12 @@
 
         <!-- Derecha: Toggle -->
         <div class="flex items-center justify-end gap-3 min-w-[60px]">
-            <span class="text-[10px] font-bold text-white uppercase tracking-widest mr-1">EN VIVO</span>
+            <div class="flex flex-col items-end leading-none">
+                <span class="text-[10px] font-bold text-white uppercase tracking-widest mr-1">EN VIVO</span>
+                <span id="live-count" class="text-[9px] font-mono text-red-500 font-bold mr-1 hidden">(0)</span>
+            </div>
             <div class="relative inline-block w-8 h-5 align-middle select-none">
-                <input type="checkbox" id="live-toggle"
+                <input type="checkbox" id="live-toggle" onchange="app.toggleLiveFilter()"
                     class="toggle-checkbox absolute block w-3 h-3 mt-1 ml-1 rounded-full bg-white border-none appearance-none cursor-pointer transition-all duration-300 left-0" />
                 <label for="live-toggle"
                     class="toggle-label block overflow-hidden h-5 rounded-full bg-[#222] cursor-pointer border border-[#444]"></label>
@@ -314,7 +319,6 @@
 
         <div id="mobile-backdrop" class="mobile-backdrop hidden lg:hidden"></div>
 
-        <!-- Sidebar B&W -->
         <!-- Sidebar B&W -->
         <aside id="sidebar"
             class="fixed inset-y-0 left-0 w-full lg:w-72 bg-black border-r border-[#222] flex flex-col transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 z-40 h-[calc(100%-80px)] lg:h-full top-20 lg:top-0">
@@ -395,7 +399,7 @@
 
             <!-- Date Navigation -->
             <div id="date-nav" class="border-b border-[#222] p-3 z-10 sticky top-0 bg-black/95 backdrop-blur">
-                <div class="flex items-center justify-between mb-3 max-w-lg mx-auto">
+                <div class="flex items-center justify-center gap-6 mb-3 max-w-lg mx-auto">
                     <button onclick="app.changeDate(-1)"
                         class="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded transition-colors"><svg
                             xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
@@ -645,8 +649,8 @@
     <!-- Bottom Navigation (Mobile Only) -->
     <nav
         class="fixed bottom-0 left-0 w-full bg-black border-t border-[#222] z-50 lg:hidden flex justify-around items-center h-16 pb-safe">
-        <button onclick="app.navigateToMatches()"
-            class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-white active:text-white transition-colors">
+        <button id="btn-nav-results" onclick="app.navigateToMatches()"
+            class="flex flex-col items-center justify-center w-full h-full text-white transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -654,7 +658,7 @@
             </svg>
             <span class="text-[10px] font-bold uppercase tracking-widest">Resultados</span>
         </button>
-        <button onclick="app.openMobileTab('leagues')"
+        <button id="btn-nav-leagues" onclick="app.openMobileTab('leagues')"
             class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-white active:text-white transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
@@ -662,7 +666,7 @@
             </svg>
             <span class="text-[10px] font-bold uppercase tracking-widest">Ligas</span>
         </button>
-        <button onclick="app.navigateToForum()"
+        <button id="btn-nav-forum" onclick="app.navigateToForum()"
             class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-white active:text-white transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1513,12 +1517,16 @@
                 document.getElementById('date-nav').classList.remove('hidden');
                 document.getElementById('sidebar').classList.add('-translate-x-full');
                 document.getElementById('mobile-backdrop').classList.add('hidden');
+
+                // Nav Highlight
+                app.updateMobileNav('btn-nav-results');
             },
 
             openMobileTab: (tabName) => {
                 const sidebar = document.getElementById('sidebar');
                 if (tabName === 'leagues') {
                     sidebar.classList.remove('-translate-x-full');
+                    app.updateMobileNav('btn-nav-leagues');
                 } else {
                     sidebar.classList.add('-translate-x-full');
                 }
@@ -1536,6 +1544,29 @@
                 document.getElementById('mobile-backdrop').classList.add('hidden');
 
                 app.initForum('global', 'forum-messages', 'forum-username');
+
+                // Nav Highlight
+                app.updateMobileNav('btn-nav-forum');
+            },
+
+            updateMobileNav: (activeId) => {
+                ['btn-nav-results', 'btn-nav-leagues', 'btn-nav-forum'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (!btn) return;
+                    if (id === activeId) {
+                        btn.classList.remove('text-gray-400');
+                        btn.classList.add('text-white');
+                    } else {
+                        btn.classList.add('text-gray-400');
+                        btn.classList.remove('text-white');
+                    }
+                });
+            },
+
+            toggleLiveFilter: () => {
+                const isChecked = document.getElementById('live-toggle').checked;
+                state.filterLive = isChecked;
+                app.renderMatchList();
             },
 
             initForum: (context, containerId, usernameInputId) => {
