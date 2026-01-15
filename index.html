@@ -978,7 +978,34 @@
                     app.loadMessageCounts();
                 } catch (e) {
                     console.error("Full API Error:", e);
-                    document.getElementById('view-match-list').innerHTML = `<div class="text-center py-10 text-gray-500"><p>Error: ${e.message || "Conexión fallida"}</p><p class="text-xs mt-2">Revisa la consola para más detalles.</p></div>`;
+                    document.getElementById('view-match-list').innerHTML = `
+                        <div class="flex justify-center items-center py-20 px-4">
+                            <div class="max-w-md w-full bg-[#0a0a0a] border-2 border-[#333] p-8 text-center">
+                                <div class="mb-6">
+                                    <h2 class="text-2xl font-black text-white mb-2">¡Estamos a tope! 🚀</h2>
+                                    <div class="h-1 w-20 bg-white mx-auto"></div>
+                                </div>
+                                <p class="text-gray-300 text-sm leading-relaxed mb-6">
+                                    Nuestros servidores han alcanzado su límite por hoy debido a la gran cantidad de usuarios. 
+                                    Estamos trabajando para ampliar nuestra capacidad.
+                                </p>
+                                <div class="border-t border-[#222] my-6"></div>
+                                <p class="text-gray-400 text-xs mb-4">
+                                    Si te gustaría ayudarnos para que esto no vuelva a suceder, podrías considerar realizar un aporte en la sección
+                                </p>
+                                <button 
+                                    onclick="document.getElementById('donation-modal').classList.remove('hidden')"
+                                    class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 uppercase tracking-widest text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-yellow-500/50">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
+                                        <path d="M12 18V6"></path>
+                                    </svg>
+                                    Donar
+                                </button>
+                            </div>
+                        </div>
+                    `;
                 }
             },
 
