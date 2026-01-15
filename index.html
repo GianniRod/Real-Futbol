@@ -806,9 +806,8 @@
 
             if (data.errors && Object.keys(data.errors).length > 0) {
                 console.error("API Error:", data.errors);
-                // Fallback
-                if (endpoint.includes('fixtures')) return getMockMatches();
-                throw new Error("API Limit");
+                // Lanzar error para mostrar el mensaje de límite alcanzado
+                throw new Error("API Limit Reached");
             }
 
             try {
@@ -829,32 +828,7 @@
             return data;
         };
 
-        // MOCK DATA para emergencias (Quota Exceeded)
-        const getMockMatches = () => ({
-            response: [
-                {
-                    fixture: { id: 1, date: new Date().toISOString(), status: { short: 'LIVE', elapsed: 55, long: 'En Vivo' }, timestamp: Date.now() },
-                    league: { id: 128, name: 'Liga Profesional', logo: 'https://media.api-sports.io/football/leagues/128.png' },
-                    teams: { home: { id: 1, name: 'Boca Juniors', logo: 'https://media.api-sports.io/football/teams/451.png' }, away: { id: 2, name: 'River Plate', logo: 'https://media.api-sports.io/football/teams/435.png' } },
-                    goals: { home: 0, away: 1 },
-                    events: [
-                        { type: 'Goal', time: { elapsed: 912 }, team: { id: 2 }, player: { name: 'S. Driussi' } }
-                    ]
-                },
-                {
-                    fixture: { id: 2, date: new Date().toISOString(), status: { short: 'FT', elapsed: 90, long: 'Finalizado' }, timestamp: Date.now() },
-                    league: { id: 39, name: 'Premier League', logo: 'https://media.api-sports.io/football/leagues/39.png' },
-                    teams: { home: { id: 3, name: 'Man City', logo: 'https://media.api-sports.io/football/teams/50.png' }, away: { id: 4, name: 'Liverpool', logo: 'https://media.api-sports.io/football/teams/40.png' } },
-                    goals: { home: 3, away: 1 },
-                    events: [
-                        { type: 'Goal', time: { elapsed: 20 }, team: { id: 3 }, player: { name: 'E. Haaland' } },
-                        { type: 'Goal', time: { elapsed: 45 }, team: { id: 4 }, player: { name: 'M. Salah' } },
-                        { type: 'Goal', time: { elapsed: 60 }, team: { id: 3 }, player: { name: 'K. De Bruyne' } },
-                        { type: 'Goal', time: { elapsed: 88 }, team: { id: 3 }, player: { name: 'P. Foden' } }
-                    ]
-                }
-            ]
-        });
+
 
         const state = {
             date: new Date(),
