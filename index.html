@@ -973,7 +973,7 @@
                         const isFin = ['FT', 'AET', 'PEN'].includes(s.short);
                         const notStarted = ['NS', 'TBD'].includes(s.short);
 
-                        const timeDisplay = isLive ? `<span class="text-white font-bold animate-pulse text-xs">${s.elapsed}'</span>` : (isHT ? '<span class="text-white font-bold text-xs">ET</span>' : (isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })));
+                        const timeDisplay = isLive ? `<span class="text-white font-bold animate-pulse text-xs">${s.elapsed}'</span>` : (isHT ? '<span class="text-white font-bold text-xs">ET</span>' : (isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })));
 
                         // LÓGICA DE OPACIDAD PARA PERDEDOR (Solo Finalizados)
                         let homeOpacity = 'opacity-100';
