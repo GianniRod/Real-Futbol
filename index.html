@@ -581,14 +581,15 @@
                                 <button
                                     class="flex-1 py-3 px-4 text-xs font-bold text-white border-b-2 border-white tab-btn whitespace-nowrap uppercase"
                                     data-target="tab-timeline"
-                                    onclick="app.switchTab(this, 'tab-timeline')">Timeline</button>
+                                    onclick="app.switchTab(this, 'tab-timeline')">Cronología</button>
                                 <button
                                     class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
                                     data-target="tab-lineups"
                                     onclick="app.switchTab(this, 'tab-lineups')">Alineaciones</button>
                                 <button
                                     class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
-                                    data-target="tab-stats" onclick="app.switchTab(this, 'tab-stats')">Stats</button>
+                                    data-target="tab-stats"
+                                    onclick="app.switchTab(this, 'tab-stats')">Estadísticas</button>
                                 <button
                                     class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
                                     data-target="tab-forum" onclick="app.switchTab(this, 'tab-forum')">Foro</button>
@@ -1435,13 +1436,21 @@
             renderStats: (m) => {
                 const c = document.getElementById('tab-stats');
                 if (!m.statistics || m.statistics.length === 0) { c.innerHTML = 'No disponible'; return; }
-                const statsTypes = ['Ball Possession', 'Total Shots', 'Shots on Goal', 'Corner Kicks', 'Fouls', 'Yellow Cards', 'Red Cards'];
+                const statsTypes = [
+                    { api: 'Ball Possession', es: 'Posesión' },
+                    { api: 'Total Shots', es: 'Tiros Totales' },
+                    { api: 'Shots on Goal', es: 'Tiros al Arco' },
+                    { api: 'Corner Kicks', es: 'Tiros de Esquina' },
+                    { api: 'Fouls', es: 'Faltas' },
+                    { api: 'Yellow Cards', es: 'Tarjetas Amarillas' },
+                    { api: 'Red Cards', es: 'Tarjetas Rojas' }
+                ];
                 const hStats = m.statistics[0].statistics;
                 const aStats = m.statistics[1].statistics;
 
-                c.innerHTML = statsTypes.map(type => {
-                    const hVal = hStats.find(s => s.type === type)?.value || 0;
-                    const aVal = aStats.find(s => s.type === type)?.value || 0;
+                c.innerHTML = statsTypes.map(stat => {
+                    const hVal = hStats.find(s => s.type === stat.api)?.value || 0;
+                    const aVal = aStats.find(s => s.type === stat.api)?.value || 0;
                     const hNum = parseInt(hVal);
                     const aNum = parseInt(aVal);
                     const total = hNum + aNum || 1;
@@ -1450,7 +1459,7 @@
                     return `
                     <div class="bg-[#111] p-4 border border-[#222]">
                         <div class="flex justify-between text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest">
-                            <span>${hVal}</span><span>${type.replace('Ball Possession', 'Posesión').replace('Shots', 'Tiros')}</span><span>${aVal}</span>
+                            <span>${hVal}</span><span>${stat.es}</span><span>${aVal}</span>
                         </div>
                         <div class="h-1 bg-[#333] flex overflow-hidden">
                             <div class="h-full bg-white" style="width: ${hPerc}%"></div>
@@ -1458,6 +1467,7 @@
                         </div>
                     </div>`;
                 }).join('');
+
             },
 
             changeSeason: (y) => { state.season = y; if (state.selectedLeague) app.showStandings(state.selectedLeague.id, state.selectedLeague.name); },
