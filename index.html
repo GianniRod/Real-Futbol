@@ -367,8 +367,25 @@
                     <span class="text-sm font-bold">Bundesliga</span>
                 </button>
 
-                <div class="mt-8 px-2 space-y-3">
-                    <!-- Botones extra movidos al bottom nav o mantenidos solo para PC -->
+                <div class="mt-8 px-2 space-y-3 hidden lg:block">
+                    <button onclick="app.navigateToForum()"
+                        class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        Foro Global
+                    </button>
+                    <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
+                        class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg border-t-0 bg-yellow-500 border-yellow-500 text-black hover:bg-yellow-400 hover:border-yellow-400 font-bold flex items-center justify-center gap-2 mt-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
+                            <path d="M12 18V6"></path>
+                        </svg>
+                        Donar
+                    </button>
                 </div>
             </div>
         </aside>
@@ -644,6 +661,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
             <span class="text-[10px] font-bold uppercase tracking-widest">Ligas</span>
+        </button>
+        <button onclick="app.navigateToForum()"
+            class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-white active:text-white transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="text-[10px] font-bold uppercase tracking-widest">Foro</span>
         </button>
         <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
             class="flex flex-col items-center justify-center w-full h-full text-yellow-500 hover:text-yellow-400 active:text-yellow-600 transition-colors">
