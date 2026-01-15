@@ -72,7 +72,7 @@
 
         /* Toggle Switch B&W & Red Live */
         .toggle-checkbox:checked {
-            transform: translateX(18px);
+            transform: translateX(14px);
             border-color: #ef4444;
             background-color: #ef4444;
             box-shadow: 0 0 10px #ef4444;
@@ -950,12 +950,34 @@
             renderMatches: () => {
                 const container = document.getElementById('view-match-list');
                 let list = state.matches;
-                if (state.liveOnly) list = list.filter(m => ['1H', 'HT', '2H', 'ET', 'P', 'LIVE'].includes(m.fixture.status.short));
+
+                // Live Count Calculation
+                let liveCount = 0;
+                state.matches.forEach(m => {
+                    if (['1H', '2H', 'HT', 'ET', 'P', 'LIVE'].includes(m.fixture.status.short)) {
+                        liveCount++;
+                    }
+                });
+                const liveCountEl = document.getElementById('live-count');
+                if (liveCountEl) {
+                    if (liveCount > 0) {
+                        liveCountEl.innerText = `(${liveCount})`;
+                        liveCountEl.classList.remove('hidden');
+                    } else {
+                        liveCountEl.classList.add('hidden');
+                    }
+                }
+
+                // Filtering
+                if (state.filterLive) {
+                    list = list.filter(m => ['1H', 'HT', '2H', 'ET', 'P', 'LIVE'].includes(m.fixture.status.short));
+                }
 
                 if (list.length === 0) {
-                    container.innerHTML = `<div class="text-center py-20 text-gray-600 uppercase tracking-widest text-xs"><p>${state.liveOnly ? 'No hay partidos en vivo' : 'No hay partidos destacados'}</p></div>`;
+                    container.innerHTML = `<div class="text-center py-20 text-gray-600 uppercase tracking-widest text-xs"><p>${state.filterLive ? 'No hay partidos en vivo' : 'No hay partidos destacados'}</p></div>`;
                     return;
                 }
+
                 // Group by league
                 const leagues = {};
                 list.forEach(m => {
@@ -983,7 +1005,7 @@
 
                     l.matches.forEach(m => {
                         const s = m.fixture.status;
-                        const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(s.short);
+                        const isLive = ['1H', '2H', 'HT', 'ET', 'P', 'LIVE'].includes(s.short);
                         const isHT = s.short === 'HT';
                         const isFin = ['FT', 'AET', 'PEN'].includes(s.short);
                         const notStarted = ['NS', 'TBD'].includes(s.short);
@@ -1001,10 +1023,13 @@
                         // Opacity Logic (Only for Score)
                         let homeOpacity = 'opacity-100';
                         let awayOpacity = 'opacity-100';
+                        const homeGoals = m.goals ? (m.goals.home ?? 0) : 0;
+                        const awayGoals = m.goals ? (m.goals.away ?? 0) : 0;
+
                         if (isFin) {
-                            if ((m.goals.home ?? 0) > (m.goals.away ?? 0)) {
+                            if (homeGoals > awayGoals) {
                                 awayOpacity = 'opacity-50'; // Visitante pierde
-                            } else if ((m.goals.away ?? 0) > (m.goals.home ?? 0)) {
+                            } else if (awayGoals > homeGoals) {
                                 homeOpacity = 'opacity-50'; // Local pierde
                             }
                         }
@@ -1062,16 +1087,16 @@
                                     ${notStarted
                                 ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
                                 : `<div class="flex gap-2 text-xl md:text-2xl font-black text-white score-font tracking-widest">
-                                             <span class="${homeOpacity}">${m.goals.home ?? 0}</span>
+                                             <span class="${homeOpacity}">${homeGoals}</span>
                                              <span class="text-gray-700">-</span>
-                                             <span class="${awayOpacity}">${m.goals.away ?? 0}</span>
+                                             <span class="${awayOpacity}">${awayGoals}</span>
                                            </div>`
                             }
                                     <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap">${isLive || isHT || isFin ? timeDisplay : ''}</span>
                                 </div>
 
                                 <!-- AWAY TEAM -->
-                                <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 ${awayOpacity} transition-opacity duration-300 text-left min-w-0">
+                                <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 transition-opacity duration-300 text-left min-w-0">
                                     <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain shrink-0">
                                     <div class="flex flex-col items-start min-w-0 max-w-full">
                                         <div class="flex items-center gap-1 w-full justify-start">
