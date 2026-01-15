@@ -72,7 +72,7 @@
 
         /* Toggle Switch B&W & Red Live */
         .toggle-checkbox:checked {
-            right: 0;
+            transform: translateX(18px);
             border-color: #ef4444;
             background-color: #ef4444;
             box-shadow: 0 0 10px #ef4444;
@@ -956,26 +956,49 @@
                     container.innerHTML = `<div class="text-center py-20 text-gray-600 uppercase tracking-widest text-xs"><p>${state.liveOnly ? 'No hay partidos en vivo' : 'No hay partidos destacados'}</p></div>`;
                     return;
                 }
-
-                const groups = {};
+                // Group by league
+                const leagues = {};
                 list.forEach(m => {
-                    if (!groups[m.league.id]) groups[m.league.id] = { name: m.league.name, logo: m.league.logo, matches: [] };
-                    groups[m.league.id].matches.push(m);
+                    if (!leagues[m.league.id]) {
+                        leagues[m.league.id] = {
+                            name: m.league.name,
+                            logo: m.league.logo,
+                            flag: m.league.flag,
+                            matches: []
+                        };
+                    }
+                    leagues[m.league.id].matches.push(m);
                 });
 
+                // Generate HTML
                 let html = '';
-                Object.values(groups).forEach(g => {
-                    html += `<div class="mb-6"><div class="px-2 py-2 flex items-center gap-3"><img src="${g.logo}" class="w-4 h-4 object-contain"><h3 class="text-xs font-bold text-white uppercase tracking-widest">${g.name}</h3></div><div class="space-y-2">`;
-                    g.matches.forEach(m => {
+                Object.entries(leagues).forEach(([id, l]) => {
+                    html += `
+                    <div class="bg-[#111] rounded-lg border border-[#222] overflow-hidden mb-6">
+                        <div class="px-4 py-3 bg-[#1a1a1a] border-b border-[#222] flex items-center gap-3 sticky top-14 z-20 shadow-md">
+                            <img src="${l.logo}" class="w-6 h-6 object-contain filter drop-shadow hover:scale-110 transition-transform">
+                            <h3 class="font-bold text-white text-sm uppercase tracking-wider font-sport">${l.name}</h3>
+                        </div>
+                        <div class="divide-y divide-[#222]">`;
+
+                    l.matches.forEach(m => {
                         const s = m.fixture.status;
                         const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(s.short);
                         const isHT = s.short === 'HT';
                         const isFin = ['FT', 'AET', 'PEN'].includes(s.short);
                         const notStarted = ['NS', 'TBD'].includes(s.short);
 
-                        const timeDisplay = isLive ? `<span class="text-white font-bold animate-pulse text-xs">${s.elapsed}'</span>` : (isHT ? '<span class="text-white font-bold text-xs">ET</span>' : (isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })));
+                        // Time Display
+                        let timeDisplay = m.fixture.status.short;
+                        if (notStarted) {
+                            const date = new Date(m.fixture.date);
+                            timeDisplay = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        } else if (isLive || isHT) {
+                            timeDisplay = m.fixture.status.elapsed + "'";
+                            if (isHT) timeDisplay = "ET";
+                        }
 
-                        // LÓGICA DE OPACIDAD PARA PERDEDOR (Solo Finalizados)
+                        // Opacity Logic (Only for Score)
                         let homeOpacity = 'opacity-100';
                         let awayOpacity = 'opacity-100';
                         if (isFin) {
@@ -1023,7 +1046,7 @@
                             
                             <div class="flex items-center justify-between">
                                 <!-- HOME TEAM -->
-                                <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 ${homeOpacity} transition-opacity duration-300 text-right min-w-0">
+                                <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 transition-opacity duration-300 text-right min-w-0">
                                     <div class="flex flex-col items-end min-w-0 max-w-full">
                                         <div class="flex items-center gap-1 w-full justify-end">
                                             <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap">${m.teams.home.name}</span>
