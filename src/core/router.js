@@ -90,10 +90,6 @@ export const createSlug = (text) => {
         .replace(/^-+|-+$/g, '');         // Eliminar - al inicio/fin
 };
 
-/**
- * Maneja el routing según el pathname y parámetros
- * @param {string} pathname - Ruta actual
- */
 export const handleRoute = (pathname) => {
     if (!routeConfig) {
         console.error('Router not initialized');
@@ -103,7 +99,6 @@ export const handleRoute = (pathname) => {
     const match = matchRoute(pathname);
 
     if (!match) {
-        // Ruta no encontrada, ir a inicio
         console.warn('Route not found:', pathname);
         routeConfig.navigateToMatches();
         return;
