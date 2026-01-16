@@ -121,11 +121,14 @@ export const handleRoute = (pathname) => {
  * @param {boolean} replace - Si es true, reemplaza en lugar de agregar al historial
  */
 export const navigate = (path, replace = false) => {
+    // Actualizar URL en el historial del navegador
     if (replace) {
-        history.replaceState(null, '', path);
+        window.history.replaceState(null, '', path);
     } else {
-        history.pushState(null, '', path);
+        window.history.pushState(null, '', path);
     }
+
+    // Manejar la ruta
     handleRoute(path);
 };
 
