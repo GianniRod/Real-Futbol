@@ -104,11 +104,24 @@ export const processStandings = (standingsData) => {
 
 /**
  * Muestra la tabla de posiciones de una liga
- * @param {number} id - ID de la liga
- * @param {string} name - Nombre de la liga
+ * Puede recibir params del router o argumentos legacy
+ * @param {Object|number} idOrParams - Params { id, name } o solo ID
+ * @param {string} name - Nombre de la liga (opcional si params)
  */
-export const showStandings = async (id, name) => {
-    state.selectedLeague = { id, name };
+export const showStandings = async (idOrParams, name) => {
+    let id, leagueName;
+
+    if (typeof idOrParams === 'object') {
+        // Llamado desde router con params
+        id = idOrParams.id;
+        leagueName = idOrParams.name || '';
+    } else {
+        // Llamado legacy con (id, name)
+        id = idOrParams;
+        leagueName = name || '';
+    }
+
+    state.selectedLeague = { id, name: leagueName };
 
     // Actualizar UI
     document.getElementById('view-match-list').classList.add('hidden');
