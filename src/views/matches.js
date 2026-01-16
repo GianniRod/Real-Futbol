@@ -217,7 +217,7 @@ export const renderMatches = () => {
             }
 
             const clickableClass = notStarted ? 'not-clickable' : 'clickable';
-            const clickAttr = notStarted ? '' : `onclick="app.openDetail(${m.fixture.id})"`;
+            const clickAttr = notStarted ? '' : `onclick="app.navigate('/partido/${m.fixture.id}'); event.preventDefault();"`;
 
             html += `
                 <div class="p-4 match-card ${clickableClass} relative bg-[#0a0a0a] rounded" ${clickAttr}>
@@ -247,7 +247,7 @@ export const renderMatches = () => {
                                    </div>`
                 }
                             <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap">${isLive || isHT || isFin ? timeDisplay : ''}</span>
-                            <div class="mt-1 px-1.5 py-0.5 bg-[#111] hover:bg-[#222] border border-[#222] rounded flex items-center gap-1 transition-colors cursor-pointer" onclick="app.openDetail(${m.fixture.id}, 'tab-forum'); event.stopPropagation();">
+                            <div class="mt-1 px-1.5 py-0.5 bg-[#111] hover:bg-[#222] border border-[#222] rounded flex items-center gap-1 transition-colors cursor-pointer" onclick="app.navigate('/partido/${m.fixture.id}/forum'); event.stopPropagation(); event.preventDefault();">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                                 <span id="msg-count-${m.fixture.id}" class="text-[8px] font-bold text-gray-500 font-mono">...</span>
                             </div>
