@@ -38,8 +38,7 @@ import {
 import {
     openDetail,
     closeDetail,
-    switchTab,
-    openMatchDetailWithTab
+    switchTab
 } from './views/matchDetail.js';
 
 /**
@@ -76,6 +75,18 @@ const showStandingsByIdAndName = (params) => {
  */
 const openMatchDetail = (params) => {
     openDetail(params);
+};
+
+/**
+ * Abre match detail con un tab específico sin modificar URL
+ * @param {number} id - ID del partido
+ * @param {string} tab - Tab a abrir
+ */
+const openDetailWithTab = (id, tab) => {
+    // Navegar a la URL limpia sin tab
+    navigate(`/partido/${id}`);
+    // Abrir con el tab específico (lo maneja openDetail internamente)
+    openDetail({ id, tab });
 };
 
 /**
@@ -143,7 +154,6 @@ const init = () => {
         navigateToMatches,
         navigateToForum,
         openMatchDetail,
-        openMatchDetailWithTab,
         showStandingsById,
         showStandingsByIdAndName
     });
@@ -162,6 +172,7 @@ window.app = {
 
     // Match Detail
     openDetail,
+    openDetailWithTab,  // Nueva función para abrir con tab específico
     closeDetail,
     switchTab,
 
