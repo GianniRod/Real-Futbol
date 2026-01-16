@@ -319,17 +319,30 @@ const renderStats = (m) => {
 
 /**
  * Abre el detalle de un partido desde el router
- * @param {Object} params - { id, tab } desde URL
+ * @param {Object|number} params - { id, tab } desde URL o ID directo
  */
 export const openDetail = async (params) => {
-    const id = params.id || params;
-    const initialTab = params.tab || 'timeline';
+    let id, initialTab;
+
+    // Manejar tanto params object como ID directo
+    if (typeof params === 'object' && params !== null) {
+        id = params.id;
+        initialTab = params.tab || 'timeline';
+    } else {
+        id = params;
+        initialTab = 'timeline';
+    }
+
+    console.log('openDetail called with:', { id, initialTab, params });
 
     const matches = getMatches();
-    const m = matches.find(x => x.fixture.id == id);
+    console.log('Available matches:', matches.length);
+
+    const m = matches.find(x => String(x.fixture.id) === String(id));
 
     if (!m) {
-        console.warn('Match not found:', id);
+        console.warn('Match not found:', id, 'Available IDs:', matches.map(m => m.fixture.id));
+        alert('Partido no encontrado. Intenta recargar la página.');
         return;
     }
 
