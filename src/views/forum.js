@@ -115,6 +115,7 @@ export const sendMessage = async (userFieldId, textFieldId) => {
 export const navigateToForum = () => {
     document.getElementById('view-match-list').classList.add('hidden');
     document.getElementById('view-standings').classList.add('hidden');
+    document.getElementById('view-match-detail').classList.add('hidden');
     document.getElementById('date-nav').classList.add('hidden');
     document.getElementById('view-forum').classList.remove('hidden');
 
@@ -122,6 +123,11 @@ export const navigateToForum = () => {
     document.getElementById('mobile-backdrop').classList.add('hidden');
 
     initForum('global', 'forum-messages', 'forum-username');
+
+    // Actualizar URL
+    if (window.app && window.app.navigate) {
+        window.app.navigate('/foro', true); // replace para no agregar al historial
+    }
 };
 
 // Exportar para acceso desde matchDetail
