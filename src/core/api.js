@@ -60,3 +60,4 @@ export const fetchAPI = async (endpoint) => {
 
     return data;
 };
+
