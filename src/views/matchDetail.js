@@ -399,12 +399,36 @@ export const openDetail = async (params) => {
     document.getElementById('detail-loader').classList.add('hidden');
     document.getElementById('detail-content-wrapper').classList.remove('hidden');
 
-    // Switch to tab
-    const tabId = initialTab.startsWith('tab-') ? initialTab : `tab-${initialTab}`;
-    const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
-    if (btn) {
-        // Usar click() para activar el tab correctamente
-        btn.click();
+    // Determinar si el partido ha comenzado
+    const notStarted = ['NS', 'TBD', 'PST', 'CANC', 'ABD'].includes(m.fixture.status.short);
+
+    // Ocultar/mostrar tabs según el estado del partido
+    const timelineTab = document.querySelector('.tab-btn[data-target="tab-timeline"]');
+    const lineupsTab = document.querySelector('.tab-btn[data-target="tab-lineups"]');
+    const statsTab = document.querySelector('.tab-btn[data-target="tab-stats"]');
+    const forumTab = document.querySelector('.tab-btn[data-target="tab-forum"]');
+
+    if (notStarted) {
+        // Partido no iniciado: solo mostrar foro
+        if (timelineTab) timelineTab.style.display = 'none';
+        if (lineupsTab) lineupsTab.style.display = 'none';
+        if (statsTab) statsTab.style.display = 'none';
+        // Forzar ir al tab de foro si el partido no ha comenzado
+        if (forumTab) {
+            forumTab.click();
+        }
+    } else {
+        // Partido iniciado o finalizado: mostrar todos los tabs
+        if (timelineTab) timelineTab.style.display = '';
+        if (lineupsTab) lineupsTab.style.display = '';
+        if (statsTab) statsTab.style.display = '';
+
+        // Switch to requested tab
+        const tabId = initialTab.startsWith('tab-') ? initialTab : `tab-${initialTab}`;
+        const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
+        if (btn) {
+            btn.click();
+        }
     }
 };
 
