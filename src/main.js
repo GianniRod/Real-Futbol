@@ -8,7 +8,7 @@
  */
 
 // Core imports
-import { initRouter, navigate } from './core/router.js';
+import { initRouter, navigate, createSlug } from './core/router.js';
 import { showOnly, hideView } from './core/dom.js';
 
 // View imports
@@ -38,7 +38,8 @@ import {
 import {
     openDetail,
     closeDetail,
-    switchTab
+    switchTab,
+    openMatchDetailWithTab
 } from './views/matchDetail.js';
 
 /**
@@ -47,12 +48,34 @@ import {
 const navigateToMatches = () => {
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-forum').classList.add('hidden');
+    document.getElementById('view-match-detail').classList.add('hidden');
     document.getElementById('view-match-list').classList.remove('hidden');
     document.getElementById('date-nav').classList.remove('hidden');
     document.getElementById('sidebar').classList.add('-translate-x-full');
     document.getElementById('mobile-backdrop').classList.add('hidden');
 
     updateMobileNav('btn-nav-results');
+};
+
+/**
+ * Handler para mostrar standings desde router (con params)
+ */
+const showStandingsById = (params) => {
+    showStandings(params);
+};
+
+/**
+ * Handler para mostrar standings desde router (con params y name)
+ */
+const showStandingsByIdAndName = (params) => {
+    showStandings(params);
+};
+
+/**
+ * Handler para abrir match detail desde router
+ */
+const openMatchDetail = (params) => {
+    openDetail(params);
 };
 
 /**
@@ -115,10 +138,14 @@ const init = () => {
         liveToggle.onchange = toggleLiveFilter;
     }
 
-    // Inicializar router
+    // Inicializar router con todos los handlers
     initRouter({
         navigateToMatches,
-        navigateToForum
+        navigateToForum,
+        openMatchDetail,
+        openMatchDetailWithTab,
+        showStandingsById,
+        showStandingsByIdAndName
     });
 };
 
@@ -153,6 +180,7 @@ window.app = {
     openMobileTab,
     updateMobileNav,
     navigate,
+    createSlug,
 
     // Init
     init
