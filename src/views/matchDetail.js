@@ -4,12 +4,10 @@
  * Propósito: Vista detallada de partido con tabs (timeline, lineups, stats, forum)
  * 
  * Exports:
- * - openDetail(id, initialTab): Abre detalle de un partido
+ * - openDetail(params): Abre detalle de un partido desde router
+ * - openMatchDetailWithTab(params): Abre con tab específico
  * - closeDetail(): Cierra vista de detalle
  * - switchTab(btn, targetId): Cambia entre tabs
- * - renderTimeline(match): Renderiza cronología de eventos
- * - renderLineups(match): Renderiza alineaciones
- * - renderStats(match): Renderiza estadísticas
  */
 
 import { fetchAPI } from '../core/api.js';
@@ -35,6 +33,12 @@ export const switchTab = (btn, targetId) => {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
     document.getElementById(targetId).classList.remove('hidden');
 
+    // Actualizar URL si selectedMatch existe
+    if (selectedMatch && window.app && window.app.navigate) {
+        const tabName = targetId.replace('tab-', '');
+        window.app.navigate(`/partido/${selectedMatch.fixture.id}/${tabName}`, true);
+    }
+
     if (targetId === 'tab-forum' && selectedMatch) {
         initForum(`match_${selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
     }
@@ -42,13 +46,11 @@ export const switchTab = (btn, targetId) => {
 
 /**
  * Renderiza el timeline de eventos
- * @param {Object} m - Datos completos del partido
  */
-export const renderTimeline = (m) => {
+const renderTimeline = (m) => {
     const c = document.getElementById('tab-timeline');
     let ev = [...(m.events || [])];
 
-    // Ordenar: Más reciente arriba
     ev.sort((a, b) => {
         const tA = a.time.elapsed + (a.time.extra || 0);
         const tB = b.time.elapsed + (b.time.extra || 0);
@@ -94,9 +96,8 @@ export const renderTimeline = (m) => {
 
 /**
  * Renderiza las alineaciones y cancha táctica
- * @param {Object} m - Datos completos del partido
  */
-export const renderLineups = (m) => {
+const renderLineups = (m) => {
     const pitch = document.getElementById('football-pitch');
     pitch.querySelectorAll('.player-marker').forEach(el => el.remove());
     const hList = document.getElementById('lineup-home-list');
@@ -112,12 +113,9 @@ export const renderLineups = (m) => {
     const awayL = m.lineups[1];
     const events = m.events || [];
 
-    // Helper para comparar IDs
     const idsMatch = (id1, id2) => String(id1) === String(id2);
 
-    // Renderizar listas de jugadores
     const renderList = (lineup) => {
-        // Titulares
         let html = lineup.startXI.map(p => {
             const subOut = events.find(e => {
                 const eventType = (e.type || '').toLowerCase();
@@ -152,7 +150,6 @@ export const renderLineups = (m) => {
     hList.innerHTML = renderList(homeL);
     aList.innerHTML = renderList(awayL);
 
-    // Renderizar cancha táctica
     const addPlayers = (lineup, side) => {
         const players = lineup.startXI;
         const formation = lineup.formation;
@@ -220,7 +217,6 @@ export const renderLineups = (m) => {
 
                 el.innerHTML = `<span class="text-xs font-bold font-mono pointer-events-none">${displayNumber}</span>`;
 
-                // Goal indicator
                 const playerGoals = events.filter(e => e.type === 'Goal' && (idsMatch(e.player.id, p.player.id) || (isSubbed && subOutEvent && idsMatch(e.player.id, subOutEvent.player.id))));
 
                 if (playerGoals.length > 0) {
@@ -233,7 +229,6 @@ export const renderLineups = (m) => {
                     el.appendChild(ballIcon);
                 }
 
-                // Posicionamiento
                 let x;
                 if (side === 'home') {
                     x = 4 + (lineIdx - 1) * 11;
@@ -251,7 +246,6 @@ export const renderLineups = (m) => {
                 el.style.left = x + '%';
                 el.style.top = y + '%';
 
-                // Name label
                 const nameEl = document.createElement('div');
                 nameEl.className = `absolute -bottom-7 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap bg-black/80 px-2 py-1 rounded flex flex-col items-center leading-none z-30 border border-[#333] pointer-events-none`;
 
@@ -281,9 +275,8 @@ export const renderLineups = (m) => {
 
 /**
  * Renderiza las estadísticas del partido
- * @param {Object} m - Datos completos del partido
  */
-export const renderStats = (m) => {
+const renderStats = (m) => {
     const c = document.getElementById('tab-stats');
     if (!m.statistics || m.statistics.length === 0) {
         c.innerHTML = 'No disponible';
@@ -325,14 +318,20 @@ export const renderStats = (m) => {
 };
 
 /**
- * Abre el detalle de un partido
- * @param {number} id - ID del fixture
- * @param {string} initialTab - Tab inicial a mostrar (opcional)
+ * Abre el detalle de un partido desde el router
+ * @param {Object} params - { id, tab } desde URL
  */
-export const openDetail = async (id, initialTab = null) => {
+export const openDetail = async (params) => {
+    const id = params.id || params;
+    const initialTab = params.tab || 'timeline';
+
     const matches = getMatches();
     const m = matches.find(x => x.fixture.id == id);
-    if (!m) return;
+
+    if (!m) {
+        console.warn('Match not found:', id);
+        return;
+    }
 
     selectedMatch = m;
 
@@ -341,14 +340,13 @@ export const openDetail = async (id, initialTab = null) => {
     document.getElementById('detail-content-wrapper').classList.add('hidden');
     document.getElementById('detail-loader').classList.remove('hidden');
 
-    // Datos básicos
     document.getElementById('detail-home-logo').src = m.teams.home.logo;
     document.getElementById('detail-away-logo').src = m.teams.away.logo;
     document.getElementById('detail-home-score').innerText = m.goals.home ?? 0;
     document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
     document.getElementById('detail-status').innerText = m.fixture.status.long;
 
-    // Red cards para header
+    // Red cards
     let homeRedCardsHTML = '';
     let awayRedCardsHTML = '';
     if (m.events && m.events.length > 0) {
@@ -363,7 +361,7 @@ export const openDetail = async (id, initialTab = null) => {
     document.getElementById('detail-home-name').innerHTML = m.teams.home.name + homeRedCardsHTML;
     document.getElementById('detail-away-name').innerHTML = m.teams.away.name + awayRedCardsHTML;
 
-    // Goleadores en header
+    // Goleadores
     const hList = document.getElementById('detail-home-scorers-list');
     const aList = document.getElementById('detail-away-scorers-list');
     hList.innerHTML = '';
@@ -394,14 +392,19 @@ export const openDetail = async (id, initialTab = null) => {
     document.getElementById('detail-loader').classList.add('hidden');
     document.getElementById('detail-content-wrapper').classList.remove('hidden');
 
-    // Switch to requested tab
-    if (initialTab) {
-        const btn = document.querySelector(`.tab-btn[data-target="${initialTab}"]`);
-        if (btn) btn.click();
-    } else {
-        const btn = document.querySelector(`.tab-btn[data-target="tab-timeline"]`);
-        if (btn) btn.click();
+    // Switch to tab
+    const tabId = initialTab.startsWith('tab-') ? initialTab : `tab-${initialTab}`;
+    const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
+    if (btn) {
+        switchTab(btn, tabId);
     }
+};
+
+/**
+ * Wrapper para compatibilidad - abre detalle con tab específico
+ */
+export const openMatchDetailWithTab = (params) => {
+    openDetail(params);
 };
 
 /**
@@ -410,6 +413,11 @@ export const openDetail = async (id, initialTab = null) => {
 export const closeDetail = () => {
     document.getElementById('view-match-detail').classList.add('hidden');
     document.body.style.overflow = '';
+
+    // Navegar de vuelta a matches
+    if (window.app && window.app.navigate) {
+        window.app.navigate('/');
+    }
 };
 
 export const getSelectedMatch = () => selectedMatch;
