@@ -54,6 +54,11 @@ const navigateToMatches = () => {
     document.getElementById('mobile-backdrop').classList.add('hidden');
 
     updateMobileNav('btn-nav-results');
+
+    // Asegurar que la URL esté en '/'
+    if (window.location.pathname !== '/') {
+        window.history.replaceState(null, '', '/');
+    }
 };
 
 /**
