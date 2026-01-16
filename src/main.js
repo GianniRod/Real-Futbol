@@ -45,6 +45,10 @@ import {
  * Navega a la vista de partidos
  */
 const navigateToMatches = () => {
+    // PRIMERO: Forzar URL a '/' SIEMPRE
+    window.history.pushState(null, '', '/');
+
+    // SEGUNDO: Cambiar vistas
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-forum').classList.add('hidden');
     document.getElementById('view-match-detail').classList.add('hidden');
@@ -54,11 +58,6 @@ const navigateToMatches = () => {
     document.getElementById('mobile-backdrop').classList.add('hidden');
 
     updateMobileNav('btn-nav-results');
-
-    // Asegurar que la URL esté en '/'
-    if (window.location.pathname !== '/') {
-        window.history.replaceState(null, '', '/');
-    }
 };
 
 /**
