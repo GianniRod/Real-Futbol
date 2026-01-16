@@ -33,11 +33,8 @@ export const switchTab = (btn, targetId) => {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
     document.getElementById(targetId).classList.remove('hidden');
 
-    // Actualizar URL si selectedMatch existe
-    if (selectedMatch && window.app && window.app.navigate) {
-        const tabName = targetId.replace('tab-', '');
-        window.app.navigate(`/partido/${selectedMatch.fixture.id}/${tabName}`, true);
-    }
+    // NO actualizar URL aquí para evitar bucle infinito
+    // La URL se actualiza solo cuando se navega directamente a una URL con tab
 
     if (targetId === 'tab-forum' && selectedMatch) {
         initForum(`match_${selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
@@ -333,15 +330,12 @@ export const openDetail = async (params) => {
         initialTab = 'timeline';
     }
 
-    console.log('openDetail called with:', { id, initialTab, params });
-
     const matches = getMatches();
-    console.log('Available matches:', matches.length);
 
     const m = matches.find(x => String(x.fixture.id) === String(id));
 
     if (!m) {
-        console.warn('Match not found:', id, 'Available IDs:', matches.map(m => m.fixture.id));
+        console.warn('Match not found:', id);
         alert('Partido no encontrado. Intenta recargar la página.');
         return;
     }
@@ -409,7 +403,8 @@ export const openDetail = async (params) => {
     const tabId = initialTab.startsWith('tab-') ? initialTab : `tab-${initialTab}`;
     const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
     if (btn) {
-        switchTab(btn, tabId);
+        // Usar click() para activar el tab correctamente
+        btn.click();
     }
 };
 
