@@ -18,7 +18,6 @@ const routes = [
     { pattern: '/', handler: 'navigateToMatches' },
     { pattern: '/foro', handler: 'navigateToForum' },
     { pattern: '/partido/:id', handler: 'openMatchDetail' },
-    { pattern: '/partido/:id/:tab', handler: 'openMatchDetailWithTab' },
     { pattern: '/liga/:id', handler: 'showStandingsById' },
     { pattern: '/liga/:id/:name', handler: 'showStandingsByIdAndName' },
 ];
