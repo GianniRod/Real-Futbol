@@ -30,9 +30,12 @@ import {
     getDocs
 } from '../core/firebase.js';
 
+import { getUserRole, DEVELOPER_UID } from './moderation.js';
+
 // State
 let currentUser = null;
 let currentUserProfile = null;
+let currentUserRole = 'user'; // 'developer', 'moderator', or 'user'
 
 /**
  * Obtiene el perfil de un usuario desde Firestore
