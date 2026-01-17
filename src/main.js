@@ -41,6 +41,15 @@ import {
     switchTab
 } from './views/matchDetail.js';
 
+import {
+    initAuth,
+    loginWithGoogle,
+    logout,
+    saveUsername,
+    getCurrentUser,
+    getCurrentUserProfile
+} from './views/auth.js';
+
 /**
  * Navega a la vista de partidos
  */
@@ -131,6 +140,9 @@ const updateMobileNav = (activeId) => {
  * Inicializa la aplicación
  */
 const init = () => {
+    // Inicializar autenticación
+    initAuth();
+
     // Inicializar matches (carga calendario y partidos)
     initMatches();
 
@@ -189,6 +201,13 @@ window.app = {
     navigateToForum,
     initForum,
     sendMessage,
+
+    // Authentication
+    loginWithGoogle,
+    logout,
+    saveUsername,
+    getCurrentUser,
+    getCurrentUserProfile,
 
     // Navigation
     navigateToMatches,
