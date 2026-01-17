@@ -45,6 +45,8 @@ import {
     initAuth,
     loginWithGoogle,
     logout,
+    confirmLogout,
+    cancelLogout,
     saveUsername,
     getCurrentUser,
     getCurrentUserProfile
@@ -205,6 +207,8 @@ window.app = {
     // Authentication
     loginWithGoogle,
     logout,
+    confirmLogout,
+    cancelLogout,
     saveUsername,
     getCurrentUser,
     getCurrentUserProfile,
