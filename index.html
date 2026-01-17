@@ -810,6 +810,31 @@
         </button>
     </nav>
 
+    <!-- Logout Confirmation Modal -->
+    <div id="logout-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Cerrar Sesión</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-300 text-sm text-center leading-relaxed">¿Estás seguro de que quieres cerrar sesión?
+                </p>
+
+                <div class="flex gap-3">
+                    <button onclick="app.cancelLogout()"
+                        class="flex-1 bg-[#222] text-white py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-[#333] transition-colors border border-[#444] rounded">
+                        Cancelar
+                    </button>
+                    <button onclick="app.confirmLogout()"
+                        class="flex-1 bg-white text-black py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors rounded">
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Username Modal -->
     <div id="username-modal"
         class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
