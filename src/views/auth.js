@@ -24,7 +24,10 @@ import {
     collection,
     doc,
     getDoc,
-    setDoc
+    setDoc,
+    query,
+    where,
+    getDocs
 } from '../core/firebase.js';
 
 // State
@@ -58,8 +61,6 @@ export const getUserProfile = async (uid) => {
  */
 const isUsernameAvailable = async (username) => {
     try {
-        const { query, collection, where, getDocs } = await import('../core/firebase.js');
-
         const q = query(collection(db, "user_profiles"), where("username", "==", username));
         const querySnapshot = await getDocs(q);
 
