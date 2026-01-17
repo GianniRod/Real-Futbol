@@ -78,29 +78,41 @@ export const initForum = (context, containerId, usernameInputId) => {
 
 /**
  * Envía un mensaje al foro actual
- * @param {string} userFieldId - ID del campo de username
+ * @param {string} userFieldId - ID del campo de username (ya no se usa, se mantiene por compatibilidad)
  * @param {string} textFieldId - ID del campo de texto
  */
 export const sendMessage = async (userFieldId, textFieldId) => {
-    const userInp = document.getElementById(userFieldId);
-    const textInp = document.getElementById(textFieldId);
-    const user = userInp.value.trim();
-    const text = textInp.value.trim();
+    // Importar auth dinámicamente para evitar dependencias circulares
+    const { getCurrentUser, getCurrentUserProfile } = await import('./auth.js');
 
+    const user = getCurrentUser();
+    const profile = getCurrentUserProfile();
+
+    // Verificar autenticación
     if (!user) {
-        alert("Por favor ingresa un nombre o usuario.");
+        alert("Debes iniciar sesión para enviar mensajes.");
         return;
     }
-    if (!text) return;
 
-    localStorage.setItem('chat_username', user);
+    // Verificar que tenga username
+    if (!profile || !profile.username) {
+        alert("Por favor establece tu nombre de usuario primero.");
+        return;
+    }
+
+    const textInp = document.getElementById(textFieldId);
+    const text = textInp.value.trim();
+
+    if (!text) return;
 
     try {
         await addDoc(collection(db, "forum_messages"), {
             context: currentForumContext,
-            user: user,
+            userId: user.uid,
+            user: profile.username,
             text: text,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            userEmail: user.email // Para debugging si es necesario
         });
         textInp.value = '';
     } catch (e) {
