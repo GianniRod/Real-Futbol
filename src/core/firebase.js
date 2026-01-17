@@ -1,25 +1,36 @@
 /**
  * Firebase Configuration & Initialization
  * 
- * Propósito: Inicializar Firebase y exportar instancias de Firestore
+ * Propósito: Inicializar Firebase y exportar instancias de Firestore y Auth
  * 
  * Exports:
  * - db: Firestore database instance
+ * - auth: Firebase Auth instance
  * - collection, addDoc, query, orderBy, onSnapshot, limit, where, getCountFromServer: Firebase helpers
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    query, 
-    orderBy, 
-    onSnapshot, 
-    limit, 
-    where, 
-    getCountFromServer 
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    query,
+    orderBy,
+    onSnapshot,
+    limit,
+    where,
+    getCountFromServer,
+    doc,
+    getDoc,
+    setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -35,16 +46,25 @@ const firebaseConfig = {
 // Initialize Firebase
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
+const auth = getAuth(fbApp);
 
 // Export database instance and Firestore helpers
-export { 
-    db, 
-    collection, 
-    addDoc, 
-    query, 
-    orderBy, 
-    onSnapshot, 
-    limit, 
-    where, 
-    getCountFromServer 
+export {
+    db,
+    auth,
+    collection,
+    addDoc,
+    query,
+    orderBy,
+    onSnapshot,
+    limit,
+    where,
+    getCountFromServer,
+    doc,
+    getDoc,
+    setDoc,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    onAuthStateChanged
 };
