@@ -61,12 +61,17 @@ export const getUserProfile = async (uid) => {
  */
 const isUsernameAvailable = async (username) => {
     try {
+        console.log('[DEBUG] Buscando username en Firestore:', username);
         const q = query(collection(db, "user_profiles"), where("username", "==", username));
         const querySnapshot = await getDocs(q);
+
+        console.log('[DEBUG] Documentos encontrados:', querySnapshot.size);
+        console.log('[DEBUG] Query vacía (disponible):', querySnapshot.empty);
 
         return querySnapshot.empty; // true si no existe (disponible)
     } catch (error) {
         console.error("Error checking username:", error);
+        alert('Error al verificar username: ' + error.message);
         return false;
     }
 };
@@ -81,19 +86,28 @@ const isUsernameAvailable = async (username) => {
  */
 export const setUserUsername = async (uid, email, username, photoURL = '') => {
     try {
+        console.log('[DEBUG] Intentando guardar username:', username);
+
         // Verificar si el username ya existe (solo si no es el mismo usuario actualizando)
         const existingProfile = await getUserProfile(uid);
+        console.log('[DEBUG] Perfil existente:', existingProfile);
 
         // Si es un usuario nuevo o está cambiando su username
         if (!existingProfile || existingProfile.username !== username) {
+            console.log('[DEBUG] Verificando disponibilidad del username...');
             const available = await isUsernameAvailable(username);
+            console.log('[DEBUG] Username disponible:', available);
 
             if (!available) {
+                console.log('[DEBUG] Username NO disponible - mostrando alerta');
                 alert('Este nombre de usuario ya está en uso. Por favor elige otro.');
                 return false;
             }
+        } else {
+            console.log('[DEBUG] Usuario mantiene su mismo username - no se valida');
         }
 
+        console.log('[DEBUG] Guardando en Firestore...');
         const docRef = doc(db, "user_profiles", uid);
         await setDoc(docRef, {
             uid: uid,
@@ -102,6 +116,8 @@ export const setUserUsername = async (uid, email, username, photoURL = '') => {
             photoURL: photoURL,
             createdAt: existingProfile?.createdAt || Date.now()
         });
+
+        console.log('[DEBUG] Guardado exitoso en Firestore');
 
         // Actualizar el perfil en memoria
         currentUserProfile = {
@@ -115,6 +131,7 @@ export const setUserUsername = async (uid, email, username, photoURL = '') => {
         return true;
     } catch (error) {
         console.error("Error setting username:", error);
+        alert('Error al guardar el nombre de usuario: ' + error.message);
         return false;
     }
 };
