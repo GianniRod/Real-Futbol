@@ -207,8 +207,13 @@ const showUsernameModal = (user) => {
  * Guarda el username establecido por el usuario
  */
 export const saveUsername = async () => {
+    console.log('[DEBUG] saveUsername() - Función iniciada');
+
     const input = document.getElementById('username-input');
     const username = input?.value.trim();
+
+    console.log('[DEBUG] Username ingresado:', username);
+    console.log('[DEBUG] CurrentUser:', currentUser);
 
     if (!username) {
         alert('Por favor ingresa un nombre de usuario');
@@ -230,12 +235,15 @@ export const saveUsername = async () => {
         return;
     }
 
+    console.log('[DEBUG] Llamando a setUserUsername...');
     const success = await setUserUsername(
         currentUser.uid,
         currentUser.email,
         username,
         currentUser.photoURL || ''
     );
+
+    console.log('[DEBUG] setUserUsername retornó:', success);
 
     if (success) {
         // Cerrar modal
@@ -244,10 +252,13 @@ export const saveUsername = async () => {
 
         // Actualizar UI
         updateAuthUI(currentUser, currentUserProfile);
+        console.log('[DEBUG] Username guardado y UI actualizada');
     } else {
         alert('Error al guardar el nombre de usuario. Intenta de nuevo.');
+        console.log('[DEBUG] Falló al guardar username');
     }
 };
+
 
 /**
  * Inicia sesión con Google
