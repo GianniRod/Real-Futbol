@@ -95,14 +95,32 @@ const updateAuthUI = (user, profile) => {
     const userAvatar = document.getElementById('auth-user-avatar');
     const userName = document.getElementById('auth-user-name');
 
+    // Forum UI elements
+    const forumLoginRequired = document.getElementById('forum-login-required');
+    const forumInputContainer = document.getElementById('forum-input-container');
+    const matchForumLoginRequired = document.getElementById('match-forum-login-required');
+    const matchForumInputContainer = document.getElementById('match-forum-input-container');
+
     if (!user) {
         // No autenticado
         if (loginBtn) loginBtn.classList.remove('hidden');
         if (userInfo) userInfo.classList.add('hidden');
+
+        // Mostrar login requerido en foros
+        if (forumLoginRequired) forumLoginRequired.classList.remove('hidden');
+        if (forumInputContainer) forumInputContainer.classList.add('hidden');
+        if (matchForumLoginRequired) matchForumLoginRequired.classList.remove('hidden');
+        if (matchForumInputContainer) matchForumInputContainer.classList.add('hidden');
     } else {
         // Autenticado
         if (loginBtn) loginBtn.classList.add('hidden');
         if (userInfo) userInfo.classList.remove('hidden');
+
+        // Mostrar inputs de foros
+        if (forumLoginRequired) forumLoginRequired.classList.add('hidden');
+        if (forumInputContainer) forumInputContainer.classList.remove('hidden');
+        if (matchForumLoginRequired) matchForumLoginRequired.classList.add('hidden');
+        if (matchForumInputContainer) matchForumInputContainer.classList.remove('hidden');
 
         if (profile && profile.username) {
             if (userName) userName.textContent = profile.username;
