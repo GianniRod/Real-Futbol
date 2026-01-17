@@ -61,17 +61,12 @@ export const getUserProfile = async (uid) => {
  */
 const isUsernameAvailable = async (username) => {
     try {
-        console.log('[DEBUG] Buscando username en Firestore:', username);
         const q = query(collection(db, "user_profiles"), where("username", "==", username));
         const querySnapshot = await getDocs(q);
-
-        console.log('[DEBUG] Documentos encontrados:', querySnapshot.size);
-        console.log('[DEBUG] Query vacía (disponible):', querySnapshot.empty);
 
         return querySnapshot.empty; // true si no existe (disponible)
     } catch (error) {
         console.error("Error checking username:", error);
-        alert('Error al verificar username: ' + error.message);
         return false;
     }
 };
@@ -86,28 +81,24 @@ const isUsernameAvailable = async (username) => {
  */
 export const setUserUsername = async (uid, email, username, photoURL = '') => {
     try {
-        console.log('[DEBUG] Intentando guardar username:', username);
-
         // Verificar si el username ya existe (solo si no es el mismo usuario actualizando)
         const existingProfile = await getUserProfile(uid);
-        console.log('[DEBUG] Perfil existente:', existingProfile);
 
         // Si es un usuario nuevo o está cambiando su username
         if (!existingProfile || existingProfile.username !== username) {
-            console.log('[DEBUG] Verificando disponibilidad del username...');
             const available = await isUsernameAvailable(username);
-            console.log('[DEBUG] Username disponible:', available);
 
             if (!available) {
-                console.log('[DEBUG] Username NO disponible - mostrando alerta');
-                alert('Este nombre de usuario ya está en uso. Por favor elige otro.');
+                // Mostrar error inline en vez de alert
+                const errorDiv = document.getElementById('username-error');
+                if (errorDiv) {
+                    errorDiv.textContent = '❌ Este nombre de usuario ya está en uso';
+                    errorDiv.classList.remove('hidden');
+                }
                 return false;
             }
-        } else {
-            console.log('[DEBUG] Usuario mantiene su mismo username - no se valida');
         }
 
-        console.log('[DEBUG] Guardando en Firestore...');
         const docRef = doc(db, "user_profiles", uid);
         await setDoc(docRef, {
             uid: uid,
@@ -116,8 +107,6 @@ export const setUserUsername = async (uid, email, username, photoURL = '') => {
             photoURL: photoURL,
             createdAt: existingProfile?.createdAt || Date.now()
         });
-
-        console.log('[DEBUG] Guardado exitoso en Firestore');
 
         // Actualizar el perfil en memoria
         currentUserProfile = {
@@ -131,7 +120,11 @@ export const setUserUsername = async (uid, email, username, photoURL = '') => {
         return true;
     } catch (error) {
         console.error("Error setting username:", error);
-        alert('Error al guardar el nombre de usuario: ' + error.message);
+        const errorDiv = document.getElementById('username-error');
+        if (errorDiv) {
+            errorDiv.textContent = '❌ Error al guardar: ' + error.message;
+            errorDiv.classList.remove('hidden');
+        }
         return false;
     }
 };
@@ -200,6 +193,32 @@ const showUsernameModal = (user) => {
             input.value = '';
             input.focus();
         }
+
+        // Limpiar errores previos
+        hideUsernameError();
+    }
+};
+
+/**
+ * Muestra un mensaje de error en el modal de username
+ * @param {string} message - Mensaje de error a mostrar
+ */
+const showUsernameError = (message) => {
+    const errorDiv = document.getElementById('username-error');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
+    }
+};
+
+/**
+ * Oculta el mensaje de error en el modal de username
+ */
+const hideUsernameError = () => {
+    const errorDiv = document.getElementById('username-error');
+    if (errorDiv) {
+        errorDiv.classList.add('hidden');
+        errorDiv.textContent = '';
     }
 };
 
@@ -207,43 +226,38 @@ const showUsernameModal = (user) => {
  * Guarda el username establecido por el usuario
  */
 export const saveUsername = async () => {
-    console.log('[DEBUG] saveUsername() - Función iniciada');
+    // Limpiar errores previos
+    hideUsernameError();
 
     const input = document.getElementById('username-input');
     const username = input?.value.trim();
 
-    console.log('[DEBUG] Username ingresado:', username);
-    console.log('[DEBUG] CurrentUser:', currentUser);
-
     if (!username) {
-        alert('Por favor ingresa un nombre de usuario');
+        showUsernameError('Por favor ingresa un nombre de usuario');
         return;
     }
 
     if (username.length < 3) {
-        alert('El nombre de usuario debe tener al menos 3 caracteres');
+        showUsernameError('El nombre de usuario debe tener al menos 3 caracteres');
         return;
     }
 
     if (username.length > 20) {
-        alert('El nombre de usuario no puede tener más de 20 caracteres');
+        showUsernameError('El nombre de usuario no puede tener más de 20 caracteres');
         return;
     }
 
     if (!currentUser) {
-        alert('Error: no hay usuario autenticado');
+        showUsernameError('Error: no hay usuario autenticado');
         return;
     }
 
-    console.log('[DEBUG] Llamando a setUserUsername...');
     const success = await setUserUsername(
         currentUser.uid,
         currentUser.email,
         username,
         currentUser.photoURL || ''
     );
-
-    console.log('[DEBUG] setUserUsername retornó:', success);
 
     if (success) {
         // Cerrar modal
@@ -252,13 +266,8 @@ export const saveUsername = async () => {
 
         // Actualizar UI
         updateAuthUI(currentUser, currentUserProfile);
-        console.log('[DEBUG] Username guardado y UI actualizada');
-    } else {
-        alert('Error al guardar el nombre de usuario. Intenta de nuevo.');
-        console.log('[DEBUG] Falló al guardar username');
     }
 };
-
 
 /**
  * Inicia sesión con Google
