@@ -40,9 +40,12 @@ export const initForum = (context, containerId, usernameInputId) => {
 
     activeForumUnsubscribe = onSnapshot(q, async (snapshot) => {
         const container = document.getElementById(containerId);
+        console.log('Forum container found:', !!container, 'Container ID:', containerId);
+
         if (!container) return;
 
         if (snapshot.empty) {
+            console.log('No messages in forum');
             container.innerHTML = '<div class="text-center text-gray-600 py-10 text-xs uppercase tracking-widest">Sé el primero en escribir.</div>';
             return;
         }
@@ -56,6 +59,9 @@ export const initForum = (context, containerId, usernameInputId) => {
                 messagesData.push({ id: doc.id, ...data });
             }
         });
+
+        console.log('Messages loaded:', messagesData.length);
+
         // Client-side sort
         messagesData.sort((a, b) => a.timestamp - b.timestamp);
         // Importar para obtener role actual
@@ -93,6 +99,8 @@ export const initForum = (context, containerId, usernameInputId) => {
                     </div>
                 </div>`;
         }).join('');
+
+        console.log('Messages rendered, scrolling to bottom');
 
         // Auto scroll to bottom
         container.scrollTop = container.scrollHeight;
