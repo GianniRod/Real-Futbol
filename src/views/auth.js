@@ -52,6 +52,25 @@ export const getUserProfile = async (uid) => {
 };
 
 /**
+ * Verifica si un username ya está en uso
+ * @param {string} username - Username a verificar
+ * @returns {Promise<boolean>} - true si está disponible, false si ya existe
+ */
+const isUsernameAvailable = async (username) => {
+    try {
+        const { query, collection, where, getDocs } = await import('../core/firebase.js');
+
+        const q = query(collection(db, "user_profiles"), where("username", "==", username));
+        const querySnapshot = await getDocs(q);
+
+        return querySnapshot.empty; // true si no existe (disponible)
+    } catch (error) {
+        console.error("Error checking username:", error);
+        return false;
+    }
+};
+
+/**
  * Crea o actualiza el perfil de usuario
  * @param {string} uid - UID del usuario
  * @param {string} email - Email del usuario
@@ -61,13 +80,26 @@ export const getUserProfile = async (uid) => {
  */
 export const setUserUsername = async (uid, email, username, photoURL = '') => {
     try {
+        // Verificar si el username ya existe (solo si no es el mismo usuario actualizando)
+        const existingProfile = await getUserProfile(uid);
+
+        // Si es un usuario nuevo o está cambiando su username
+        if (!existingProfile || existingProfile.username !== username) {
+            const available = await isUsernameAvailable(username);
+
+            if (!available) {
+                alert('Este nombre de usuario ya está en uso. Por favor elige otro.');
+                return false;
+            }
+        }
+
         const docRef = doc(db, "user_profiles", uid);
         await setDoc(docRef, {
             uid: uid,
             email: email,
             username: username,
             photoURL: photoURL,
-            createdAt: Date.now()
+            createdAt: existingProfile?.createdAt || Date.now()
         });
 
         // Actualizar el perfil en memoria
@@ -76,7 +108,7 @@ export const setUserUsername = async (uid, email, username, photoURL = '') => {
             email,
             username,
             photoURL,
-            createdAt: Date.now()
+            createdAt: existingProfile?.createdAt || Date.now()
         };
 
         return true;
