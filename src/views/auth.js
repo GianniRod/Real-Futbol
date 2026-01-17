@@ -7,6 +7,8 @@
  * - initAuth(): Inicializa el sistema de autenticación
  * - loginWithGoogle(): Inicia sesión con Google
  * - logout(): Cierra sesión
+ * - confirmLogout(): Confirma el cierre de sesión
+ * - cancelLogout(): Cancela el cierre de sesión
  * - getCurrentUser(): Obtiene el usuario actual
  * - getUserProfile(): Obtiene el perfil del usuario
  * - setUserUsername(): Establece el username del usuario
@@ -228,16 +230,24 @@ export const loginWithGoogle = async () => {
 };
 
 /**
- * Cierra sesión
+ * Muestra el modal de confirmación para cerrar sesión
  */
 export const logout = async () => {
-    // Pedir confirmación
-    const confirmar = confirm('¿Estás seguro de que quieres cerrar sesión?');
-
-    if (!confirmar) {
-        return; // El usuario canceló
+    const modal = document.getElementById('logout-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
     }
+};
 
+/**
+ * Confirma el cierre de sesión
+ */
+export const confirmLogout = async () => {
+    // Cerrar modal
+    const modal = document.getElementById('logout-modal');
+    if (modal) modal.classList.add('hidden');
+
+    // Cerrar sesión
     try {
         await signOut(auth);
         currentUser = null;
@@ -247,6 +257,14 @@ export const logout = async () => {
         console.error("Error signing out:", error);
         alert('Error al cerrar sesión');
     }
+};
+
+/**
+ * Cancela el cierre de sesión
+ */
+export const cancelLogout = () => {
+    const modal = document.getElementById('logout-modal');
+    if (modal) modal.classList.add('hidden');
 };
 
 /**
