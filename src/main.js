@@ -32,7 +32,8 @@ import {
 import {
     navigateToForum,
     initForum,
-    sendMessage
+    sendMessage,
+    deleteMessage
 } from './views/forum.js';
 
 import {
@@ -213,6 +214,7 @@ window.app = {
     navigateToForum,
     initForum,
     sendMessage,
+    deleteMessage,
 
     // Authentication
     loginWithGoogle,
