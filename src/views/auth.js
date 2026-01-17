@@ -359,15 +359,29 @@ export const getCurrentUserProfile = () => {
 /**
  * Inicializa el sistema de autenticación
  */
+/**
+ * Inicializa el sistema de autenticación
+ */
 export const initAuth = () => {
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
-
         if (user) {
             // Usuario autenticado - cargar perfil
             const profile = await getUserProfile(user.uid);
             currentUserProfile = profile;
 
+            // Detectar rol del usuario
+            currentUserRole = await getUserRole(user.uid);
+
+            // Mostrar/ocultar botón de moderación
+            const modBtn = document.getElementById('moderation-btn');
+            if (modBtn) {
+                if (currentUserRole === 'developer') {
+                    modBtn.classList.remove('hidden');
+                } else {
+                    modBtn.classList.add('hidden');
+                }
+            }
             if (!profile || !profile.username) {
                 // No tiene username - mostrar modal
                 showUsernameModal(user);
@@ -377,7 +391,23 @@ export const initAuth = () => {
         } else {
             // No autenticado
             currentUserProfile = null;
+            currentUserRole = 'user';
+
+            // Ocultar botón de moderación
+            const modBtn = document.getElementById('moderation-btn');
+            if (modBtn) {
+                modBtn.classList.add('hidden');
+            }
+
             updateAuthUI(null, null);
         }
     });
+};
+
+/**
+ * Obtiene el rol del usuario actual
+ * @returns {string} - 'developer', 'moderator', o 'user'
+ */
+export const getCurrentUserRole = () => {
+    return currentUserRole;
 };
