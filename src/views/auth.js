@@ -231,6 +231,13 @@ export const loginWithGoogle = async () => {
  * Cierra sesión
  */
 export const logout = async () => {
+    // Pedir confirmación
+    const confirmar = confirm('¿Estás seguro de que quieres cerrar sesión?');
+
+    if (!confirmar) {
+        return; // El usuario canceló
+    }
+
     try {
         await signOut(auth);
         currentUser = null;
