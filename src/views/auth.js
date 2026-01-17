@@ -1,0 +1,267 @@
+/**
+ * Authentication Module
+ * 
+ * Propósito: Manejar autenticación con Google y perfiles de usuario
+ * 
+ * Exports:
+ * - initAuth(): Inicializa el sistema de autenticación
+ * - loginWithGoogle(): Inicia sesión con Google
+ * - logout(): Cierra sesión
+ * - getCurrentUser(): Obtiene el usuario actual
+ * - getUserProfile(): Obtiene el perfil del usuario
+ * - setUserUsername(): Establece el username del usuario
+ */
+
+import {
+    auth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    onAuthStateChanged,
+    db,
+    collection,
+    doc,
+    getDoc,
+    setDoc
+} from '../core/firebase.js';
+
+// State
+let currentUser = null;
+let currentUserProfile = null;
+
+/**
+ * Obtiene el perfil de un usuario desde Firestore
+ * @param {string} uid - UID del usuario
+ * @returns {Promise<object|null>} - Perfil del usuario o null
+ */
+export const getUserProfile = async (uid) => {
+    try {
+        const docRef = doc(db, "user_profiles", uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            return docSnap.data();
+        }
+        return null;
+    } catch (error) {
+        console.error("Error getting user profile:", error);
+        return null;
+    }
+};
+
+/**
+ * Crea o actualiza el perfil de usuario
+ * @param {string} uid - UID del usuario
+ * @param {string} email - Email del usuario
+ * @param {string} username - Username elegido
+ * @param {string} photoURL - URL de la foto de perfil
+ * @returns {Promise<boolean>} - Éxito o fallo
+ */
+export const setUserUsername = async (uid, email, username, photoURL = '') => {
+    try {
+        const docRef = doc(db, "user_profiles", uid);
+        await setDoc(docRef, {
+            uid: uid,
+            email: email,
+            username: username,
+            photoURL: photoURL,
+            createdAt: Date.now()
+        });
+
+        // Actualizar el perfil en memoria
+        currentUserProfile = {
+            uid,
+            email,
+            username,
+            photoURL,
+            createdAt: Date.now()
+        };
+
+        return true;
+    } catch (error) {
+        console.error("Error setting username:", error);
+        return false;
+    }
+};
+
+/**
+ * Actualiza la UI según el estado de autenticación
+ * @param {object|null} user - Usuario de Firebase Auth
+ * @param {object|null} profile - Perfil del usuario
+ */
+const updateAuthUI = (user, profile) => {
+    const loginBtn = document.getElementById('auth-login-btn');
+    const userInfo = document.getElementById('auth-user-info');
+    const userAvatar = document.getElementById('auth-user-avatar');
+    const userName = document.getElementById('auth-user-name');
+
+    if (!user) {
+        // No autenticado
+        if (loginBtn) loginBtn.classList.remove('hidden');
+        if (userInfo) userInfo.classList.add('hidden');
+    } else {
+        // Autenticado
+        if (loginBtn) loginBtn.classList.add('hidden');
+        if (userInfo) userInfo.classList.remove('hidden');
+
+        if (profile && profile.username) {
+            if (userName) userName.textContent = profile.username;
+            if (userAvatar) {
+                userAvatar.innerHTML = profile.photoURL
+                    ? `<img src="${profile.photoURL}" class="w-8 h-8 rounded-full" alt="${profile.username}">`
+                    : `<div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm">${profile.username.charAt(0).toUpperCase()}</div>`;
+            }
+        }
+    }
+};
+
+/**
+ * Muestra el modal para establecer username
+ * @param {object} user - Usuario de Firebase Auth
+ */
+const showUsernameModal = (user) => {
+    const modal = document.getElementById('username-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+
+        // Focus en el input
+        const input = document.getElementById('username-input');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+    }
+};
+
+/**
+ * Guarda el username establecido por el usuario
+ */
+export const saveUsername = async () => {
+    const input = document.getElementById('username-input');
+    const username = input?.value.trim();
+
+    if (!username) {
+        alert('Por favor ingresa un nombre de usuario');
+        return;
+    }
+
+    if (username.length < 3) {
+        alert('El nombre de usuario debe tener al menos 3 caracteres');
+        return;
+    }
+
+    if (username.length > 20) {
+        alert('El nombre de usuario no puede tener más de 20 caracteres');
+        return;
+    }
+
+    if (!currentUser) {
+        alert('Error: no hay usuario autenticado');
+        return;
+    }
+
+    const success = await setUserUsername(
+        currentUser.uid,
+        currentUser.email,
+        username,
+        currentUser.photoURL || ''
+    );
+
+    if (success) {
+        // Cerrar modal
+        const modal = document.getElementById('username-modal');
+        if (modal) modal.classList.add('hidden');
+
+        // Actualizar UI
+        updateAuthUI(currentUser, currentUserProfile);
+    } else {
+        alert('Error al guardar el nombre de usuario. Intenta de nuevo.');
+    }
+};
+
+/**
+ * Inicia sesión con Google
+ */
+export const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+        prompt: 'select_account'
+    });
+
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        // Verificar si tiene perfil
+        const profile = await getUserProfile(user.uid);
+
+        if (!profile || !profile.username) {
+            // Primera vez - mostrar modal para username
+            showUsernameModal(user);
+        } else {
+            // Ya tiene perfil
+            currentUserProfile = profile;
+            updateAuthUI(user, profile);
+        }
+    } catch (error) {
+        console.error("Error signing in with Google:", error);
+        alert('Error al iniciar sesión con Google. Por favor intenta de nuevo.');
+    }
+};
+
+/**
+ * Cierra sesión
+ */
+export const logout = async () => {
+    try {
+        await signOut(auth);
+        currentUser = null;
+        currentUserProfile = null;
+        updateAuthUI(null, null);
+    } catch (error) {
+        console.error("Error signing out:", error);
+        alert('Error al cerrar sesión');
+    }
+};
+
+/**
+ * Obtiene el usuario actual
+ * @returns {object|null} - Usuario actual
+ */
+export const getCurrentUser = () => {
+    return currentUser;
+};
+
+/**
+ * Obtiene el perfil del usuario actual
+ * @returns {object|null} - Perfil del usuario actual
+ */
+export const getCurrentUserProfile = () => {
+    return currentUserProfile;
+};
+
+/**
+ * Inicializa el sistema de autenticación
+ */
+export const initAuth = () => {
+    onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+
+        if (user) {
+            // Usuario autenticado - cargar perfil
+            const profile = await getUserProfile(user.uid);
+            currentUserProfile = profile;
+
+            if (!profile || !profile.username) {
+                // No tiene username - mostrar modal
+                showUsernameModal(user);
+            } else {
+                updateAuthUI(user, profile);
+            }
+        } else {
+            // No autenticado
+            currentUserProfile = null;
+            updateAuthUI(null, null);
+        }
+    });
+};
