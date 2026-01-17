@@ -49,8 +49,18 @@ import {
     cancelLogout,
     saveUsername,
     getCurrentUser,
-    getCurrentUserProfile
+    getCurrentUserProfile,
+    getCurrentUserRole
 } from './views/auth.js';
+
+import {
+    DEVELOPER_UID,
+    openModerationPanel,
+    closeModerationPanel,
+    addModerator,
+    removeModerator,
+    handleAddModeratorForm
+} from './views/moderation.js';
 
 /**
  * Navega a la vista de partidos
@@ -212,6 +222,14 @@ window.app = {
     saveUsername,
     getCurrentUser,
     getCurrentUserProfile,
+    getCurrentUserRole,
+
+    // Moderation
+    openModerationPanel,
+    closeModerationPanel,
+    addModerator,
+    removeModerator,
+    handleAddModeratorForm,
 
     // Navigation
     navigateToMatches,
