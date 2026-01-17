@@ -36,7 +36,7 @@ import {
 // Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDiRY9xyTiQWeJuFCjU7CTBDWcJxDUcVVo",
-    authDomain: "realfutbol.app",
+    authDomain: "real-futbol-950e9.firebaseapp.com",
     projectId: "real-futbol-950e9",
     storageBucket: "real-futbol-950e9.firebasestorage.app",
     messagingSenderId: "997733956346",
