@@ -22,7 +22,8 @@ import {
     getCountFromServer,
     doc,
     getDoc,
-    setDoc
+    setDoc,
+    getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     getAuth,
@@ -63,6 +64,7 @@ export {
     doc,
     getDoc,
     setDoc,
+    getDocs,
     GoogleAuthProvider,
     signInWithPopup,
     signOut,
