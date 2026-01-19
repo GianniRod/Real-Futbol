@@ -144,6 +144,7 @@ const updateAuthUI = (user, profile) => {
     const loginContainer = document.getElementById('auth-login-container');
     const userInfo = document.getElementById('auth-user-info');
     const userAvatar = document.getElementById('auth-user-avatar');
+    const suggestionBtn = document.getElementById('suggestion-btn');
 
     // Forum UI elements
     const forumLoginRequired = document.getElementById('forum-login-required');
@@ -155,6 +156,7 @@ const updateAuthUI = (user, profile) => {
         // No autenticado
         if (loginContainer) loginContainer.classList.remove('hidden');
         if (userInfo) userInfo.classList.add('hidden');
+        if (suggestionBtn) suggestionBtn.classList.add('hidden');
 
         // Mostrar login requerido en foros
         if (forumLoginRequired) forumLoginRequired.classList.remove('hidden');
@@ -165,6 +167,7 @@ const updateAuthUI = (user, profile) => {
         // Autenticado
         if (loginContainer) loginContainer.classList.add('hidden');
         if (userInfo) userInfo.classList.remove('hidden');
+        if (suggestionBtn) suggestionBtn.classList.remove('hidden');
 
         // Mostrar inputs de foros
         if (forumLoginRequired) forumLoginRequired.classList.add('hidden');
