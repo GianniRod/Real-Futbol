@@ -19,4 +19,4 @@ Resultados de fútbol en tiempo real con foro global y autenticación con Google
 Proyecto en fase pre-lanzamiento.
 
 ## Redes
-X (@realfutbolapp)
+X - https://x.com/RealFutbolApp
