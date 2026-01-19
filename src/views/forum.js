@@ -67,13 +67,13 @@ export const initForum = (context, containerId, usernameInputId) => {
         messagesData.sort((a, b) => a.timestamp - b.timestamp);
 
         // Importar para obtener role y usuario actual
-        const { getCurrentUserRole, getCurrentUser } = await import('./auth.js');
+        const { getCurrentUserRole, getCurrentUser, whenRoleReady } = await import('./auth.js');
+        await whenRoleReady();
         const userRole = getCurrentUserRole();
         const currentUser = getCurrentUser();
         const currentUserId = currentUser ? currentUser.uid : null;
         const canDelete = userRole === 'developer' || userRole === 'moderator';
 
-        console.log('User role:', userRole, 'Can delete:', canDelete);
 
         container.innerHTML = messagesData.map(msg => {
             // Comparar por userId en lugar de username de localStorage
