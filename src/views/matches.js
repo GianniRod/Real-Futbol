@@ -96,15 +96,15 @@ export const loadMatches = async (silent = false) => {
     }
 
     const dateStr = formatDate(state.date);
-    const targetIds = [128, 1032, 129, 39, 140, 78, 71, 13, 11, 135, 556, 152, 150, 77, 335, 48, 51, 25];
+    const targetIds = [128, 1032, 129, 130, 39, 140, 78, 71, 13, 11, 135, 556, 152, 150, 77, 335, 48, 51, 25];
 
     try {
         const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires`);
 
         let matches = data.response.filter(m => targetIds.includes(m.league.id));
         matches.sort((a, b) => {
-            const isArgA = [128, 1032].includes(a.league.id);
-            const isArgB = [128, 1032].includes(b.league.id);
+            const isArgA = [128, 1032, 130].includes(a.league.id);
+            const isArgB = [128, 1032, 130].includes(b.league.id);
             if (isArgA && !isArgB) return -1;
             if (!isArgA && isArgB) return 1;
             return a.fixture.timestamp - b.fixture.timestamp;
