@@ -104,8 +104,8 @@ export const initForum = (context, containerId, usernameInputId) => {
                             </button>
                         ` : ''}
                     </div>
-                    <div class="relative">
-                        <div class="${isMe ? 'bg-white text-black border-white' : 'bg-[#111] text-gray-300 border-[#333]'} border px-3 py-2 rounded-lg max-w-[85%] text-sm break-words shadow-sm">
+                    <div class="relative max-w-[85%]">
+                        <div class="${isMe ? 'bg-white text-black border-white' : 'bg-[#111] text-gray-300 border-[#333]'} border px-3 py-2 rounded-lg text-sm break-words shadow-sm">
                             ${msg.replyTo ? `
                                 <div class="mb-2 pl-2 border-l-2 border-gray-500 text-xs opacity-70">
                                     <div class="font-bold">@${msg.replyTo.username}</div>
@@ -115,13 +115,13 @@ export const initForum = (context, containerId, usernameInputId) => {
                             ${msg.text}
                         </div>
                         
-                        <!-- 3-dot menu (desktop only, on hover) -->
+                        <!-- Reply arrow (desktop only, on hover) -->
                         ${currentUserId ? `
                             <button onclick="app.startReply('${msg.id}', '${msg.user.replace(/'/g, "\\\\'")}', '${msg.text.substring(0, 100).replace(/'/g, "\\\\'").replace(/\n/g, ' ')}')"
-                                class="hidden lg:block absolute top-1 ${isMe ? '-left-8' : '-right-8'} opacity-0 group-hover:opacity-100 transition-opacity bg-[#222] hover:bg-[#333] rounded-full p-1.5"
+                                class="hidden lg:block absolute top-1 ${isMe ? '-left-7' : '-right-7'} opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-white"
                                 title="Responder">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                                 </svg>
                             </button>
                         ` : ''}
@@ -155,34 +155,36 @@ const setupSwipeGestures = (containerId) => {
         let startX = 0;
         let currentX = 0;
         let isSwiping = false;
+        let currentMessageEl = null;
 
         const messageId = messageEl.dataset.messageId;
         const messageUser = messageEl.dataset.messageUser;
         const messageText = messageEl.dataset.messageText;
 
-        // Touch start
+        // Touch start - identificar el mensaje específico
         messageEl.addEventListener('touchstart', (e) => {
             startX = e.touches[0].clientX;
+            currentMessageEl = messageEl;
             isSwiping = true;
         }, { passive: true });
 
-        // Touch move
+        // Touch move - aplicar transformación solo a este mensaje
         messageEl.addEventListener('touchmove', (e) => {
-            if (!isSwiping) return;
+            if (!isSwiping || !currentMessageEl) return;
 
             currentX = e.touches[0].clientX;
             const diffX = currentX - startX;
 
             // Solo permitir swipe a la derecha y hasta 80px
             if (diffX > 0 && diffX <= 80) {
-                messageEl.style.transform = `translateX(${diffX}px)`;
-                messageEl.style.transition = 'none';
+                currentMessageEl.style.transform = `translateX(${diffX}px)`;
+                currentMessageEl.style.transition = 'none';
             }
         }, { passive: true });
 
-        // Touch end
+        // Touch end - reset del mensaje específico
         messageEl.addEventListener('touchend', () => {
-            if (!isSwiping) return;
+            if (!isSwiping || !currentMessageEl) return;
 
             const diffX = currentX - startX;
 
@@ -193,11 +195,24 @@ const setupSwipeGestures = (containerId) => {
                 }
             }
 
-            // Reset position
-            messageEl.style.transform = '';
-            messageEl.style.transition = 'transform 0.2s ease-out';
+            // Reset position solo de este mensaje
+            currentMessageEl.style.transform = '';
+            currentMessageEl.style.transition = 'transform 0.2s ease-out';
 
             isSwiping = false;
+            currentMessageEl = null;
+            startX = 0;
+            currentX = 0;
+        });
+
+        // Touch cancel - reset por si se cancela el gesto
+        messageEl.addEventListener('touchcancel', () => {
+            if (currentMessageEl) {
+                currentMessageEl.style.transform = '';
+                currentMessageEl.style.transition = 'transform 0.2s ease-out';
+            }
+            isSwiping = false;
+            currentMessageEl = null;
             startX = 0;
             currentX = 0;
         });
