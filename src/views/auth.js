@@ -39,6 +39,8 @@ import { getUserStats } from './user_stats.js';
 let currentUser = null;
 let currentUserProfile = null;
 let currentUserRole = 'user'; // 'developer', 'moderator', or 'user'
+let isRoleLoaded = false;
+let roleReadyCallbacks = [];
 
 /**
  * Obtiene el perfil de un usuario desde Firestore
@@ -376,8 +378,13 @@ export const initAuth = () => {
 
             // Detectar rol del usuario
             currentUserRole = await getUserRole(user.uid);
+            isRoleLoaded = true;
 
             console.log('Role loaded:', currentUserRole);
+
+            // Ejecutar callbacks pendientes
+            roleReadyCallbacks.forEach(callback => callback());
+            roleReadyCallbacks = [];
 
             // Si estamos en el foro, re-renderizar para mostrar botones de moderador
             const forumMessages = document.getElementById('forum-messages');
@@ -432,6 +439,25 @@ export const initAuth = () => {
  */
 export const getCurrentUserRole = () => {
     return currentUserRole;
+};
+
+/**
+ * Ejecuta un callback cuando el rol del usuario esté cargado
+ * @param {Function} callback - Función a ejecutar (opcional)
+ * @returns {Promise} - Promise que se resuelve cuando el rol está listo
+ */
+export const whenRoleReady = (callback) => {
+    return new Promise((resolve) => {
+        if (isRoleLoaded) {
+            if (callback) callback();
+            resolve();
+        } else {
+            roleReadyCallbacks.push(() => {
+                if (callback) callback();
+                resolve();
+            });
+        }
+    });
 };
 
 /**
