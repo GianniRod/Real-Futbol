@@ -64,12 +64,17 @@ export const initForum = (context, containerId, usernameInputId) => {
 
         // Client-side sort
         messagesData.sort((a, b) => a.timestamp - b.timestamp);
-        // Importar para obtener role actual
-        const { getCurrentUserRole } = await import('./auth.js');
+
+        // Importar para obtener role y usuario actual
+        const { getCurrentUserRole, getCurrentUser } = await import('./auth.js');
         const userRole = getCurrentUserRole();
+        const currentUser = getCurrentUser();
+        const currentUserId = currentUser ? currentUser.uid : null;
         const canDelete = userRole === 'developer' || userRole === 'moderator';
+
         container.innerHTML = messagesData.map(msg => {
-            const isMe = localStorage.getItem('chat_username') === msg.user;
+            // Comparar por userId en lugar de username de localStorage
+            const isMe = currentUserId && msg.userId === currentUserId;
             const date = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
             // Badge según role del autor
             let badge = '';
@@ -106,12 +111,7 @@ export const initForum = (context, containerId, usernameInputId) => {
         container.scrollTop = container.scrollHeight;
     });
 
-    // Pre-fill username if exists
-    const savedUser = localStorage.getItem('chat_username');
-    if (savedUser) {
-        const inp = document.getElementById(usernameInputId);
-        if (inp) inp.value = savedUser;
-    }
+    // Ya no usamos localStorage para username
 };
 
 /**
