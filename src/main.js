@@ -51,7 +51,9 @@ import {
     saveUsername,
     getCurrentUser,
     getCurrentUserProfile,
-    getCurrentUserRole
+    getCurrentUserRole,
+    showProfileModal,
+    closeProfileModal
 } from './views/auth.js';
 
 import {
@@ -136,7 +138,7 @@ const openMobileTab = (tabName) => {
  * @param {string} activeId - ID del botón activo
  */
 const updateMobileNav = (activeId) => {
-    ['btn-nav-results', 'btn-nav-leagues', 'btn-nav-forum'].forEach(id => {
+    ['btn-nav-results', 'btn-nav-live', 'btn-nav-leagues', 'btn-nav-forum'].forEach(id => {
         const btn = document.getElementById(id);
         if (!btn) return;
         if (id === activeId) {
@@ -147,6 +149,30 @@ const updateMobileNav = (activeId) => {
             btn.classList.remove('text-white');
         }
     });
+};
+
+/**
+ * Activa/desactiva el filtro de partidos en vivo desde mobile
+ */
+const toggleLiveFromMobile = () => {
+    const toggle = document.getElementById('live-toggle');
+    const liveBtn = document.getElementById('btn-nav-live');
+
+    if (toggle) {
+        toggle.checked = !toggle.checked;
+        toggleLiveFilter();
+    }
+
+    // Actualizar estado visual del botón
+    if (liveBtn) {
+        if (toggle && toggle.checked) {
+            liveBtn.classList.remove('text-gray-400');
+            liveBtn.classList.add('text-red-500');
+        } else {
+            liveBtn.classList.remove('text-red-500');
+            liveBtn.classList.add('text-gray-400');
+        }
+    }
 };
 
 /**
@@ -225,6 +251,8 @@ window.app = {
     getCurrentUser,
     getCurrentUserProfile,
     getCurrentUserRole,
+    showProfileModal,
+    closeProfileModal,
 
     // Moderation
     openModerationPanel,
@@ -237,6 +265,7 @@ window.app = {
     navigateToMatches,
     openMobileTab,
     updateMobileNav,
+    toggleLiveFromMobile,
     navigate,
     createSlug,
 
