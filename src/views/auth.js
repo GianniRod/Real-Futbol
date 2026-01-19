@@ -403,12 +403,23 @@ export const initAuth = () => {
             }
 
             // Mostrar/ocultar botón de moderación
+            // Mostrar/ocultar botón de moderación (developer)
             const modBtn = document.getElementById('moderation-btn');
+            const modBadge = document.getElementById('moderator-badge-btn');
+
             if (modBtn) {
                 if (currentUserRole === 'developer') {
                     modBtn.classList.remove('hidden');
                 } else {
                     modBtn.classList.add('hidden');
+                }
+            }
+
+            if (modBadge) {
+                if (currentUserRole === 'moderator') {
+                    modBadge.classList.remove('hidden');
+                } else {
+                    modBadge.classList.add('hidden');
                 }
             }
             if (!profile || !profile.username) {
@@ -423,10 +434,12 @@ export const initAuth = () => {
             currentUserRole = 'user';
 
             // Ocultar botón de moderación
+            // Ocultar botones de moderación
             const modBtn = document.getElementById('moderation-btn');
-            if (modBtn) {
-                modBtn.classList.add('hidden');
-            }
+            const modBadge = document.getElementById('moderator-badge-btn');
+
+            if (modBtn) modBtn.classList.add('hidden');
+            if (modBadge) modBadge.classList.add('hidden');
 
             updateAuthUI(null, null);
         }
