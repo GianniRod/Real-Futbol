@@ -377,6 +377,24 @@ export const initAuth = () => {
             // Detectar rol del usuario
             currentUserRole = await getUserRole(user.uid);
 
+            console.log('Role loaded:', currentUserRole);
+
+            // Si estamos en el foro, re-renderizar para mostrar botones de moderador
+            const forumMessages = document.getElementById('forum-messages');
+            const matchForumMessages = document.getElementById('match-forum-messages');
+            if (forumMessages && !forumMessages.innerHTML.includes('Cargando')) {
+                // Re-renderizar foro si ya está cargado
+                if (window.app && window.app.initForum) {
+                    const currentContext = forumMessages.closest('#view-forum') ? 'global' : null;
+                    if (currentContext) {
+                        console.log('Re-rendering forum with updated role');
+                        // Forzar re-render sin cambiar el scroll
+                        const scrollPos = forumMessages.scrollTop;
+                        window.location.hash = window.location.hash; // Trigger re-render
+                    }
+                }
+            }
+
             // Mostrar/ocultar botón de moderación
             const modBtn = document.getElementById('moderation-btn');
             if (modBtn) {
