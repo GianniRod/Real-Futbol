@@ -12,6 +12,8 @@
  * - getCurrentUser(): Obtiene el usuario actual
  * - getUserProfile(): Obtiene el perfil del usuario
  * - setUserUsername(): Establece el username del usuario
+ * - showProfileModal(): Muestra el modal de perfil
+ * - closeProfileModal(): Cierra el modal de perfil
  */
 
 import {
@@ -31,6 +33,7 @@ import {
 } from '../core/firebase.js';
 
 import { getUserRole, DEVELOPER_UID } from './moderation.js';
+import { getUserStats } from './user_stats.js';
 
 // State
 let currentUser = null;
@@ -138,10 +141,9 @@ export const setUserUsername = async (uid, email, username, photoURL = '') => {
  * @param {object|null} profile - Perfil del usuario
  */
 const updateAuthUI = (user, profile) => {
-    const loginBtn = document.getElementById('auth-login-btn');
+    const loginContainer = document.getElementById('auth-login-container');
     const userInfo = document.getElementById('auth-user-info');
     const userAvatar = document.getElementById('auth-user-avatar');
-    const userName = document.getElementById('auth-user-name');
 
     // Forum UI elements
     const forumLoginRequired = document.getElementById('forum-login-required');
@@ -151,7 +153,7 @@ const updateAuthUI = (user, profile) => {
 
     if (!user) {
         // No autenticado
-        if (loginBtn) loginBtn.classList.remove('hidden');
+        if (loginContainer) loginContainer.classList.remove('hidden');
         if (userInfo) userInfo.classList.add('hidden');
 
         // Mostrar login requerido en foros
@@ -161,7 +163,7 @@ const updateAuthUI = (user, profile) => {
         if (matchForumInputContainer) matchForumInputContainer.classList.add('hidden');
     } else {
         // Autenticado
-        if (loginBtn) loginBtn.classList.add('hidden');
+        if (loginContainer) loginContainer.classList.add('hidden');
         if (userInfo) userInfo.classList.remove('hidden');
 
         // Mostrar inputs de foros
@@ -171,11 +173,10 @@ const updateAuthUI = (user, profile) => {
         if (matchForumInputContainer) matchForumInputContainer.classList.remove('hidden');
 
         if (profile && profile.username) {
-            if (userName) userName.textContent = profile.username;
             if (userAvatar) {
                 userAvatar.innerHTML = profile.photoURL
-                    ? `<img src="${profile.photoURL}" class="w-8 h-8 rounded-full" alt="${profile.username}">`
-                    : `<div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm">${profile.username.charAt(0).toUpperCase()}</div>`;
+                    ? `<img src="${profile.photoURL}" class="w-10 h-10 rounded-full border-2 border-white" alt="${profile.username}">`
+                    : `<div class="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center font-bold text-lg border-2 border-white">${profile.username.charAt(0).toUpperCase()}</div>`;
             }
         }
     }
@@ -410,4 +411,59 @@ export const initAuth = () => {
  */
 export const getCurrentUserRole = () => {
     return currentUserRole;
+};
+
+/**
+ * Muestra el modal de perfil con estadísticas del usuario
+ */
+export const showProfileModal = async () => {
+    const modal = document.getElementById('profile-modal');
+    if (!modal || !currentUser || !currentUserProfile) return;
+
+    // Mostrar modal
+    modal.classList.remove('hidden');
+
+    // Cargar datos del usuario
+    const profileAvatar = document.getElementById('profile-avatar');
+    const profileUsername = document.getElementById('profile-username');
+    const profileCommentCount = document.getElementById('profile-comment-count');
+    const profileRanking = document.getElementById('profile-ranking');
+
+    if (profileAvatar) {
+        profileAvatar.innerHTML = currentUserProfile.photoURL
+            ? `<img src="${currentUserProfile.photoURL}" class="w-20 h-20 rounded-full border-4 border-white" alt="${currentUserProfile.username}">`
+            : `<div class="w-20 h-20 rounded-full bg-white text-black flex items-center justify-center font-bold text-3xl border-4 border-white">${currentUserProfile.username.charAt(0).toUpperCase()}</div>`;
+    }
+
+    if (profileUsername) {
+        profileUsername.textContent = currentUserProfile.username;
+    }
+
+    // Cargar estadísticas
+    if (profileCommentCount) profileCommentCount.textContent = '...';
+    if (profileRanking) profileRanking.textContent = '...';
+
+    try {
+        const stats = await getUserStats(currentUser.uid);
+        if (profileCommentCount) {
+            profileCommentCount.textContent = stats.commentCount;
+        }
+        if (profileRanking) {
+            profileRanking.textContent = `#${stats.ranking}`;
+        }
+    } catch (error) {
+        console.error('Error loading user stats:', error);
+        if (profileCommentCount) profileCommentCount.textContent = '0';
+        if (profileRanking) profileRanking.textContent = '#-';
+    }
+};
+
+/**
+ * Cierra el modal de perfil
+ */
+export const closeProfileModal = () => {
+    const modal = document.getElementById('profile-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
 };
