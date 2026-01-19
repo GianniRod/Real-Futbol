@@ -33,7 +33,10 @@ import {
     navigateToForum,
     initForum,
     sendMessage,
-    deleteMessage
+    deleteMessage,
+    toggleReaction,
+    startReply,
+    cancelReply
 } from './views/forum.js';
 
 import {
@@ -247,6 +250,9 @@ window.app = {
     initForum,
     sendMessage,
     deleteMessage,
+    toggleReaction,
+    startReply,
+    cancelReply,
 
     // Authentication
     loginWithGoogle,
