@@ -473,7 +473,7 @@
         <main class="flex-1 flex flex-col relative w-full lg:w-auto overflow-hidden bg-black">
 
             <!-- Date Navigation -->
-            <div id="date-nav" class="border-b border-[#222] p-3 z-10 sticky top-0 bg-black/95 backdrop-blur">
+            <div id="date-nav" class="border-b border-[#222] p-3 z-10 bg-black/95 backdrop-blur shrink-0">
                 <div class="flex items-center justify-center gap-6 mb-3 max-w-lg mx-auto">
                     <button onclick="app.changeDate(-1)"
                         class="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded transition-colors"><svg
@@ -509,7 +509,7 @@
                 </div>
             </div>
 
-            <div id="main-content" class="flex-1 overflow-y-auto p-4 relative scroll-smooth">
+            <div id="main-content" class="flex-1 overflow-y-auto p-4 relative scroll-smooth pb-20 lg:pb-4">
 
                 <!-- Match List -->
                 <div id="view-match-list" class="max-w-3xl mx-auto space-y-6 animate-fade-in pb-24"></div>
