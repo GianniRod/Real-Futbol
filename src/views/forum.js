@@ -73,6 +73,8 @@ export const initForum = (context, containerId, usernameInputId) => {
         const currentUserId = currentUser ? currentUser.uid : null;
         const canDelete = userRole === 'developer' || userRole === 'moderator';
 
+        console.log('User role:', userRole, 'Can delete:', canDelete);
+
         container.innerHTML = messagesData.map(msg => {
             // Comparar por userId en lugar de username de localStorage
             const isMe = currentUserId && msg.userId === currentUserId;
