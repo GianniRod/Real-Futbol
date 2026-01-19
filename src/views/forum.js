@@ -89,7 +89,7 @@ export const initForum = (context, containerId, usernameInputId) => {
             const reactions = messageReactions[msg.id] || { likes: 0, dislikes: 0, userLike: false, userDislike: false };
 
             return `
-                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-3 animate-fade-in">
+                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-3 animate-fade-in group relative" data-message-id="${msg.id}">
                     <div class="flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : ''}">
                         <span class="text-[10px] text-gray-500 font-bold uppercase px-1">${msg.user}</span>
                         ${badge}
@@ -104,32 +104,49 @@ export const initForum = (context, containerId, usernameInputId) => {
                             </button>
                         ` : ''}
                     </div>
-                    <div class="${isMe ? 'bg-white text-black border-white' : 'bg-[#111] text-gray-300 border-[#333]'} border px-3 py-2 rounded-lg max-w-[85%] text-sm break-words shadow-sm">
-                        ${msg.replyTo ? `
-                            <div class="mb-2 pl-2 border-l-2 border-gray-500 text-xs opacity-70">
-                                <div class="font-bold">@${msg.replyTo.username}</div>
-                                <div class="truncate">${msg.replyTo.text}</div>
-                            </div>
-                        ` : ''}
-                        ${msg.text}
-                    </div>
-                    <div class="flex items-center gap-2 mt-1 text-[10px]">
-                        ${currentUserId ? `
-                            <button onclick="app.startReply('${msg.id}', '${msg.user.replace(/'/g, "\\'")}',' ${msg.text.substring(0, 100).replace(/'/g, "\\'").replace(/\n/g, ' ')}')"
-                                class="text-gray-500 hover:text-white transition-colors px-1.5 py-0.5 rounded">
-                                Responder
+                    
+                    <div class="flex items-start gap-2 ${isMe ? 'flex-row-reverse' : ''} w-full max-w-[85%]">
+                        <!-- Message content -->
+                        <div class="flex-1 ${isMe ? 'bg-white text-black border-white' : 'bg-[#111] text-gray-300 border-[#333]'} border px-3 py-2 rounded-lg text-sm break-words shadow-sm relative">
+                            ${msg.replyTo ? `
+                                <div class="mb-2 pl-2 border-l-2 border-gray-500 text-xs opacity-70">
+                                    <div class="font-bold">@${msg.replyTo.username}</div>
+                                    <div class="truncate">${msg.replyTo.text}</div>
+                                </div>
+                            ` : ''}
+                            ${msg.text}
+                            
+                            <!-- 3-dot menu (desktop only, on hover) -->
+                            ${currentUserId ? `
+                                <button onclick="app.startReply('${msg.id}', '${msg.user.replace(/'/g, "\\\\'")}', '${msg.text.substring(0, 100).replace(/'/g, "\\\\'").replace(/\n/g, ' ')}')"
+                                    class="hidden lg:block absolute -top-2 ${isMe ? '-left-8' : '-right-8'} opacity-0 group-hover:opacity-100 transition-opacity bg-[#222] hover:bg-[#333] rounded-full p-1.5"
+                                    title="Responder">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </button>
+                            ` : ''}
+                        </div>
+                        
+                        <!-- Reactions (right side for others, left side for me) -->
+                        <div class="flex flex-col gap-0.5 shrink-0">
+                            <button onclick="app.toggleReaction('${msg.id}', 'like')" 
+                                class="flex items-center justify-center gap-1 ${reactions.userLike ? 'text-green-500' : 'text-gray-600'} hover:text-green-400 transition-colors text-xs"
+                                title="Me gusta">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                                ${reactions.likes > 0 ? `<span class="font-mono text-[10px]">${reactions.likes}</span>` : ''}
                             </button>
-                        ` : ''}
-                        <button onclick="app.toggleReaction('${msg.id}', 'like')" 
-                            class="flex items-center gap-1 ${reactions.userLike ? 'text-blue-500' : 'text-gray-500'} hover:text-blue-400 transition-colors px-1.5 py-0.5 rounded"
-                            title="Me gusta">
-                            👍 ${reactions.likes > 0 ? `<span class="font-mono">${reactions.likes}</span>` : ''}
-                        </button>
-                        <button onclick="app.toggleReaction('${msg.id}', 'dislike')" 
-                            class="flex items-center gap-1 ${reactions.userDislike ? 'text-red-500' : 'text-gray-500'} hover:text-red-400 transition-colors px-1.5 py-0.5 rounded"
-                            title="No me gusta">
-                            👎 ${reactions.dislikes > 0 ? `<span class="font-mono">${reactions.dislikes}</span>` : ''}
-                        </button>
+                            <button onclick="app.toggleReaction('${msg.id}', 'dislike')" 
+                                class="flex items-center justify-center gap-1 ${reactions.userDislike ? 'text-red-500' : 'text-gray-600'} hover:text-red-400 transition-colors text-xs"
+                                title="No me gusta">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                ${reactions.dislikes > 0 ? `<span class="font-mono text-[10px]">${reactions.dislikes}</span>` : ''}
+                            </button>
+                        </div>
                     </div>
                 </div>`;
         }).join('');
@@ -138,9 +155,126 @@ export const initForum = (context, containerId, usernameInputId) => {
 
         // Auto scroll to bottom
         container.scrollTop = container.scrollHeight;
+
+        // Cargar reacciones en tiempo real
+        const messageIds = messagesData.map(m => m.id);
+        if (messageIds.length > 0) {
+            loadReactionsRealtime(messageIds, containerId);
+        }
     });
 
     // Ya no usamos localStorage para username
+};
+
+/**
+ * Carga las reacciones en tiempo real
+ * @param {Array} messageIds - IDs de los mensajes
+ * @param {string} containerId - ID del contenedor para re-render
+ */
+let reactionsUnsubscribe = null;
+const loadReactionsRealtime = (messageIds, containerId) => {
+    // Desuscribirse del listener anterior
+    if (reactionsUnsubscribe) {
+        reactionsUnsubscribe();
+    }
+
+    // Resetear reactions
+    messageReactions = {};
+
+    if (!messageIds.length) return;
+
+    // Listener en tiempo real para reacciones
+    const reactionsQuery = query(
+        collection(db, 'message_reactions'),
+        where('messageId', 'in', messageIds.slice(0, 10)) // Firestore limit
+    );
+
+    reactionsUnsubscribe = onSnapshot(reactionsQuery, async (snapshot) => {
+        const { getCurrentUser } = await import('./auth.js');
+        const currentUser = getCurrentUser();
+        const currentUserId = currentUser ? currentUser.uid : null;
+
+        // Resetear contadores
+        messageReactions = {};
+
+        snapshot.forEach(reactionDoc => {
+            const reaction = reactionDoc.data();
+            const msgId = reaction.messageId;
+
+            if (!messageReactions[msgId]) {
+                messageReactions[msgId] = {
+                    likes: 0,
+                    dislikes: 0,
+                    userLike: false,
+                    userDislike: false
+                };
+            }
+
+            if (reaction.type === 'like') {
+                messageReactions[msgId].likes++;
+                if (reaction.userId === currentUserId) {
+                    messageReactions[msgId].userLike = true;
+                }
+            } else if (reaction.type === 'dislike') {
+                messageReactions[msgId].dislikes++;
+                if (reaction.userId === currentUserId) {
+                    messageReactions[msgId].userDislike = true;
+                }
+            }
+        });
+
+        // Re-render solo los botones de reacciones sin scroll
+        updateReactionButtons(containerId);
+    });
+};
+
+/**
+ * Actualiza solo los botones de reacciones sin re-renderizar todo
+ * @param {string} containerId - ID del contenedor
+ */
+const updateReactionButtons = (containerId) => {
+    Object.keys(messageReactions).forEach(messageId => {
+        const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+        if (!messageEl) return;
+
+        const reactions = messageReactions[messageId];
+        const reactionsContainer = messageEl.querySelector('.flex.flex-col.gap-0\\.5');
+
+        if (reactionsContainer) {
+            const likeBtn = reactionsContainer.children[0];
+            const dislikeBtn = reactionsContainer.children[1];
+
+            // Update like button
+            if (likeBtn) {
+                likeBtn.className = `flex items-center justify-center gap-1 ${reactions.userLike ? 'text-green-500' : 'text-gray-600'} hover:text-green-400 transition-colors text-xs`;
+                const likeCount = likeBtn.querySelector('span');
+                if (reactions.likes > 0) {
+                    if (likeCount) {
+                        likeCount.textContent = reactions.likes;
+                    } else {
+                        likeBtn.insertAdjacentHTML('beforeend', `<span class="font-mono text-[10px]">${reactions.likes}</span>`);
+                    }
+                } else if (likeCount) {
+                    likeCount.remove();
+                }
+            }
+
+            // Update dislike button
+            if (dislikeBtn) {
+                dislikeBtn.className = `flex items-center justify-center gap-1 ${reactions.userDislike ? 'text-red-500' : 'text-gray-600'} hover:text-red-400 transition-colors text-xs`;
+                const dislikeCount = dislikeBtn.querySelector('span');
+                if (reactions.dislikes > 0) {
+                    if (dislikeCount) {
+                        dislikeCount.textContent = reactions.dislikes;
+                    } else {
+                        dislikeBtn.insertAdjacentHTML('beforeend', `<span class="font-mono text-[10px]">${reactions.dislikes}</span>`);
+                    }
+                } else if (dislikeCount) {
+                    dislikeCount.remove();
+                }
+            }
+        }
+    });
 };
 
 /**
