@@ -183,8 +183,25 @@ export const incrementUserCommentCount = async (uid) => {
 
         if (userProfileSnap.exists()) {
             const currentCount = userProfileSnap.data().commentCount || 0;
-            await setDoc(userProfileRef, { commentCount: currentCount + 1 }, { merge: true });
-            console.log('Incremented comment count for user:', uid);
+            const newCount = currentCount + 1;
+            await setDoc(userProfileRef, { commentCount: newCount }, { merge: true });
+            console.log('Incremented comment count for user:', uid, 'New count:', newCount);
+
+            // Si el modal de perfil está abierto, actualizar la UI inmediatamente
+            const profileModal = document.getElementById('profile-modal');
+            if (profileModal && !profileModal.classList.contains('hidden')) {
+                const profileCommentCount = document.getElementById('profile-comment-count');
+                if (profileCommentCount) {
+                    profileCommentCount.textContent = newCount;
+
+                    // Recalcular ranking también
+                    const ranking = await getUserRanking(uid, newCount);
+                    const profileRanking = document.getElementById('profile-ranking');
+                    if (profileRanking) {
+                        profileRanking.textContent = `#${ranking}`;
+                    }
+                }
+            }
         }
     } catch (error) {
         console.error("Error incrementing comment count:", error);
