@@ -122,6 +122,7 @@ export const initForum = (context, containerId, usernameInputId) => {
 export const sendMessage = async (userFieldId, textFieldId) => {
     // Importar auth dinámicamente para evitar dependencias circulares
     const { getCurrentUser, getCurrentUserProfile, getCurrentUserRole } = await import('./auth.js');
+    const { incrementUserCommentCount } = await import('./user_stats.js');
 
     const user = getCurrentUser();
     const profile = getCurrentUserProfile();
@@ -154,6 +155,10 @@ export const sendMessage = async (userFieldId, textFieldId) => {
             timestamp: Date.now(),
             userEmail: user.email // Para debugging si es necesario
         });
+
+        // Incrementar contador de comentarios del usuario
+        await incrementUserCommentCount(user.uid);
+
         textInp.value = '';
     } catch (e) {
         console.error("Error sending message: ", e);
