@@ -34,7 +34,6 @@ import {
     initForum,
     sendMessage,
     deleteMessage,
-    toggleReaction,
     startReply,
     cancelReply
 } from './views/forum.js';
@@ -250,7 +249,6 @@ window.app = {
     initForum,
     sendMessage,
     deleteMessage,
-    toggleReaction,
     startReply,
     cancelReply,
 
