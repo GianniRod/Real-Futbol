@@ -65,6 +65,12 @@ import {
     handleAddModeratorForm
 } from './views/moderation.js';
 
+import {
+    openSuggestionModal,
+    closeSuggestionModal,
+    sendSuggestion
+} from './views/suggestions.js';
+
 /**
  * Navega a la vista de partidos
  */
@@ -260,6 +266,11 @@ window.app = {
     addModerator,
     removeModerator,
     handleAddModeratorForm,
+
+    // Suggestions
+    openSuggestionModal,
+    closeSuggestionModal,
+    sendSuggestion,
 
     // Navigation
     navigateToMatches,
