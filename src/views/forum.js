@@ -9,13 +9,15 @@
  * - sendMessage(userFieldId, textFieldId): Envía un mensaje
  */
 
-import { db, collection, addDoc, query, where, onSnapshot, doc, deleteDoc, updateDoc } from '../core/firebase.js';
+import { db, collection, addDoc, query, where, onSnapshot, doc, deleteDoc, updateDoc, getDocs } from '../core/firebase.js';
 import { showOnly, hideView } from '../core/dom.js';
 import { DEVELOPER_UID } from './moderation.js';
 
 // State
 let activeForumUnsubscribe = null;
 let currentForumContext = 'global';
+let replyingTo = null; // {messageId, username, text}
+let messageReactions = {}; // {messageId: {likes: count, dislikes: count, userLike: bool, userDislike: bool}}
 
 /**
  * Inicializa un foro (global o de partido)
@@ -83,6 +85,9 @@ export const initForum = (context, containerId, usernameInputId) => {
             } else if (msg.userRole === 'moderator') {
                 badge = '<span class="ml-2 px-1.5 py-0.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-[9px] font-black uppercase rounded">MOD</span>';
             }
+            // Get reaction data for this message
+            const reactions = messageReactions[msg.id] || { likes: 0, dislikes: 0, userLike: false, userDislike: false };
+
             return `
                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-3 animate-fade-in">
                     <div class="flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : ''}">
@@ -100,7 +105,31 @@ export const initForum = (context, containerId, usernameInputId) => {
                         ` : ''}
                     </div>
                     <div class="${isMe ? 'bg-white text-black border-white' : 'bg-[#111] text-gray-300 border-[#333]'} border px-3 py-2 rounded-lg max-w-[85%] text-sm break-words shadow-sm">
+                        ${msg.replyTo ? `
+                            <div class="mb-2 pl-2 border-l-2 border-gray-500 text-xs opacity-70">
+                                <div class="font-bold">@${msg.replyTo.username}</div>
+                                <div class="truncate">${msg.replyTo.text}</div>
+                            </div>
+                        ` : ''}
                         ${msg.text}
+                    </div>
+                    <div class="flex items-center gap-2 mt-1 text-[10px]">
+                        ${currentUserId ? `
+                            <button onclick="app.startReply('${msg.id}', '${msg.user.replace(/'/g, "\\'")}',' ${msg.text.substring(0, 100).replace(/'/g, "\\'").replace(/\n/g, ' ')}')"
+                                class="text-gray-500 hover:text-white transition-colors px-1.5 py-0.5 rounded">
+                                Responder
+                            </button>
+                        ` : ''}
+                        <button onclick="app.toggleReaction('${msg.id}', 'like')" 
+                            class="flex items-center gap-1 ${reactions.userLike ? 'text-blue-500' : 'text-gray-500'} hover:text-blue-400 transition-colors px-1.5 py-0.5 rounded"
+                            title="Me gusta">
+                            👍 ${reactions.likes > 0 ? `<span class="font-mono">${reactions.likes}</span>` : ''}
+                        </button>
+                        <button onclick="app.toggleReaction('${msg.id}', 'dislike')" 
+                            class="flex items-center gap-1 ${reactions.userDislike ? 'text-red-500' : 'text-gray-500'} hover:text-red-400 transition-colors px-1.5 py-0.5 rounded"
+                            title="No me gusta">
+                            👎 ${reactions.dislikes > 0 ? `<span class="font-mono">${reactions.dislikes}</span>` : ''}
+                        </button>
                     </div>
                 </div>`;
         }).join('');
@@ -146,20 +175,36 @@ export const sendMessage = async (userFieldId, textFieldId) => {
     if (!text) return;
 
     try {
-        await addDoc(collection(db, "forum_messages"), {
+        const messageData = {
             context: currentForumContext,
             userId: user.uid,
             user: profile.username,
-            userRole: userRole, // Incluir rol para badges
+            userRole: userRole,
             text: text,
             timestamp: Date.now(),
-            userEmail: user.email // Para debugging si es necesario
-        });
+            userEmail: user.email
+        };
+
+        // Agregar replyTo si está respondiendo
+        if (replyingTo) {
+            messageData.replyTo = {
+                messageId: replyingTo.messageId,
+                username: replyingTo.username,
+                text: replyingTo.text
+            };
+        }
+
+        await addDoc(collection(db, "forum_messages"), messageData);
 
         // Incrementar contador de comentarios del usuario
         await incrementUserCommentCount(user.uid);
 
         textInp.value = '';
+
+        // Cancelar reply si está activo
+        if (replyingTo) {
+            cancelReply();
+        }
     } catch (e) {
         console.error("Error sending message: ", e);
         alert("Error al enviar mensaje.");
@@ -217,6 +262,110 @@ export const deleteMessage = async (messageId) => {
         console.error('Error deleting message:', error);
         alert('Error al borrar mensaje: ' + error.message);
     }
+};
+
+/**
+ * Toggle like/dislike en un mensaje
+ * @param {string} messageId - ID del mensaje
+ * @param {string} type - 'like' o 'dislike'
+ */
+export const toggleReaction = async (messageId, type) => {
+    const { getCurrentUser } = await import('./auth.js');
+    const currentUser = getCurrentUser();
+
+    if (!currentUser) {
+        alert('Debes iniciar sesión para reaccionar');
+        return;
+    }
+
+    const currentUserId = currentUser.uid;
+
+    try {
+        // Buscar si ya existe una reacción de este usuario para este mensaje
+        const reactionQuery = query(
+            collection(db, 'message_reactions'),
+            where('messageId', '==', messageId),
+            where('userId', '==', currentUserId)
+        );
+
+        const existingReactions = await getDocs(reactionQuery);
+
+        // Si ya existe una reacción
+        if (!existingReactions.empty) {
+            const existingReaction = existingReactions.docs[0];
+            const existingType = existingReaction.data().type;
+
+            // Si es del mismo tipo, eliminar (toggle off)
+            if (existingType === type) {
+                await deleteDoc(existingReaction.ref);
+            } else {
+                // Si es de tipo diferente, actualizar
+                await updateDoc(existingReaction.ref, { type });
+            }
+        } else {
+            // No existe reacción, crear una nueva
+            await addDoc(collection(db, 'message_reactions'), {
+                messageId,
+                userId: currentUserId,
+                type,
+                timestamp: Date.now()
+            });
+        }
+
+        console.log('Reaction toggled successfully');
+
+    } catch (error) {
+        console.error('Error toggling reaction:', error);
+        alert('Error al reaccionar: ' + error.message);
+    }
+};
+
+/**
+ * Inicia una respuesta a un mensaje
+ * @param {string} messageId - ID del mensaje a responder  
+ * @param {string} username - Nombre del usuario a responder
+ * @param {string} text - Texto del mensaje original
+ */
+export const startReply = (messageId, username, text) => {
+    replyingTo = {
+        messageId,
+        username,
+        text: text.substring(0, 100)
+    };
+
+    const replyIndicator = `
+        <div id="reply-indicator" class="bg-[#1a1a1a] border border-[#333] rounded p-2 mb-2 flex items-center justify-between">
+            <div class="text-xs">
+                <div class="text-gray-400">Respondiendo a <span class="text-white font-bold">@${username}</span></div>
+                <div class="text-gray-600 truncate">${text.substring(0, 50)}...</div>
+            </div>
+            <button onclick="app.cancelReply()" class="text-gray-500 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    `;
+
+    const inputContainer = document.getElementById('forum-input-container') || document.getElementById('match-forum-input-container');
+    if (inputContainer) {
+        const oldIndicator = document.getElementById('reply-indicator');
+        if (oldIndicator) oldIndicator.remove();
+
+        inputContainer.insertAdjacentHTML('afterbegin', replyIndicator);
+
+        const textField = document.getElementById('forum-text') || document.getElementById('match-forum-text');
+        if (textField) textField.focus();
+    }
+};
+
+/**
+ * Cancela la respuesta actual
+ */
+export const cancelReply = () => {
+    replyingTo = null;
+    const indicator = document.getElementById('reply-indicator');
+    if (indicator) indicator.remove();
 };
 
 // Exportar para acceso desde matchDetail
