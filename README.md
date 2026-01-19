@@ -18,5 +18,5 @@ Resultados de fútbol en tiempo real con foro global y autenticación con Google
 ## Estado
 Proyecto en fase pre-lanzamiento.
 
-## Autor
-RealFutbol (@realfutbolapp)
+## Redes
+X (@realfutbolapp)
