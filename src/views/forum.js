@@ -177,10 +177,12 @@ const setupSwipeGestures = (containerId) => {
 
             // Solo permitir swipe a la derecha y hasta 80px
             if (diffX > 0 && diffX <= 80) {
+                // Prevenir el scroll del contenedor padre
+                e.preventDefault();
                 currentMessageEl.style.transform = `translateX(${diffX}px)`;
                 currentMessageEl.style.transition = 'none';
             }
-        }, { passive: true });
+        }, { passive: false }); // passive: false para poder usar preventDefault
 
         // Touch end - reset del mensaje específico
         messageEl.addEventListener('touchend', () => {
