@@ -432,6 +432,11 @@ export const initAuth = () => {
             // No autenticado
             currentUserProfile = null;
             currentUserRole = 'user';
+            isRoleLoaded = true;
+
+            // Ejecutar callbacks pendientes
+            roleReadyCallbacks.forEach(callback => callback());
+            roleReadyCallbacks = [];
 
             // Ocultar botón de moderación
             // Ocultar botones de moderación
