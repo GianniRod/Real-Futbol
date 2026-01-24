@@ -343,7 +343,6 @@ export const openDetail = async (params) => {
     selectedMatch = m;
 
     document.getElementById('view-match-detail').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
     document.getElementById('detail-content-wrapper').classList.add('hidden');
     document.getElementById('detail-loader').classList.remove('hidden');
 
@@ -444,7 +443,6 @@ export const openMatchDetailWithTab = (params) => {
  */
 export const closeDetail = () => {
     document.getElementById('view-match-detail').classList.add('hidden');
-    document.body.style.overflow = '';
 
     // Navegar de vuelta a matches
     if (window.app && window.app.navigate) {
