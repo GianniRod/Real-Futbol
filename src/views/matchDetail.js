@@ -345,7 +345,11 @@ export const openDetail = async (params) => {
     // Guardar posición actual del scroll
     const scrollY = window.scrollY;
 
-    document.getElementById('view-match-detail').classList.remove('hidden');
+    const detailView = document.getElementById('view-match-detail');
+    detailView.classList.remove('hidden');
+
+    // Forzar scroll al inicio del modal para ver escudos, nombres y resultado
+    detailView.scrollTop = 0;
 
     // Fijar el body para prevenir scroll de fondo (funciona en móvil)
     document.body.style.position = 'fixed';
