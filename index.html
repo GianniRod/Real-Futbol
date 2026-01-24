@@ -1,1119 +1,473 @@
-<!DOCTYPE html>
-<html lang="es" class="dark">
+/**
+ * Match Detail View Module
+ * 
+ * Propósito: Vista detallada de partido con tabs (timeline, lineups, stats, forum)
+ * 
+ * Exports:
+ * - openDetail(params): Abre detalle de un partido desde router
+ * - openMatchDetailWithTab(params): Abre con tab específico
+ * - closeDetail(): Cierra vista de detalle
+ * - switchTab(btn, targetId): Cambia entre tabs
+ */
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description"
-        content="Resultados de fútbol en vivo, tablas de posiciones y foros en tiempo real para comentar cada partido. Seguí todo el fútbol actualizado al instante.">
-    <title>RealFutbol - Resultados de futbol en tiempo real.</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="icon" href="https://i.postimg.cc/vBgSB9tn/favicon.jpg" type="image/jpg">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;600;800&display=swap"
-        rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2312798559341043"
-        crossorigin="anonymous"></script>
-    <style>
-        :root {
-            --bg-main: #000000;
-            --bg-card: #0f0f0f;
-            --border: #333333;
-            --text-main: #ffffff;
-            --text-muted: #888888;
+import { fetchAPI } from '../core/api.js';
+import { getMatches } from './matches.js';
+import { initForum } from './forum.js';
+
+// State
+let selectedMatch = null;
+
+/**
+ * Cambia entre tabs del detalle
+ * @param {HTMLElement} btn - Botón clickeado
+ * @param {string} targetId - ID del tab a mostrar
+ */
+export const switchTab = (btn, targetId) => {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('text-white', 'border-b-2', 'border-white');
+        b.classList.add('text-gray-500');
+    });
+    btn.classList.add('text-white', 'border-b-2', 'border-white');
+    btn.classList.remove('text-gray-500');
+
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById(targetId).classList.remove('hidden');
+
+    // NO actualizar URL aquí para evitar bucle infinito
+    // La URL se actualiza solo cuando se navega directamente a una URL con tab
+
+    if (targetId === 'tab-forum' && selectedMatch) {
+        initForum(`match_${selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
+    }
+};
+
+/**
+ * Renderiza el timeline de eventos
+ */
+const renderTimeline = (m) => {
+    const c = document.getElementById('tab-timeline');
+    let ev = [...(m.events || [])];
+
+    ev.sort((a, b) => {
+        const tA = a.time.elapsed + (a.time.extra || 0);
+        const tB = b.time.elapsed + (b.time.extra || 0);
+        if (tA === tB) return 0;
+        return tA > tB ? -1 : 1;
+    });
+
+    if (ev.length === 0) {
+        c.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Sin eventos</div>';
+        return;
+    }
+
+    c.innerHTML = ev.map(e => {
+        const isHome = e.team.id === m.teams.home.id;
+        const sideClass = isHome ? 'flex-row' : 'flex-row-reverse';
+        const boxClass = isHome ? '' : 'flex-row-reverse text-right';
+
+        let content = '';
+        if (e.type === 'subst') {
+            content = `
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-xs font-bold text-green-400 uppercase">Entra: ${e.player.name}</span>
+                    <span class="text-[10px] font-bold text-red-400 uppercase opacity-70">Sale: ${e.assist.name}</span>
+                </div>
+            `;
+        } else {
+            content = `
+                <span class="text-sm font-bold text-white">${e.player.name}</span>
+                <span class="text-[9px] px-2 py-0.5 uppercase font-bold tracking-wider ${e.type === 'Goal' ? 'bg-white text-black' : 'bg-[#333] text-gray-400'}">${e.type === 'Goal' ? 'GOL' : e.detail}</span>
+            `;
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            -webkit-tap-highlight-color: transparent;
+        return `
+            <div class="flex items-center gap-4 mb-4 ${sideClass}">
+                <div class="w-8 text-center text-xs font-bold text-gray-500 font-mono">${e.time.elapsed}'</div>
+                <div class="bg-[#111] border border-[#222] px-4 py-3 flex items-center gap-3 ${boxClass} min-w-[140px]">
+                    ${content}
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+/**
+ * Renderiza las alineaciones y cancha táctica
+ */
+const renderLineups = (m) => {
+    const pitch = document.getElementById('football-pitch');
+    pitch.querySelectorAll('.player-marker').forEach(el => el.remove());
+    const hList = document.getElementById('lineup-home-list');
+    const aList = document.getElementById('lineup-away-list');
+
+    if (!m.lineups || m.lineups.length === 0) {
+        hList.innerHTML = 'No disponible';
+        aList.innerHTML = 'No disponible';
+        return;
+    }
+
+    const homeL = m.lineups[0];
+    const awayL = m.lineups[1];
+    const events = m.events || [];
+
+    const idsMatch = (id1, id2) => String(id1) === String(id2);
+
+    const renderList = (lineup) => {
+        let html = lineup.startXI.map(p => {
+            const subOut = events.find(e => {
+                const eventType = (e.type || '').toLowerCase();
+                return (eventType === 'subst' || eventType === 'substitution') && e.assist && idsMatch(e.assist.id, p.player.id);
+            });
+            const subInfo = subOut ? `<span class="text-red-400 text-[10px] ml-2 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
+
+            return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
+                <div class="flex items-center gap-2"><span class="text-gray-300 transition-colors">${p.player.name}</span>${subInfo}</div>
+                <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
+            </div>`;
+        }).join('');
+
+        if (lineup.substitutes && lineup.substitutes.length > 0) {
+            html += `<div class="mt-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Suplentes</div>`;
+            html += lineup.substitutes.map(p => {
+                const subIn = events.find(e => {
+                    const eventType = (e.type || '').toLowerCase();
+                    return (eventType === 'subst' || eventType === 'substitution') && e.player && idsMatch(e.player.id, p.player.id);
+                });
+                const subInfo = subIn ? `<span class="text-green-400 text-[10px] ml-2 font-bold">▲ ${subIn.time.elapsed}'</span>` : '';
+
+                return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
+                    <div class="flex items-center gap-2"><span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}</div>
+                    <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
+                </div>`;
+            }).join('');
+        }
+        return html;
+    };
+
+    hList.innerHTML = renderList(homeL);
+    aList.innerHTML = renderList(awayL);
+
+    const addPlayers = (lineup, side) => {
+        const players = lineup.startXI;
+        const formation = lineup.formation;
+
+        let lines = {};
+        let hasGrid = players.every(p => p.player.grid);
+
+        if (hasGrid) {
+            players.forEach(p => {
+                const parts = p.player.grid.split(':');
+                const lineIdx = parseInt(parts[0]);
+                if (!lines[lineIdx]) lines[lineIdx] = [];
+                lines[lineIdx].push(p);
+            });
+        } else {
+            let formationParts = formation ? formation.split('-').map(Number) : [4, 4, 2];
+            formationParts.unshift(1);
+            let playerIdx = 0;
+            formationParts.forEach((count, i) => {
+                const lineIdx = i + 1;
+                lines[lineIdx] = [];
+                for (let k = 0; k < count; k++) {
+                    if (playerIdx < players.length) {
+                        lines[lineIdx].push(players[playerIdx]);
+                        playerIdx++;
+                    }
+                }
+            });
         }
 
-        /* Tipografía Deportiva */
-        .font-sport {
-            font-family: 'Chakra Petch', sans-serif;
-        }
-
-        /* Tarjetas Minimalistas B&W */
-        .match-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border);
-            transition: all 0.2s ease;
-        }
-
-        /* Hover efecto blanco */
-        .match-card.clickable:hover {
-            border-color: #ffffff;
-            background-color: #1a1a1a;
-            cursor: pointer;
-        }
-
-        .match-card.not-clickable {
-            opacity: 1;
-            cursor: default;
-        }
-
-        /* Scrollbars */
-        ::-webkit-scrollbar {
-            width: 4px;
-            height: 4px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #444;
-            border-radius: 2px;
-        }
-
-        /* Toggle Switch B&W & Red Live */
-        .toggle-checkbox:checked {
-            transform: translateX(20px);
-            border-color: #ef4444;
-            background-color: #ef4444;
-            box-shadow: 0 0 10px #ef4444;
-        }
-
-        .toggle-checkbox:checked+.toggle-label {
-            background-color: #fff;
-        }
-
-        .toggle-label {
-            background-color: #000;
-            border: 1px solid #444;
-        }
-
-        /* Cancha Táctica B&W */
-        .football-pitch {
-            background-color: #151515;
-            /* Gris muy oscuro */
-            border: 2px solid #444;
-            position: relative;
-            width: 100%;
-            aspect-ratio: 7 / 5;
-            border-radius: 0 !important;
-            overflow: hidden;
-        }
-
-        .pitch-line {
-            position: absolute;
-            background-color: #444;
-        }
-
-        .center-line {
-            top: 0;
-            bottom: 0;
-            left: 50%;
-            width: 1px;
-            transform: translateX(-50%);
-        }
-
-        .center-circle {
-            top: 50%;
-            left: 50%;
-            width: 20%;
-            height: 28%;
-            border: 1px solid #444;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .penalty-box {
-            position: absolute;
-            border: 1px solid #444;
-            width: 15%;
-            height: 40%;
-            top: 30%;
-        }
-
-        .home-box {
-            left: 0;
-            border-left: none;
-        }
-
-        .away-box {
-            right: 0;
-            border-right: none;
-        }
-
-        /* Corner Arcs */
-        .corner-arc {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            border: 1px solid #444;
-            border-radius: 50%;
-        }
-
-        .corner-top-left {
-            top: -25px;
-            left: -25px;
-        }
-
-        .corner-top-right {
-            top: -25px;
-            right: -25px;
-        }
-
-        .corner-bottom-left {
-            bottom: -25px;
-            left: -25px;
-        }
-
-        .corner-bottom-right {
-            bottom: -25px;
-            right: -25px;
-        }
-
-        /* Marcadores Jugadores B&W */
-        .player-marker {
-            position: absolute;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 10px;
-            z-index: 10;
-            transition: transform 0.2s;
-            cursor: pointer;
-            border: 1px solid #000;
-        }
-
-        .home-player {
-            background-color: #ffffff;
-            color: #000000;
-        }
-
-        .away-player {
-            background-color: #333333;
-            color: #ffffff;
-            border: 1px solid #fff;
-        }
-
-        .player-marker:active {
-            transform: scale(1.3);
-            z-index: 20;
-        }
-
-        /* Tabs */
-        .tab-btn {
-            color: #666;
-            border-bottom: 2px solid transparent;
-        }
-
-        .tab-btn.active {
-            color: #fff;
-            border-bottom-color: #fff;
-        }
-
-        /* Loader B&W */
-        .loader {
-            width: 32px;
-            height: 32px;
-            border: 3px solid #333;
-            border-bottom-color: #fff;
-            border-radius: 50%;
-            display: inline-block;
-            animation: rotation 1s linear infinite;
-        }
-
-        @keyframes rotation {
-            0% {
-                transform: rotate(0deg);
+        Object.keys(lines).forEach(lineKey => {
+            const lineIdx = parseInt(lineKey);
+            const linePlayers = lines[lineKey];
+            if (hasGrid) {
+                linePlayers.sort((a, b) => {
+                    const rowA = parseInt(a.player.grid.split(':')[1]);
+                    const rowB = parseInt(b.player.grid.split(':')[1]);
+                    return rowA - rowB;
+                });
             }
 
-            100% {
-                transform: rotate(360deg);
-            }
+            const count = linePlayers.length;
+            linePlayers.forEach((p, index) => {
+                const el = document.createElement('div');
+                el.className = `player-marker ${side === 'home' ? 'home-player' : 'away-player'}`;
+
+                let displayNumber = p.player.number;
+                let displayName = p.player.name;
+                let isSubbed = false;
+                let subInName = '';
+
+                const subOutEvent = events.find(e => e.type === 'subst' && e.assist && idsMatch(e.assist.id, p.player.id));
+
+                if (subOutEvent) {
+                    isSubbed = true;
+                    const subInPlayer = lineup.substitutes.find(s => idsMatch(s.player.id, subOutEvent.player.id));
+                    if (subInPlayer) {
+                        displayNumber = subInPlayer.player.number;
+                        subInName = subInPlayer.player.name;
+                    } else {
+                        subInName = subOutEvent.player.name;
+                        displayNumber = "⇄";
+                    }
+                }
+
+                el.innerHTML = `<span class="text-xs font-bold font-mono pointer-events-none">${displayNumber}</span>`;
+
+                const playerGoals = events.filter(e => e.type === 'Goal' && (idsMatch(e.player.id, p.player.id) || (isSubbed && subOutEvent && idsMatch(e.player.id, subOutEvent.player.id))));
+
+                if (playerGoals.length > 0) {
+                    const ballIcon = document.createElement('div');
+                    ballIcon.className = `absolute -top-2 -right-2 w-3.5 h-3.5 flex items-center justify-center rounded-full bg-black shadow-sm z-20`;
+                    const isOwn = playerGoals[playerGoals.length - 1].detail === 'Own Goal';
+                    ballIcon.innerHTML = isOwn
+                        ? `<div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>`
+                        : `<div class="w-full h-full rounded-full bg-white flex items-center justify-center"><div class="w-1.5 h-1.5 bg-black rounded-full opacity-80"></div></div>`;
+                    el.appendChild(ballIcon);
+                }
+
+                let x;
+                if (side === 'home') {
+                    x = 4 + (lineIdx - 1) * 11;
+                    if (lineIdx === 1) x = 2;
+                } else {
+                    x = 96 - (lineIdx - 1) * 11;
+                    if (lineIdx === 1) x = 98;
+                }
+
+                const segment = 100 / (count + 1);
+                let y = segment * (index + 1);
+                if (y < 5) y = 5;
+                if (y > 95) y = 95;
+
+                el.style.left = x + '%';
+                el.style.top = y + '%';
+
+                const nameEl = document.createElement('div');
+                nameEl.className = `absolute -bottom-7 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap bg-black/80 px-2 py-1 rounded flex flex-col items-center leading-none z-30 border border-[#333] pointer-events-none`;
+
+                if (isSubbed) {
+                    const inNameShort = subInName.split(' ').pop();
+                    const outNameShort = displayName.split(' ').pop();
+                    nameEl.innerHTML = `<span class="text-white mb-0.5">${inNameShort}</span><span class="text-gray-400 opacity-50 text-[7px]">${outNameShort}</span>`;
+                } else {
+                    const shortName = displayName.split(' ').pop();
+                    nameEl.innerHTML = `<span class="text-white">${shortName}</span>`;
+                }
+                el.appendChild(nameEl);
+
+                el.onclick = () => {
+                    document.getElementById('modal-player-name').innerText = p.player.name;
+                    document.getElementById('player-modal').classList.remove('hidden');
+                };
+
+                pitch.appendChild(el);
+            });
+        });
+    };
+
+    addPlayers(homeL, 'home');
+    addPlayers(awayL, 'away');
+};
+
+/**
+ * Renderiza las estadísticas del partido
+ */
+const renderStats = (m) => {
+    const c = document.getElementById('tab-stats');
+    if (!m.statistics || m.statistics.length === 0) {
+        c.innerHTML = 'No disponible';
+        return;
+    }
+
+    const statsTypes = [
+        { api: 'Ball Possession', es: 'Posesión' },
+        { api: 'Total Shots', es: 'Tiros Totales' },
+        { api: 'Shots on Goal', es: 'Tiros al Arco' },
+        { api: 'Corner Kicks', es: 'Tiros de Esquina' },
+        { api: 'Fouls', es: 'Faltas' },
+        { api: 'Yellow Cards', es: 'Tarjetas Amarillas' },
+        { api: 'Red Cards', es: 'Tarjetas Rojas' }
+    ];
+
+    const hStats = m.statistics[0].statistics;
+    const aStats = m.statistics[1].statistics;
+
+    c.innerHTML = statsTypes.map(stat => {
+        const hVal = hStats.find(s => s.type === stat.api)?.value || 0;
+        const aVal = aStats.find(s => s.type === stat.api)?.value || 0;
+        const hNum = parseInt(hVal);
+        const aNum = parseInt(aVal);
+        const total = hNum + aNum || 1;
+        const hPerc = (hNum / total) * 100;
+
+        return `
+            <div class="bg-[#111] p-4 border border-[#222]">
+                <div class="flex justify-between text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest">
+                    <span>${hVal}</span><span>${stat.es}</span><span>${aVal}</span>
+                </div>
+                <div class="h-1 bg-[#333] flex overflow-hidden">
+                    <div class="h-full bg-white" style="width: ${hPerc}%"></div>
+                    <div class="h-full bg-[#555]" style="width: ${100 - hPerc}%"></div>
+                </div>
+            </div>`;
+    }).join('');
+};
+
+/**
+ * Abre el detalle de un partido desde el router
+ * @param {Object|number} params - { id, tab } desde URL o ID directo
+ */
+export const openDetail = async (params) => {
+    let id, initialTab;
+
+    // Manejar tanto params object como ID directo
+    if (typeof params === 'object' && params !== null) {
+        id = params.id;
+        initialTab = params.tab || 'timeline';
+    } else {
+        id = params;
+        initialTab = 'timeline';
+    }
+
+    const matches = getMatches();
+
+    const m = matches.find(x => String(x.fixture.id) === String(id));
+
+    if (!m) {
+        console.warn('Match not found:', id);
+        alert('Partido no encontrado. Intenta recargar la página.');
+        return;
+    }
+
+    selectedMatch = m;
+
+    // Guardar posición actual del scroll
+    const scrollY = window.scrollY;
+
+    document.getElementById('view-match-detail').classList.remove('hidden');
+
+    // Fijar el body para prevenir scroll de fondo (funciona en móvil)
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+
+    document.getElementById('detail-content-wrapper').classList.add('hidden');
+    document.getElementById('detail-loader').classList.remove('hidden');
+
+    document.getElementById('detail-home-logo').src = m.teams.home.logo;
+    document.getElementById('detail-away-logo').src = m.teams.away.logo;
+    document.getElementById('detail-home-score').innerText = m.goals.home ?? 0;
+    document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
+    document.getElementById('detail-status').innerText = m.fixture.status.long;
+
+    // Red cards
+    let homeRedCardsHTML = '';
+    let awayRedCardsHTML = '';
+    if (m.events && m.events.length > 0) {
+        const redCards = m.events.filter(e => e.type === 'Card' && e.detail === 'Red Card');
+        const hReds = redCards.filter(e => e.team.id === m.teams.home.id).length;
+        const aReds = redCards.filter(e => e.team.id === m.teams.away.id).length;
+
+        if (hReds > 0) homeRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(hReds) + '</div>';
+        if (aReds > 0) awayRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(aReds) + '</div>';
+    }
+
+    document.getElementById('detail-home-name').innerHTML = m.teams.home.name + homeRedCardsHTML;
+    document.getElementById('detail-away-name').innerHTML = m.teams.away.name + awayRedCardsHTML;
+
+    // Goleadores
+    const hList = document.getElementById('detail-home-scorers-list');
+    const aList = document.getElementById('detail-away-scorers-list');
+    hList.innerHTML = '';
+    aList.innerHTML = '';
+
+    if (m.events && m.events.length > 0) {
+        const goals = m.events.filter(e => e.type === 'Goal');
+        const formatScorer = (ev) => `<div class="truncate leading-tight max-w-[120px] text-center">${ev.player.name} ${ev.time.elapsed}'</div>`;
+
+        const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(formatScorer);
+        if (hGoals.length > 0) hList.innerHTML = hGoals.join('');
+
+        const aGoals = goals.filter(e => e.team.id === m.teams.away.id).map(formatScorer);
+        if (aGoals.length > 0) aList.innerHTML = aGoals.join('');
+    }
+
+    try {
+        const data = await fetchAPI(`/fixtures?id=${id}`);
+        const fullMatch = data.response[0];
+
+        renderTimeline(fullMatch);
+        renderLineups(fullMatch);
+        renderStats(fullMatch);
+    } catch (e) {
+        console.error(e);
+    }
+
+    document.getElementById('detail-loader').classList.add('hidden');
+    document.getElementById('detail-content-wrapper').classList.remove('hidden');
+
+    // Determinar si el partido ha comenzado
+    const notStarted = ['NS', 'TBD', 'PST', 'CANC', 'ABD'].includes(m.fixture.status.short);
+
+    // Ocultar/mostrar tabs según el estado del partido
+    const timelineTab = document.querySelector('.tab-btn[data-target="tab-timeline"]');
+    const lineupsTab = document.querySelector('.tab-btn[data-target="tab-lineups"]');
+    const statsTab = document.querySelector('.tab-btn[data-target="tab-stats"]');
+    const forumTab = document.querySelector('.tab-btn[data-target="tab-forum"]');
+
+    if (notStarted) {
+        // Partido no iniciado: solo mostrar foro
+        if (timelineTab) timelineTab.style.display = 'none';
+        if (lineupsTab) lineupsTab.style.display = 'none';
+        if (statsTab) statsTab.style.display = 'none';
+        // Forzar ir al tab de foro si el partido no ha comenzado
+        if (forumTab) {
+            forumTab.click();
         }
+    } else {
+        // Partido iniciado o finalizado: mostrar todos los tabs
+        if (timelineTab) timelineTab.style.display = '';
+        if (lineupsTab) lineupsTab.style.display = '';
+        if (statsTab) statsTab.style.display = '';
 
-        /* Botón Flotante Fijo */
-        .btn-float-back {
-            position: fixed;
-            top: 16px;
-            left: 16px;
-            z-index: 100;
-            background: #000;
-            border: 1px solid #444;
-            color: white;
-            padding: 10px;
-            border-radius: 50%;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        // Switch to requested tab
+        const tabId = initialTab.startsWith('tab-') ? initialTab : `tab-${initialTab}`;
+        const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
+        if (btn) {
+            btn.click();
         }
-
-        .btn-float-back:hover {
-            background-color: #222;
-            border-color: #fff;
-        }
-
-        .font-tnum {
-            font-feature-settings: "tnum";
-            font-variant-numeric: tabular-nums;
-        }
-
-        /* Live Pulse Blanco */
-        .live-dot {
-            height: 6px;
-            width: 6px;
-            background-color: #fff;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 4px;
-            vertical-align: middle;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% {
-                opacity: 0.4;
-                transform: scale(0.8);
-            }
-
-            50% {
-                opacity: 1;
-                transform: scale(1.2);
-            }
-
-            100% {
-                opacity: 0.4;
-                transform: scale(0.8);
-            }
-        }
-
-        /* Override Select */
-        select {
-            background-color: #000;
-            color: white;
-            border-color: #333;
-        }
-
-        /* Botón Principal Blanco */
-        .btn-primary {
-            background-color: #ffffff;
-            color: #000000;
-            font-weight: bold;
-            border: 1px solid #fff;
-            transition: all 0.2s;
-        }
-
-        .btn-primary:hover {
-            background-color: #ccc;
-            border-color: #ccc;
-        }
-
-        /* Backdrop Móvil */
-        .mobile-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 40;
-            backdrop-filter: blur(4px);
-        }
-    </style>
-</head>
-
-<body class="h-screen flex flex-col overflow-hidden">
-
-    <!-- HEADER SIMÉTRICO -->
-    <header
-        class="h-12 lg:h-16 border-b border-[#222] bg-black flex items-center justify-between px-4 z-40 shrink-0 relative">
-        <!-- Izquierda: Logo -->
-        <div class="flex items-center cursor-pointer" onclick="app.navigateToMatches()">
-            <img src="https://i.postimg.cc/9FD6NhN2/REAL-FUTBOL-LARGO.png" alt="Real Futbol Logo"
-                class="h-8 lg:h-12 object-contain">
-        </div>
-
-        <!-- Derecha: Auth + Menu -->
-        <div class="flex items-center justify-end gap-3">
-            <!-- Login Icon + Dropdown (visible cuando NO está autenticado) -->
-            <div id="auth-login-container" class="hidden relative">
-                <button id="auth-login-icon-btn"
-                    onclick="document.getElementById('login-dropdown').classList.toggle('hidden')"
-                    class="p-2 text-white hover:bg-[#222] rounded-full transition-all" title="Iniciar sesión">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                </button>
-                <!-- Dropdown Menu -->
-                <div id="login-dropdown"
-                    class="hidden absolute right-0 top-12 bg-[#111] border border-[#333] rounded-lg shadow-2xl z-50 min-w-[200px]">
-                    <button
-                        onclick="app.loginWithGoogle(); document.getElementById('login-dropdown').classList.add('hidden')"
-                        class="w-full px-4 py-3 text-left text-sm text-white hover:bg-[#222] transition-all flex items-center gap-3 rounded-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                fill="#4285F4" />
-                            <path
-                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                fill="#34A853" />
-                            <path
-                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                                fill="#FBBC05" />
-                            <path
-                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                                fill="#EA4335" />
-                        </svg>
-                        <span class="font-bold">Iniciar con Google</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Suggestion Icon (visible para todos los usuarios autenticados) -->
-            <button id="suggestion-btn" onclick="app.openSuggestionModal()"
-                class="hidden p-1.5 lg:p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded-full transition-all"
-                title="Enviar sugerencia">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 lg:w-7 lg:h-7" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-            </button>
-
-            <!-- User Icon (visible cuando está autenticado) -->
-            <div id="auth-user-info" class="hidden">
-                <button onclick="app.showProfileModal()" id="auth-user-avatar"
-                    class="flex-shrink-0 hover:opacity-80 transition-opacity" title="Ver perfil"></button>
-            </div>
-
-            <!-- Botón de Moderación (solo visible para developer) -->
-            <button id="moderation-btn" onclick="app.openModerationPanel()"
-                class="hidden px-2 lg:px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-black text-xs font-black uppercase tracking-wider rounded hover:from-yellow-400 hover:to-orange-400 transition-all flex items-center gap-1.5 shadow-lg"
-                title="Panel de Moderación">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span class="hidden lg:inline">DESARROLLADOR</span>
-            </button>
-
-            <!-- Botón de Moderador (solo visible para moderadores, visual only) -->
-            <button id="moderator-badge-btn"
-                class="hidden px-2 lg:px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-black uppercase tracking-wider rounded cursor-default flex items-center gap-1.5 shadow-lg"
-                title="Eres Moderador">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span class="inline">MOD</span>
-            </button>
-
-            <!-- Menu Toggle -->
-
-        </div>
-    </header>
-
-    <div class="flex flex-1 overflow-hidden relative">
-
-        <div id="mobile-backdrop" class="mobile-backdrop hidden lg:hidden"></div>
-
-        <!-- Sidebar B&W -->
-        <aside id="sidebar"
-            class="fixed inset-y-0 left-0 w-full lg:w-72 bg-black border-r border-[#222] flex flex-col transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 z-40 h-[calc(100%-48px)] lg:h-full top-12 lg:top-0">
-
-            <div class="overflow-y-auto flex-1 p-3 space-y-1 pb-24">
-                <div class="px-3 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Competiciones</div>
-
-                <!-- Botones de Ligas (IDs Correctos API-Sports) -->
-                <button onclick="app.navigate('/liga/128/liga-profesional'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/128.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Liga Argentina</span>
-                </button>
-
-                <button onclick="app.navigate('/liga/1032/copa-de-la-liga'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/1032.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Copa de la Liga</span>
-                </button>
-
-                <button onclick="app.navigate('/liga/129/primera-nacional'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/129.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Primera Nacional</span>
-                </button>
-
-                <button onclick="app.navigate('/liga/71/brasileirao'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/71.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Brasileirão A</span>
-                </button>
-
-                <div class="my-2 border-t border-[#222]"></div>
-
-                <button onclick="app.navigate('/liga/39/premier-league'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/39.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Premier League</span>
-                </button>
-
-                <button onclick="app.navigate('/liga/140/la-liga'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/140.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">La Liga</span>
-                </button>
-
-                <button onclick="app.navigate('/liga/78/bundesliga'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/78.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Bundesliga</span>
-                </button>
-
-                <div class="mt-8 px-2 space-y-3 hidden lg:block">
-                    <button onclick="app.navigateToForum()"
-                        class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                        Foro Global
-                    </button>
-                    <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
-                        class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg border-t-0 bg-yellow-500 border-yellow-500 text-black hover:bg-yellow-400 hover:border-yellow-400 font-bold flex items-center justify-center gap-2 mt-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
-                            <path d="M12 18V6"></path>
-                        </svg>
-                        Donar
-                    </button>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 flex flex-col relative w-full lg:w-auto overflow-hidden bg-black">
-
-            <!-- Date Navigation -->
-            <div id="date-nav" class="border-b border-[#222] p-3 z-10 bg-black/95 backdrop-blur shrink-0">
-                <div class="flex items-center justify-center gap-6 mb-3 max-w-lg mx-auto">
-                    <button onclick="app.changeDate(-1)"
-                        class="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded transition-colors"><svg
-                            xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                        </svg></button>
-                    <div class="text-center cursor-pointer" onclick="app.resetDate()">
-                        <h2 id="current-month"
-                            class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">MES</h2>
-                        <div id="current-day-text" class="text-lg font-bold text-white leading-none font-sport">HOY
-                        </div>
-                    </div>
-                    <button onclick="app.changeDate(1)"
-                        class="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded transition-colors"><svg
-                            xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg></button>
-                </div>
-                <div id="calendar-days" class="flex justify-between max-w-lg mx-auto gap-1"></div>
-
-                <!-- Live Toggle (Desktop only) -->
-                <div class="hidden lg:flex items-center justify-center gap-3 mt-4 pt-3 border-t border-[#222]">
-                    <span class="text-[10px] font-bold text-white uppercase tracking-widest">EN VIVO</span>
-                    <div class="relative inline-block w-10 h-5 align-middle select-none">
-                        <input type="checkbox" id="live-toggle" onchange="app.toggleLiveFilter()"
-                            class="toggle-checkbox absolute block w-3 h-3 mt-1 ml-1 rounded-full bg-white border-none appearance-none cursor-pointer transition-all duration-300 left-0" />
-                        <label for="live-toggle"
-                            class="toggle-label block overflow-hidden h-5 rounded-full bg-[#222] cursor-pointer border border-[#444]"></label>
-                    </div>
-                    <span id="live-count" class="text-[9px] font-mono text-red-500 font-bold hidden">(0)</span>
-                </div>
-            </div>
-
-            <div id="main-content"
-                class="flex-1 overflow-y-auto overflow-x-hidden p-4 relative scroll-smooth pb-20 lg:pb-4"
-                style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
-
-                <!-- Match List -->
-                <div id="view-match-list" class="max-w-3xl mx-auto space-y-6 animate-fade-in pb-24"></div>
-
-                <!-- Standings View -->
-                <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-24">
-                    <div
-                        class="flex flex-col gap-4 mb-6 sticky top-0 z-20 bg-black/95 backdrop-blur py-2 border-b border-[#222]">
-                        <div class="flex items-center justify-between px-1">
-                            <div class="flex items-center gap-3">
-                                <button onclick="app.navigateToMatches()" class="lg:hidden p-1 text-white"><svg
-                                        xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                    </svg></button>
-                                <h2 id="standings-title"
-                                    class="text-xl font-bold text-white uppercase tracking-wider font-sport">Tabla</h2>
-                            </div>
-                            <select id="season-selector" onchange="app.changeSeason(this.value)"
-                                class="bg-[#111] text-white text-sm border border-[#333] p-1 px-2 rounded focus:outline-none font-mono">
-                                <option value="2025">2025</option>
-                                <option value="2024" selected>2024</option>
-                                <option value="2023">2023</option>
-                            </select>
-                        </div>
-                        <!-- Tabs Zonas -->
-                        <div id="standings-tabs" class="flex overflow-x-auto gap-2 px-1 no-scrollbar hidden"></div>
-                    </div>
-
-                    <div id="standings-container" class="space-y-6"></div>
-                </div>
-
-                <!-- Forum View -->
-                <div id="view-forum" class="hidden max-w-4xl mx-auto animate-fade-in pb-24 h-full flex flex-col">
-                    <div
-                        class="flex items-center gap-3 mb-6 sticky top-0 z-20 bg-black/95 backdrop-blur py-2 border-b border-[#222]">
-                        <button onclick="app.navigateToMatches()" class="lg:hidden p-1 text-white"><svg
-                                xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg></button>
-                        <h2 class="text-xl font-bold text-white uppercase tracking-wider font-sport">Foro Global</h2>
-                    </div>
-
-                    <div id="forum-messages" class="flex-1 overflow-y-auto space-y-4 pr-1 mb-4 pb-8"
-                        style="min-height: 400px; max-height: calc(100vh - 400px);">
-                        <!-- Messages inserted here -->
-                        <div class="text-center text-gray-600 py-10 text-xs uppercase tracking-widest">Cargando
-                            mensajes...</div>
-                    </div>
-
-                    <!-- Login required message (when NOT authenticated) -->
-                    <div id="forum-login-required"
-                        class="bg-[#111] p-6 border border-[#222] rounded-lg sticky bottom-0 z-10 w-full hidden">
-                        <div class="flex flex-col items-center gap-3">
-                            <p class="text-gray-400 text-xs text-center">Debes iniciar sesión para participar en el foro
-                            </p>
-                            <button onclick="app.loginWithGoogle()"
-                                class="px-4 py-2.5 bg-white text-black text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
-                                    fill="currentColor">
-                                    <path
-                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                        fill="#4285F4" />
-                                    <path
-                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                        fill="#34A853" />
-                                    <path
-                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                                        fill="#FBBC05" />
-                                    <path
-                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                                        fill="#EA4335" />
-                                </svg>
-                                Iniciar Sesión para Escribir
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Forum input (when authenticated) -->
-                    <div id="forum-input-container"
-                        class="bg-[#111] p-4 border border-[#222] rounded-lg sticky bottom-12 lg:bottom-0 z-10 w-full hidden">
-                        <div class="flex gap-2">
-                            <input type="text" id="forum-input" placeholder="Escribe un mensaje..."
-                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-white">
-                            <button onclick="app.sendMessage('forum-username', 'forum-input')"
-                                class="btn-primary px-6 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-gray-200 transition-colors">
-                                Enviar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Match Detail Overlay -->
-                <div id="view-match-detail" class="hidden fixed inset-0 bg-black z-[60] overflow-y-auto animate-fade-in"
-                    style="touch-action: pan-y; -webkit-overflow-scrolling: touch;">
-                    <div class="max-w-4xl mx-auto min-h-full bg-[#050505] relative">
-
-                        <!-- Botón Volver Flotante -->
-                        <button onclick="app.closeDetail()" class="btn-float-back hover:bg-[#222] transition-all">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                        </button>
-
-                        <div id="detail-loader" class="hidden py-40 text-center">
-                            <div class="loader"></div>
-                        </div>
-
-                        <div id="detail-content-wrapper" class="pt-16 pb-20">
-                            <!-- Scoreboard -->
-                            <div class="relative p-6 text-center border-b border-[#222] bg-[#0a0a0a]">
-                                <div class="flex justify-between items-center max-w-md mx-auto">
-                                    <div class="flex-1 flex flex-col items-center min-w-0">
-                                        <img id="detail-home-logo" src="" class="w-16 h-16 object-contain mb-3">
-                                        <h3 id="detail-home-name"
-                                            class="font-bold text-sm leading-tight text-white uppercase text-center w-full truncate">
-                                            Home</h3>
-                                        <div id="detail-home-scorers-list"
-                                            class="mt-2 text-xs text-gray-500 font-mono space-y-0.5 flex flex-col items-center w-full">
-                                        </div>
-                                    </div>
-                                    <div class="px-4 flex flex-col items-center">
-                                        <div
-                                            class="text-4xl font-black text-white tracking-tighter flex items-center gap-2 score-font">
-                                            <span id="detail-home-score">-</span>
-                                            <span class="text-gray-600 text-2xl">:</span>
-                                            <span id="detail-away-score">-</span>
-                                        </div>
-                                        <div id="detail-status"
-                                            class="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                            VS</div>
-                                    </div>
-                                    <div class="flex-1 flex flex-col items-center min-w-0">
-                                        <img id="detail-away-logo" src="" class="w-16 h-16 object-contain mb-3">
-                                        <h3 id="detail-away-name"
-                                            class="font-bold text-sm leading-tight text-white uppercase text-center w-full truncate">
-                                            Away</h3>
-                                        <div id="detail-away-scorers-list"
-                                            class="mt-2 text-xs text-gray-500 font-mono space-y-0.5 flex flex-col items-center w-full">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Tabs -->
-                            <div
-                                class="flex border-b border-[#222] sticky top-[57px] bg-black/95 backdrop-blur z-30 overflow-x-auto no-scrollbar">
-                                <button
-                                    class="flex-1 py-3 px-4 text-xs font-bold text-white border-b-2 border-white tab-btn whitespace-nowrap uppercase"
-                                    data-target="tab-timeline"
-                                    onclick="app.switchTab(this, 'tab-timeline')">Cronología</button>
-                                <button
-                                    class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
-                                    data-target="tab-lineups"
-                                    onclick="app.switchTab(this, 'tab-lineups')">Alineaciones</button>
-                                <button
-                                    class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
-                                    data-target="tab-stats"
-                                    onclick="app.switchTab(this, 'tab-stats')">Estadísticas</button>
-                                <button
-                                    class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
-                                    data-target="tab-forum" onclick="app.switchTab(this, 'tab-forum')">Foro</button>
-                            </div>
-
-                            <div class="p-4 lg:p-8 space-y-6 min-h-[50vh]">
-                                <div id="tab-timeline" class="tab-content block space-y-4 max-w-2xl mx-auto"></div>
-
-                                <div id="tab-forum"
-                                    class="tab-content hidden h-[400px] flex flex-col max-w-2xl mx-auto">
-                                    <div id="match-forum-messages"
-                                        class="flex-1 overflow-y-auto space-y-3 pr-1 mb-4 pb-8 border border-[#222] rounded p-3 bg-[#0a0a0a]">
-                                        <div class="text-center text-gray-600 py-10 text-xs uppercase tracking-widest">
-                                            Cargando charla del partido...</div>
-                                    </div>
-                                    <!-- Login required (when NOT authenticated) -->
-                                    <div id="match-forum-login-required" class="hidden">
-                                        <div
-                                            class="flex flex-col items-center gap-3 p-4 bg-[#111] border border-[#222] rounded">
-                                            <p class="text-gray-400 text-xs text-center">Inicia sesión para comentar en
-                                                este partido</p>
-                                            <button onclick="app.loginWithGoogle()"
-                                                class="px-4 py-2 bg-white text-black text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all flex items-center gap-2">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4"
-                                                    viewBox="0 0 24 24" fill="currentColor">
-                                                    <path
-                                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                                        fill="#4285F4" />
-                                                    <path
-                                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                                        fill="#34A853" />
-                                                    <path
-                                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                                                        fill="#FBBC05" />
-                                                    <path
-                                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                                                        fill="#EA4335" />
-                                                </svg>
-                                                Iniciar Sesión
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Match forum input (when authenticated) -->
-                                    <div id="match-forum-input-container" class="flex gap-2 hidden">
-                                        <input type="text" id="match-forum-input"
-                                            placeholder="Comenta sobre el partido..."
-                                            class="flex-1 bg-[#111] border border-[#333] text-white text-sm p-2 rounded focus:outline-none focus:border-white">
-                                        <button onclick="app.sendMessage('match-forum-username', 'match-forum-input')"
-                                            class="btn-primary px-4 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-gray-200 transition-colors">
-                                            Enviar
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div id="tab-lineups" class="tab-content hidden max-w-2xl mx-auto">
-                                    <div class="football-pitch mx-auto" id="football-pitch">
-                                        <div class="center-line"></div>
-                                        <div class="center-circle"></div>
-                                        <div class="penalty-box home-box"></div>
-                                        <div class="penalty-box away-box"></div>
-                                        <!-- Corner Arcs -->
-                                        <div class="corner-arc corner-top-left"></div>
-                                        <div class="corner-arc corner-top-right"></div>
-                                        <div class="corner-arc corner-bottom-left"></div>
-                                        <div class="corner-arc corner-bottom-right"></div>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-4 mt-6">
-                                        <div class="bg-[#111] p-4 rounded border border-[#222]">
-                                            <h4
-                                                class="text-white font-bold border-b border-[#333] pb-2 mb-2 text-xs uppercase tracking-wider">
-                                                Local</h4>
-                                            <div id="lineup-home-list"
-                                                class="space-y-2 text-xs text-gray-400 font-mono"></div>
-                                        </div>
-                                        <div class="bg-[#111] p-4 rounded border border-[#222]">
-                                            <h4
-                                                class="text-white font-bold border-b border-[#333] pb-2 mb-2 text-right text-xs uppercase tracking-wider">
-                                                Visitante</h4>
-                                            <div id="lineup-away-list"
-                                                class="space-y-2 text-xs text-gray-400 text-right font-mono"></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div id="tab-stats" class="tab-content hidden space-y-4 max-w-xl mx-auto"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </main>
-    </div>
-
-    <!-- Player Modal -->
-    <div id="player-modal"
-        class="fixed inset-0 bg-black/90 z-[70] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#111] border border-[#333] rounded-none w-full max-w-sm overflow-hidden shadow-2xl">
-            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
-                <h3 id="modal-player-name" class="font-bold text-white text-lg font-mono uppercase">Jugador</h3>
-                <button onclick="document.getElementById('player-modal').classList.add('hidden')"
-                    class="text-white hover:text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6"
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
-                    </svg></button>
-            </div>
-            <div class="p-8 text-center">
-                <div
-                    class="w-16 h-16 bg-white rounded-full mx-auto mb-4 flex items-center justify-center text-black font-bold text-2xl">
-                    #</div>
-                <p class="text-gray-400 text-sm uppercase tracking-wider">Detalles no disponibles</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bottom Navigation (Mobile Only) -->
-    <nav
-        class="fixed bottom-0 left-0 w-full bg-black border-t border-[#222] z-50 lg:hidden flex justify-around items-center h-16 pb-safe">
-        <button id="btn-nav-results" onclick="app.navigateToMatches()"
-            class="flex flex-col items-center justify-center w-full h-full text-white transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-1" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <span class="text-[9px] font-bold uppercase tracking-widest">Resultados</span>
-        </button>
-        <button id="btn-nav-live" onclick="app.toggleLiveFromMobile()"
-            class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-white active:text-white transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-1" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
-            </svg>
-            <span class="text-[9px] font-bold uppercase tracking-widest">En Vivo</span>
-        </button>
-        <button id="btn-nav-leagues" onclick="app.openMobileTab('leagues')"
-            class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-white active:text-white transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-1" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-            <span class="text-[9px] font-bold uppercase tracking-widest">Ligas</span>
-        </button>
-        <button id="btn-nav-forum" onclick="app.navigateToForum()"
-            class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-white active:text-white transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-1" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            <span class="text-[9px] font-bold uppercase tracking-widest">Foro</span>
-        </button>
-        <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
-            class="flex flex-col items-center justify-center w-full h-full text-yellow-500 hover:text-yellow-400 active:text-yellow-600 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-1" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="text-[9px] font-bold uppercase tracking-widest">Donar</span>
-        </button>
-    </nav>
-
-    <!-- Logout Confirmation Modal -->
-    <div id="logout-modal"
-        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
-            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
-                <h3 class="font-bold text-white text-lg font-sport uppercase">Cerrar Sesión</h3>
-            </div>
-            <div class="p-6 space-y-4">
-                <p class="text-gray-300 text-sm text-center leading-relaxed">¿Estás seguro de que quieres cerrar sesión?
-                </p>
-
-                <div class="flex gap-3">
-                    <button onclick="app.cancelLogout()"
-                        class="flex-1 bg-[#222] text-white py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-[#333] transition-colors border border-[#444] rounded">
-                        Cancelar
-                    </button>
-                    <button onclick="app.confirmLogout()"
-                        class="flex-1 bg-white text-black py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors rounded">
-                        Cerrar Sesión
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Username Modal -->
-    <div id="username-modal"
-        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
-            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
-                <h3 class="font-bold text-white text-lg font-sport uppercase">Establece tu Usuario</h3>
-            </div>
-            <div class="p-6 space-y-4">
-                <p class="text-gray-400 text-xs text-center mb-4 leading-relaxed">Este será tu nombre de usuario
-                    permanente vinculado a tu cuenta de Google.</p>
-
-                <div>
-                    <input type="text" id="username-input" placeholder="Tu nombre de usuario"
-                        class="w-full bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-white"
-                        maxlength="20">
-                    <div id="username-error" class="hidden text-red-500 text-xs mt-2 font-medium"></div>
-                </div>
-
-                <button onclick="app.saveUsername()"
-                    class="w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors">
-                    Guardar
-                </button>
-
-                <p class="text-gray-600 text-[10px] text-center">Podrás usar este nombre en todos los foros</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Profile Modal -->
-    <div id="profile-modal"
-        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
-            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
-                <h3 class="font-bold text-white text-lg font-sport uppercase">Mi Perfil</h3>
-                <button onclick="app.closeProfileModal()" class="text-white hover:text-gray-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <div class="p-6 space-y-6">
-                <!-- User Avatar + Name -->
-                <div class="flex flex-col items-center">
-                    <div id="profile-avatar" class="w-20 h-20 mb-3"></div>
-                    <h4 id="profile-username" class="text-white font-bold text-xl font-mono"></h4>
-                </div>
-
-                <!-- Stats Grid -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-[#0a0a0a] p-4 rounded border border-[#222] text-center">
-                        <div id="profile-comment-count" class="text-3xl font-black text-white font-mono mb-1">0</div>
-                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Comentarios</div>
-                    </div>
-                    <div class="bg-[#0a0a0a] p-4 rounded border border-[#222] text-center">
-                        <div id="profile-ranking" class="text-3xl font-black text-white font-mono mb-1">#0</div>
-                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Ranking</div>
-                    </div>
-                </div>
-
-                <!-- Logout Button -->
-                <button onclick="app.logout(); app.closeProfileModal()"
-                    class="w-full bg-[#222] text-white py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-[#333] transition-colors border border-[#444] rounded flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Cerrar Sesión
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Suggestion Modal -->
-    <div id="suggestion-modal"
-        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-md overflow-hidden shadow-2xl">
-            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
-                <h3 class="font-bold text-white text-lg font-sport uppercase flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                    Enviar Sugerencia
-                </h3>
-                <button onclick="app.closeSuggestionModal()" class="text-white hover:text-gray-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <div class="p-6 space-y-4">
-                <p class="text-gray-400 text-sm leading-relaxed">
-                    ¿Tienes alguna idea para mejorar RealFutbol? ¡Nos encantaría escucharla!
-                </p>
-
-                <div>
-                    <label class="text-white text-sm font-bold mb-2 block">Tu sugerencia</label>
-                    <textarea id="suggestion-input" placeholder="Escribe tu sugerencia aquí..." rows="6"
-                        class="w-full bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-white resize-none"
-                        maxlength="500"></textarea>
-                    <div class="flex justify-between items-center mt-2">
-                        <span id="suggestion-char-count" class="text-xs text-gray-600">0 / 500</span>
-                        <div id="suggestion-error" class="hidden text-red-500 text-xs font-medium"></div>
-                    </div>
-                </div>
-
-                <button onclick="app.sendSuggestion()"
-                    class="w-full bg-white text-black py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors rounded flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                    Enviar Sugerencia
-                </button>
-
-                <p class="text-gray-600 text-[10px] text-center">
-                    Tu sugerencia será revisada por el equipo de desarrollo
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Donation Modal -->
-    <div id="donation-modal"
-        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
-            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
-                <h3 class="font-bold text-white text-lg font-sport uppercase text-yellow-500">Apoyar el proyecto</h3>
-                <button onclick="document.getElementById('donation-modal').classList.add('hidden')"
-                    class="text-white hover:text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6"
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
-                    </svg></button>
-            </div>
-            <div class="p-6 space-y-4">
-                <p class="text-gray-400 text-xs text-center mb-4 leading-relaxed">Tu aporte nos ayuda a mantener los
-                    servidores y mejorar la aplicación cada día.</p>
-
-                <a href="https://mpago.la/2K2nHrX" target="_blank"
-                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
-                    Donar $1.000
-                </a>
-                <a href="https://mpago.la/2K2nHrX" target="_blank"
-                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
-                    Donar $2.500
-                </a>
-                <a href="https://mpago.la/31xAk5T" target="_blank"
-                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
-                    Donar $5.000
-                </a>
-                <a href="https://mpago.la/28LhXrY" target="_blank"
-                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
-                    Donar $10.000
-                </a>
-
-                <div class="pt-4 flex justify-center">
-                    <span class="text-[10px] text-gray-600 font-mono"></span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Moderation Panel Modal -->
-    <div id="moderation-modal"
-        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-md overflow-hidden shadow-2xl">
-            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 p-5 flex justify-between items-center">
-                <h3 class="font-bold text-black text-lg font-sport uppercase flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                    Panel de Moderación
-                </h3>
-                <button onclick="app.closeModerationPanel()" class="text-black hover:text-gray-700 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <div class="p-6 space-y-6">
-                <!-- Agregar Moderador -->
-                <div class="space-y-3">
-                    <h4 class="text-white font-bold text-sm uppercase tracking-wider">Agregar Moderador</h4>
-                    <p class="text-gray-400 text-xs leading-relaxed">Ingresa el UID del usuario que quieres hacer
-                        moderador. Los moderadores pueden eliminar mensajes en los foros.</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="add-mod-input" placeholder="UID del usuario"
-                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-orange-500 font-mono">
-                        <button onclick="app.handleAddModeratorForm()"
-                            class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 rounded text-xs uppercase font-bold tracking-widest hover:from-green-400 hover:to-emerald-500 transition-colors shadow-lg">
-                            Agregar
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Lista de Moderadores -->
-                <div class="space-y-3">
-                    <h4 class="text-white font-bold text-sm uppercase tracking-wider border-t border-[#333] pt-4">
-                        Moderadores Actuales</h4>
-                    <div id="moderators-list" class="space-y-2 max-h-64 overflow-y-auto">
-                        <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
-                    </div>
-                </div>
-
-                <div class="border-t border-[#333] pt-4">
-                    <p class="text-gray-600 text-[10px] text-center">Los moderadores pueden eliminar mensajes pero no
-                        pueden agregar o quitar otros moderadores.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script type="module" src="./src/main.js"></script>
-</body>
-
-</html>
+    }
+};
+
+/**
+ * Wrapper para compatibilidad - abre detalle con tab específico
+ */
+export const openMatchDetailWithTab = (params) => {
+    openDetail(params);
+};
+
+/**
+ * Cierra la vista de detalle
+ */
+export const closeDetail = () => {
+    document.getElementById('view-match-detail').classList.add('hidden');
+
+    // Restaurar posición del body y scroll
+    const scrollY = document.body.style.top;
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+
+    // Restaurar scroll a la posición original
+    if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+    }
+
+    // Navegar de vuelta a matches
+    if (window.app && window.app.navigate) {
+        window.app.navigate('/');
+    }
+};
+
+export const getSelectedMatch = () => selectedMatch;
