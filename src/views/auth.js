@@ -470,10 +470,21 @@ export const whenRoleReady = (callback) => {
             if (callback) callback();
             resolve();
         } else {
+            // Agregar callback a la cola
             roleReadyCallbacks.push(() => {
                 if (callback) callback();
                 resolve();
             });
+
+            // Timeout de seguridad: si después de 3 segundos no se resolvió, resolver de todos modos
+            setTimeout(() => {
+                if (!isRoleLoaded) {
+                    console.warn('whenRoleReady: timeout, resolving anyway');
+                    isRoleLoaded = true;
+                    roleReadyCallbacks.forEach(cb => cb());
+                    roleReadyCallbacks = [];
+                }
+            }, 3000);
         }
     });
 };
