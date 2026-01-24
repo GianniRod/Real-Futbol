@@ -342,8 +342,16 @@ export const openDetail = async (params) => {
 
     selectedMatch = m;
 
+    // Guardar posición actual del scroll
+    const scrollY = window.scrollY;
+
     document.getElementById('view-match-detail').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+
+    // Fijar el body para prevenir scroll de fondo (funciona en móvil)
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+
     document.getElementById('detail-content-wrapper').classList.add('hidden');
     document.getElementById('detail-loader').classList.remove('hidden');
 
@@ -444,7 +452,17 @@ export const openMatchDetailWithTab = (params) => {
  */
 export const closeDetail = () => {
     document.getElementById('view-match-detail').classList.add('hidden');
-    document.body.style.overflow = '';
+
+    // Restaurar posición del body y scroll
+    const scrollY = document.body.style.top;
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+
+    // Restaurar scroll a la posición original
+    if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+    }
 
     // Navegar de vuelta a matches
     if (window.app && window.app.navigate) {
