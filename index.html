@@ -1101,6 +1101,33 @@
                     </div>
                 </div>
 
+                <!-- Link Phone Section (only for Google users without linked phone) -->
+                <div id="link-phone-section" class="hidden">
+                    <button onclick="app.openPhoneLinkingModal()"
+                        class="w-full bg-[#0a0a0a] border border-[#333] text-white py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-[#111] transition-colors rounded flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        Vincular Número de Teléfono
+                    </button>
+                </div>
+
+                <!-- Linked Phone Section (shown when phone is linked) -->
+                <div id="linked-phone-section" class="hidden">
+                    <div class="bg-[#0a0a0a] border border-green-500/30 p-3 rounded flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-500" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span id="linked-phone-number" class="text-green-500 text-sm font-mono"></span>
+                        </div>
+                        <span class="text-[10px] text-gray-500 uppercase">Vinculado</span>
+                    </div>
+                </div>
+
                 <!-- Logout Button -->
                 <button onclick="app.logout(); app.closeProfileModal()"
                     class="w-full bg-[#222] text-white py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-[#333] transition-colors border border-[#444] rounded flex items-center justify-center gap-2">
@@ -1304,6 +1331,99 @@
                     <p class="text-gray-600 text-[10px] text-center">Los moderadores pueden eliminar mensajes pero no
                         pueden agregar o quitar otros moderadores.</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phone Linking Modal -->
+    <div id="phone-linking-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Vincular Teléfono</h3>
+                <button onclick="app.closePhoneLinkingModal()" class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-sm leading-relaxed text-center">
+                    Vincula tu número de teléfono para mayor seguridad. Recibirás un código de verificación por SMS.
+                </p>
+
+                <div class="space-y-3">
+                    <label class="text-gray-400 text-xs uppercase tracking-wider">Número de teléfono</label>
+                    <div class="flex gap-2">
+                        <select id="link-phone-country-code"
+                            class="bg-[#0a0a0a] border border-[#333] text-white p-3 rounded focus:outline-none focus:border-white w-24">
+                            <option value="+54">🇦🇷 +54</option>
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+52">🇲🇽 +52</option>
+                            <option value="+34">🇪🇸 +34</option>
+                            <option value="+55">🇧🇷 +55</option>
+                        </select>
+                        <input type="tel" id="link-phone-number-input" placeholder=""
+                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white p-3 rounded focus:outline-none focus:border-white">
+                    </div>
+                </div>
+
+                <div id="link-phone-error" class="hidden text-red-500 text-xs text-center"></div>
+
+                <button onclick="app.handlePhoneLinking()"
+                    class="w-full px-4 py-3 bg-white text-black text-sm font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all">
+                    Enviar Código
+                </button>
+
+                <!-- reCAPTCHA container for linking -->
+                <div id="link-recaptcha-container"></div>
+
+                <p class="text-gray-600 text-[10px] text-center">
+                    Se enviarán costos estándar de mensaje
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phone Linking Verification Modal -->
+    <div id="phone-linking-verification-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Verificar Código</h3>
+                <button onclick="app.closePhoneLinkingVerification()" class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-sm leading-relaxed text-center">
+                    Ingresa el código de 6 dígitos que enviamos a <span id="link-phone-display"
+                        class="text-white font-bold"></span>
+                </p>
+
+                <div class="space-y-3">
+                    <label class="text-gray-400 text-xs uppercase tracking-wider">Código de verificación</label>
+                    <input type="text" id="link-sms-code-input" placeholder="" maxlength="6"
+                        class="w-full bg-[#0a0a0a] border border-[#333] text-white text-center text-2xl tracking-widest p-3 rounded focus:outline-none focus:border-white font-mono">
+                </div>
+
+                <div id="link-verification-error" class="hidden text-red-500 text-xs text-center"></div>
+
+                <button onclick="app.handlePhoneLinkingVerification()"
+                    class="w-full px-4 py-3 bg-white text-black text-sm font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all">
+                    Vincular Teléfono
+                </button>
+
+                <button onclick="app.closePhoneLinkingVerification(); app.openPhoneLinkingModal();"
+                    class="w-full text-gray-500 hover:text-white text-xs uppercase tracking-wider transition-colors">
+                    ← Cambiar número
+                </button>
             </div>
         </div>
     </div>
