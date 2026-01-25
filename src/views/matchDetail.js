@@ -342,24 +342,19 @@ export const openDetail = async (params) => {
 
     selectedMatch = m;
 
-    // Guardar posición actual del scroll
-    const scrollY = window.scrollY;
-
     const detailView = document.getElementById('view-match-detail');
 
-    // CRÍTICO: Resetear scroll ANTES de mostrar el modal
-    detailView.scrollTop = 0;
+    // Resetear scroll del modal completamente antes de mostrarlo
+    detailView.scrollTo(0, 0);
 
+    // Mostrar el modal
     detailView.classList.remove('hidden');
 
-    // Resetear scroll INMEDIATAMENTE después de mostrar
-    detailView.scrollTop = 0;
-    window.scrollTo(0, 0);
+    // Prevenir scroll del fondo (método simple que funciona)
+    document.body.style.overflow = 'hidden';
 
-    // Fijar el body para prevenir scroll de fondo (funciona en móvil)
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = '100%';
+    // Asegurar que el modal inicia desde arriba
+    detailView.scrollTo(0, 0);
 
     document.getElementById('detail-content-wrapper').classList.add('hidden');
     document.getElementById('detail-loader').classList.remove('hidden');
@@ -416,30 +411,10 @@ export const openDetail = async (params) => {
     document.getElementById('detail-loader').classList.add('hidden');
     document.getElementById('detail-content-wrapper').classList.remove('hidden');
 
-    // Forzar scroll al inicio de manera agresiva para móvil
-    // Usar múltiples métodos para máxima compatibilidad
-
-    // Método 1: Scroll del modal al inicio
-    detailView.scrollTop = 0;
-
-    // Método 2: Scroll del window también
-    window.scrollTo(0, 0);
-
-    // Método 3: Forzar scroll después del siguiente frame
-    requestAnimationFrame(() => {
-        detailView.scrollTop = 0;
-        window.scrollTo(0, 0);
-
-        // Método 4: Hacer que el scoreboard sea visible usando scrollIntoView
-        setTimeout(() => {
-            const scoreboard = document.querySelector('#detail-content-wrapper > div:first-child');
-            if (scoreboard) {
-                scoreboard.scrollIntoView({ behavior: 'instant', block: 'start' });
-            }
-            // Backup final
-            detailView.scrollTop = 0;
-        }, 100);
-    });
+    // Asegurar que después de cargar, el scroll está arriba
+    setTimeout(() => {
+        detailView.scrollTo(0, 0);
+    }, 100);
 
     // Determinar si el partido ha comenzado
     const notStarted = ['NS', 'TBD', 'PST', 'CANC', 'ABD'].includes(m.fixture.status.short);
@@ -482,21 +457,14 @@ export const openMatchDetailWithTab = (params) => {
 };
 
 /**
- * Cierra la vista de detalle
- */
+* Cierra la vista de detalle
+*/
 export const closeDetail = () => {
-    document.getElementById('view-match-detail').classList.add('hidden');
+    const detailView = document.getElementById('view-match-detail');
+    detailView.classList.add('hidden');
 
-    // Restaurar posición del body y scroll
-    const scrollY = document.body.style.top;
-    document.body.style.position = '';
-    document.body.style.top = '';
-    document.body.style.width = '';
-
-    // Restaurar scroll a la posición original
-    if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
-    }
+    // Restaurar scroll del body
+    document.body.style.overflow = '';
 
     // Navegar de vuelta a matches
     if (window.app && window.app.navigate) {
