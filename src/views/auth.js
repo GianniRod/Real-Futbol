@@ -558,7 +558,7 @@ export const initRecaptcha = (containerId = 'recaptcha-container') => {
     if (!recaptchaVerifier) {
         try {
             recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
-                'size': 'invisible',
+                'size': 'normal',
                 'callback': (response) => {
                     console.log('reCAPTCHA resuelto');
                 },
