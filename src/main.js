@@ -55,7 +55,11 @@ import {
     getCurrentUserProfile,
     getCurrentUserRole,
     showProfileModal,
-    closeProfileModal
+    closeProfileModal,
+    loginWithPhone,
+    verifyPhoneCode,
+    resendPhoneCode,
+    initRecaptcha
 } from './views/auth.js';
 
 import {
@@ -183,6 +187,163 @@ const toggleLiveFromMobile = () => {
     }
 };
 
+// Phone Auth State
+let currentPhoneNumber = '';
+let resendTimer = null;
+let resendCountdown = 40;
+
+/**
+ * Handler para iniciar login con teléfono
+ */
+const handlePhoneLogin = async () => {
+    const countryCode = document.getElementById('phone-country-code').value;
+    const phoneInput = document.getElementById('phone-number-input').value.replace(/\s/g, '');
+    const errorDiv = document.getElementById('phone-login-error');
+
+    // Validaciones
+    if (!phoneInput) {
+        errorDiv.textContent = 'Por favor ingresa tu número de teléfono';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+
+    currentPhoneNumber = countryCode + phoneInput;
+
+    try {
+        errorDiv.classList.add('hidden');
+
+        // Enviar SMS
+        await loginWithPhone(currentPhoneNumber);
+
+        // Mostrar modal de verificación
+        document.getElementById('phone-login-modal').classList.add('hidden');
+        document.getElementById('phone-verification-modal').classList.remove('hidden');
+
+        // Mostrar número en el modal
+        document.getElementById('phone-display').textContent = currentPhoneNumber;
+
+        // Iniciar timer de reenvío
+        startResendTimer();
+
+    } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = error.message || 'Error al enviar código. Intenta de nuevo.';
+        errorDiv.classList.remove('hidden');
+    }
+};
+
+/**
+ * Handler para verificar código SMS
+ */
+const handleSMSVerification = async () => {
+    const code = document.getElementById('sms-code-input').value;
+    const errorDiv = document.getElementById('phone-verification-error');
+
+    if (!code || code.length !== 6) {
+        errorDiv.textContent = 'Por favor ingresa el código de 6 dígitos';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        errorDiv.classList.add('hidden');
+
+        // Verificar código
+        await verifyPhoneCode(code);
+
+        // Cerrar modal y limpiar
+        closePhoneVerification();
+
+    } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = 'Código incorrecto. Intenta de nuevo.';
+        errorDiv.classList.remove('hidden');
+    }
+};
+
+/**
+ * Handler para reenviar código SMS
+ */
+const handleResendSMS = async () => {
+    const errorDiv = document.getElementById('phone-verification-error');
+
+    try {
+        errorDiv.classList.add('hidden');
+
+        // Reenviar SMS
+        await resendPhoneCode(currentPhoneNumber);
+
+        // Reiniciar timer
+        startResendTimer();
+
+    } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = 'Error al reenviar código. Intenta de nuevo.';
+        errorDiv.classList.remove('hidden');
+    }
+};
+
+/**
+ * Inicia el timer de reenvío (40 segundos)
+ */
+const startResendTimer = () => {
+    const btn = document.getElementById('resend-sms-btn');
+    const countdownEl = document.getElementById('resend-countdown');
+
+    // Deshabilitar botón
+    btn.disabled = true;
+    btn.classList.add('text-gray-500');
+    btn.classList.remove('text-white', 'hover:bg-[#111]');
+
+    // Reset countdown
+    resendCountdown = 40;
+    countdownEl.textContent = resendCountdown;
+
+    // Limpiar timer anterior si existe
+    if (resendTimer) {
+        clearInterval(resendTimer);
+    }
+
+    // Iniciar timer
+    resendTimer = setInterval(() => {
+        resendCountdown--;
+        countdownEl.textContent = resendCountdown;
+
+        if (resendCountdown <= 0) {
+            clearInterval(resendTimer);
+            resendTimer = null;
+
+            // Habilitar botón
+            btn.disabled = false;
+            btn.classList.remove('text-gray-500');
+            btn.classList.add('text-white', 'hover:bg-[#111]');
+            document.getElementById('resend-text').innerHTML = 'Reenviar Código';
+        }
+    }, 1000);
+};
+
+/**
+ * Cierra el modal de verificación y limpia estado
+ */
+const closePhoneVerification = () => {
+    document.getElementById('phone-verification-modal').classList.add('hidden');
+    document.getElementById('sms-code-input').value = '';
+    document.getElementById('phone-number-input').value = '';
+    currentPhoneNumber = '';
+
+    // Limpiar timer
+    if (resendTimer) {
+        clearInterval(resendTimer);
+        resendTimer = null;
+    }
+
+    // Reset resend button
+    const btn = document.getElementById('resend-sms-btn');
+    btn.disabled = true;
+    document.getElementById('resend-countdown').textContent = '40';
+    document.getElementById('resend-text').innerHTML = 'Reenviar en <span id="resend-countdown">40</span>s';
+};
+
 /**
  * Inicializa la aplicación
  */
@@ -263,6 +424,12 @@ window.app = {
     getCurrentUserRole,
     showProfileModal,
     closeProfileModal,
+
+    // Phone Authentication
+    handlePhoneLogin,
+    handleSMSVerification,
+    handleResendSMS,
+    closePhoneVerification,
 
     // Moderation
     openModerationPanel,
