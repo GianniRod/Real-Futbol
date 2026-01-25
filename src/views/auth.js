@@ -619,8 +619,8 @@ export const loginWithPhone = async (phoneNumber) => {
         // Mensajes de error específicos
         if (error.code === 'auth/invalid-phone-number') {
             throw new Error('Número inválido. Verifica el formato (+54...)');
-        } else if (error.code === 'auth/quota-exceeded') {
-            throw new Error('Demasiados intentos. Espera un momento.');
+        } else if (error.code === 'auth/quota-exceeded' || error.code === 'auth/too-many-requests') {
+            throw new Error('Demasiados intentos. Espera unas horas antes de intentar de nuevo.');
         } else if (error.code === 'auth/captcha-check-failed') {
             throw new Error('Error de verificación. Por favor intenta de nuevo.');
         }
