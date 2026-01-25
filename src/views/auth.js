@@ -25,6 +25,8 @@ import {
     RecaptchaVerifier,
     signInWithPhoneNumber,
     PhoneAuthProvider,
+    linkWithPhoneNumber,
+    linkWithCredential,
     db,
     collection,
     doc,
@@ -497,51 +499,6 @@ export const whenRoleReady = (callback) => {
 };
 
 /**
- * Muestra el modal de perfil con estadísticas del usuario
- */
-export const showProfileModal = async () => {
-    const modal = document.getElementById('profile-modal');
-    if (!modal || !currentUser || !currentUserProfile) return;
-
-    // Mostrar modal
-    modal.classList.remove('hidden');
-
-    // Cargar datos del usuario
-    const profileAvatar = document.getElementById('profile-avatar');
-    const profileUsername = document.getElementById('profile-username');
-    const profileCommentCount = document.getElementById('profile-comment-count');
-    const profileRanking = document.getElementById('profile-ranking');
-
-    if (profileAvatar) {
-        profileAvatar.innerHTML = currentUserProfile.photoURL
-            ? `<img src="${currentUserProfile.photoURL}" class="w-20 h-20 rounded-full border-4 border-white" alt="${currentUserProfile.username}">`
-            : `<div class="w-20 h-20 rounded-full bg-white text-black flex items-center justify-center font-bold text-3xl border-4 border-white">${currentUserProfile.username.charAt(0).toUpperCase()}</div>`;
-    }
-
-    if (profileUsername) {
-        profileUsername.textContent = currentUserProfile.username;
-    }
-
-    // Cargar estadísticas
-    if (profileCommentCount) profileCommentCount.textContent = '...';
-    if (profileRanking) profileRanking.textContent = '...';
-
-    try {
-        const stats = await getUserStats(currentUser.uid);
-        if (profileCommentCount) {
-            profileCommentCount.textContent = stats.commentCount;
-        }
-        if (profileRanking) {
-            profileRanking.textContent = `#${stats.ranking}`;
-        }
-    } catch (error) {
-        console.error('Error loading user stats:', error);
-        if (profileCommentCount) profileCommentCount.textContent = '0';
-        if (profileRanking) profileRanking.textContent = '#-';
-    }
-};
-
-/**
  * Cierra el modal de perfil
  */
 export const closeProfileModal = () => {
@@ -684,6 +641,224 @@ export const resendPhoneCode = async (phoneNumber) => {
     }
 
     return await loginWithPhone(phoneNumber);
+};
+
+// Phone Linking State
+let phoneLinkingConfirmationResult = null;
+
+/**
+ * Obtiene el proveedor de autenticación del usuario actual
+ * @returns {string} - 'google.com', 'phone', o 'unknown'
+ */
+export const getAuthProvider = () => {
+    if (!currentUser) return 'unknown';
+
+    const providers = currentUser.providerData;
+    if (!providers || providers.length === 0) return 'unknown';
+
+    // Buscar el proveedor principal
+    for (const provider of providers) {
+        if (provider.providerId === 'google.com') return 'google.com';
+        if (provider.providerId === 'phone') return 'phone';
+    }
+
+    return providers[0]?.providerId || 'unknown';
+};
+
+/**
+ * Verifica si el usuario tiene un teléfono vinculado
+ * @returns {boolean}
+ */
+export const hasLinkedPhone = () => {
+    if (!currentUser) return false;
+
+    const providers = currentUser.providerData;
+    if (!providers) return false;
+
+    return providers.some(p => p.providerId === 'phone');
+};
+
+/**
+ * Obtiene el número de teléfono vinculado si existe
+ * @returns {string|null}
+ */
+export const getLinkedPhone = () => {
+    if (!currentUser) return null;
+
+    const phoneProvider = currentUser.providerData?.find(p => p.providerId === 'phone');
+    return phoneProvider?.phoneNumber || null;
+};
+
+/**
+ * Inicia el proceso de vinculación de teléfono para usuarios de Google
+ * @param {string} phoneNumber - Número de teléfono en formato internacional
+ * @returns {Promise<object>} - Confirmation result
+ */
+export const startPhoneLinking = async (phoneNumber) => {
+    try {
+        if (!currentUser) {
+            throw new Error('No hay usuario autenticado');
+        }
+
+        // Verificar que sea un usuario de Google
+        if (getAuthProvider() !== 'google.com') {
+            throw new Error('Solo usuarios de Google pueden vincular un teléfono');
+        }
+
+        // Verificar formato
+        if (!phoneNumber.startsWith('+')) {
+            throw new Error('El número debe empezar con código de país (ej: +54)');
+        }
+
+        console.log('Vinculando teléfono:', phoneNumber);
+
+        // Inicializar reCAPTCHA para linking
+        if (!recaptchaVerifier) {
+            recaptchaVerifier = new RecaptchaVerifier(auth, 'link-recaptcha-container', {
+                'size': 'invisible'
+            });
+        }
+
+        // Enviar SMS usando linkWithPhoneNumber
+        const confirmationResult = await linkWithPhoneNumber(currentUser, phoneNumber, recaptchaVerifier);
+        phoneLinkingConfirmationResult = confirmationResult;
+
+        console.log('SMS de vinculación enviado');
+        return confirmationResult;
+    } catch (error) {
+        console.error('Error al iniciar vinculación:', error);
+
+        // Reset reCAPTCHA en error
+        if (recaptchaVerifier) {
+            try {
+                recaptchaVerifier.clear();
+            } catch (e) { /* ignore */ }
+            recaptchaVerifier = null;
+        }
+
+        // Mensajes de error específicos
+        if (error.code === 'auth/provider-already-linked') {
+            throw new Error('Ya tienes un número de teléfono vinculado');
+        } else if (error.code === 'auth/credential-already-in-use') {
+            throw new Error('Este número ya está vinculado a otra cuenta');
+        } else if (error.code === 'auth/invalid-phone-number') {
+            throw new Error('Número inválido. Verifica el formato (+54...)');
+        } else if (error.code === 'auth/captcha-check-failed') {
+            throw new Error('Error de verificación. Por favor intenta de nuevo.');
+        }
+
+        throw error;
+    }
+};
+
+/**
+ * Confirma la vinculación del teléfono con el código SMS
+ * @param {string} code - Código de 6 dígitos
+ * @returns {Promise<object>} - User con teléfono vinculado
+ */
+export const confirmPhoneLinking = async (code) => {
+    try {
+        if (!phoneLinkingConfirmationResult) {
+            throw new Error('No hay vinculación pendiente');
+        }
+
+        // Verificar código
+        const result = await phoneLinkingConfirmationResult.confirm(code);
+
+        console.log('Teléfono vinculado exitosamente');
+
+        // Reset state
+        phoneLinkingConfirmationResult = null;
+        if (recaptchaVerifier) {
+            recaptchaVerifier.clear();
+            recaptchaVerifier = null;
+        }
+
+        return result;
+    } catch (error) {
+        console.error('Error al confirmar vinculación:', error);
+
+        if (error.code === 'auth/invalid-verification-code') {
+            throw new Error('Código incorrecto. Verifica e intenta de nuevo.');
+        } else if (error.code === 'auth/code-expired') {
+            throw new Error('El código ha expirado. Solicita uno nuevo.');
+        }
+
+        throw error;
+    }
+};
+
+/**
+ * Muestra el modal de perfil actualizando el estado de vinculación telefónica
+ */
+export const showProfileModal = async () => {
+    const modal = document.getElementById('profile-modal');
+    if (!modal || !currentUser || !currentUserProfile) return;
+
+    // Mostrar modal
+    modal.classList.remove('hidden');
+
+    // Cargar datos del usuario
+    const profileAvatar = document.getElementById('profile-avatar');
+    const profileUsername = document.getElementById('profile-username');
+    const profileCommentCount = document.getElementById('profile-comment-count');
+    const profileRanking = document.getElementById('profile-ranking');
+    const linkPhoneSection = document.getElementById('link-phone-section');
+    const linkedPhoneSection = document.getElementById('linked-phone-section');
+    const linkedPhoneNumber = document.getElementById('linked-phone-number');
+
+    if (profileAvatar) {
+        profileAvatar.innerHTML = currentUserProfile.photoURL
+            ? `<img src="${currentUserProfile.photoURL}" class="w-20 h-20 rounded-full border-4 border-white" alt="${currentUserProfile.username}">`
+            : `<div class="w-20 h-20 rounded-full bg-white text-black flex items-center justify-center font-bold text-3xl border-4 border-white">${currentUserProfile.username.charAt(0).toUpperCase()}</div>`;
+    }
+
+    if (profileUsername) {
+        profileUsername.textContent = currentUserProfile.username;
+    }
+
+    // Mostrar/ocultar sección de vincular teléfono según el proveedor
+    const provider = getAuthProvider();
+    const hasPhone = hasLinkedPhone();
+
+    if (linkPhoneSection) {
+        // Mostrar solo si es usuario de Google y no tiene teléfono vinculado
+        if (provider === 'google.com' && !hasPhone) {
+            linkPhoneSection.classList.remove('hidden');
+        } else {
+            linkPhoneSection.classList.add('hidden');
+        }
+    }
+
+    if (linkedPhoneSection) {
+        // Mostrar si tiene teléfono vinculado
+        if (hasPhone) {
+            linkedPhoneSection.classList.remove('hidden');
+            if (linkedPhoneNumber) {
+                linkedPhoneNumber.textContent = getLinkedPhone() || 'Teléfono vinculado';
+            }
+        } else {
+            linkedPhoneSection.classList.add('hidden');
+        }
+    }
+
+    // Cargar estadísticas
+    if (profileCommentCount) profileCommentCount.textContent = '...';
+    if (profileRanking) profileRanking.textContent = '...';
+
+    try {
+        const stats = await getUserStats(currentUser.uid);
+        if (profileCommentCount) {
+            profileCommentCount.textContent = stats.commentCount;
+        }
+        if (profileRanking) {
+            profileRanking.textContent = `#${stats.ranking}`;
+        }
+    } catch (error) {
+        console.error('Error loading user stats:', error);
+        if (profileCommentCount) profileCommentCount.textContent = '0';
+        if (profileRanking) profileRanking.textContent = '#-';
+    }
 };
 
 export { currentUser, currentUserProfile, currentUserRole };
