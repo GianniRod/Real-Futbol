@@ -282,6 +282,16 @@ export const sendMessage = async (userFieldId, textFieldId) => {
 
     if (!text) return;
 
+    // Filtro anti-links: detectar URLs en el mensaje (excepto developer y moderadores)
+    const urlPattern = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.(com|net|org|io|app|co|me|tv|gg|xyz|info|biz|es|ar|cl|mx|br|uk|de|fr|it|ru|cn|jp|kr|au|in|us|ca|nl|be|ch|at|se|no|dk|fi|pl|cz|pt|gr|tr|za|nz|sg|hk|tw|ph|th|vn|id|my|ae|sa|eg|ng|ke|gh|tz|ug|rw|et|dz|ma|tn|ly|sd|iq|ir|pk|bd|lk|np|mm|kh|la|bn|pg|fj|ws|sb|vu|nc|pf)\/?\S*)/gi;
+
+    const canSendLinks = userRole === 'developer' || userRole === 'moderator';
+
+    if (!canSendLinks && urlPattern.test(text)) {
+        alert("No está permitido enviar enlaces en el foro.");
+        return;
+    }
+
     try {
         const messageData = {
             context: currentForumContext,
