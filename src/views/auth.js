@@ -556,12 +556,22 @@ export const closeProfileModal = () => {
  */
 export const initRecaptcha = (containerId = 'recaptcha-container') => {
     if (!recaptchaVerifier) {
-        recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
-            'size': 'invisible',
-            'callback': (response) => {
-                console.log('reCAPTCHA solved');
-            }
-        });
+        try {
+            recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+                'size': 'invisible',
+                'callback': (response) => {
+                    console.log('reCAPTCHA resuelto');
+                },
+                'expired-callback': () => {
+                    console.log('reCAPTCHA expirado');
+                }
+            });
+
+            console.log('reCAPTCHA inicializado');
+        } catch (error) {
+            console.error('Error al inicializar reCAPTCHA:', error);
+            throw error;
+        }
     }
     return recaptchaVerifier;
 };
@@ -578,26 +588,50 @@ export const loginWithPhone = async (phoneNumber) => {
             throw new Error('El número debe empezar con código de país (ej: +54)');
         }
 
-        // Inicializar reCAPTCHA si no existe
+        // Inicializar y renderizar reCAPTCHA si no existe
         if (!recaptchaVerifier) {
+            console.log('Inicializando reCAPTCHA...');
             initRecaptcha();
+
+            // Intentar renderizar
+            try {
+                await recaptchaVerifier.render();
+                console.log('reCAPTCHA renderizado correctamente');
+            } catch (renderErr) {
+                console.warn('No se pudo renderizar (puede que ya esté renderizado):', renderErr);
+            }
         }
+
+        console.log('Enviando SMS a:', phoneNumber);
 
         // Enviar SMS
         const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
         phoneConfirmationResult = confirmationResult;
-        
-        console.log('SMS enviado a:', phoneNumber);
+
+        console.log('SMS enviado exitosamente');
         return confirmationResult;
     } catch (error) {
-        console.error('Error al enviar SMS:', error);
-        
+        console.error('Error detallado:', error);
+        console.error('Code:', error.code);
+        console.error('Message:', error.message);
+
         // Reset reCAPTCHA en error
         if (recaptchaVerifier) {
-            recaptchaVerifier.clear();
+            try {
+                recaptchaVerifier.clear();
+            } catch (e) { /* ignore */ }
             recaptchaVerifier = null;
         }
-        
+
+        // Mensaje de error más útil
+        if (error.code === 'auth/captcha-check-failed') {
+            throw new Error('Error de verificación. Recarga la página e intenta de nuevo.');
+        } else if (error.code === 'auth/invalid-phone-number') {
+            throw new Error('Número inválido. Verifica el formato (+54...)');
+        } else if (error.code === 'auth/quota-exceeded') {
+            throw new Error('Demasiados intentos. Espera un momento.');
+        }
+
         throw error;
     }
 };
@@ -621,7 +655,7 @@ export const verifyPhoneCode = async (code) => {
 
         // Crear/actualizar perfil como con Google
         const profile = await getUserProfile(user.uid);
-        
+
         if (!profile || !profile.username) {
             // Mostrar modal de username
             showUsernameModal(user);
@@ -655,7 +689,7 @@ export const resendPhoneCode = async (phoneNumber) => {
         recaptchaVerifier.clear();
         recaptchaVerifier = null;
     }
-    
+
     return await loginWithPhone(phoneNumber);
 };
 
