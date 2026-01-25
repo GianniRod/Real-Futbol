@@ -426,6 +426,7 @@ window.app = {
     closeProfileModal,
 
     // Phone Authentication
+    initPhoneRecaptcha,
     handlePhoneLogin,
     handleSMSVerification,
     handleResendSMS,
@@ -461,3 +462,17 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
+
+/**
+ * Inicializa el reCAPTCHA cuando se abre el modal de phone login
+ */
+const initPhoneRecaptcha = () => {
+    setTimeout(() => {
+        try {
+            initRecaptcha();
+            console.log('reCAPTCHA inicializado al abrir modal');
+        } catch (error) {
+            console.error('Error al inicializar reCAPTCHA:', error);
+        }
+    }, 500);
+};
