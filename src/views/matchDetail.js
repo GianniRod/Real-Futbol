@@ -346,7 +346,15 @@ export const openDetail = async (params) => {
     const scrollY = window.scrollY;
 
     const detailView = document.getElementById('view-match-detail');
+
+    // CRÍTICO: Resetear scroll ANTES de mostrar el modal
+    detailView.scrollTop = 0;
+
     detailView.classList.remove('hidden');
+
+    // Resetear scroll INMEDIATAMENTE después de mostrar
+    detailView.scrollTop = 0;
+    window.scrollTo(0, 0);
 
     // Fijar el body para prevenir scroll de fondo (funciona en móvil)
     document.body.style.position = 'fixed';
