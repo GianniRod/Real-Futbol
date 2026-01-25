@@ -348,9 +348,6 @@ export const openDetail = async (params) => {
     const detailView = document.getElementById('view-match-detail');
     detailView.classList.remove('hidden');
 
-    // Forzar scroll al inicio del modal para ver escudos, nombres y resultado
-    detailView.scrollTop = 0;
-
     // Fijar el body para prevenir scroll de fondo (funciona en móvil)
     document.body.style.position = 'fixed';
     document.body.style.top = `-${scrollY}px`;
@@ -410,6 +407,16 @@ export const openDetail = async (params) => {
 
     document.getElementById('detail-loader').classList.add('hidden');
     document.getElementById('detail-content-wrapper').classList.remove('hidden');
+
+    // Forzar scroll al inicio DESPUÉS de que el contenido se muestre
+    // Usar requestAnimationFrame + setTimeout para asegurar que funciona en móvil
+    requestAnimationFrame(() => {
+        detailView.scrollTop = 0;
+        // Backup por si requestAnimationFrame no es suficiente
+        setTimeout(() => {
+            detailView.scrollTop = 0;
+        }, 50);
+    });
 
     // Determinar si el partido ha comenzado
     const notStarted = ['NS', 'TBD', 'PST', 'CANC', 'ABD'].includes(m.fixture.status.short);
