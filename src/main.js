@@ -68,7 +68,11 @@ import {
     closeModerationPanel,
     addModerator,
     removeModerator,
-    handleAddModeratorForm
+    handleAddModeratorForm,
+    addFirstUser,
+    removeFirstUser,
+    handleAddFirstUserForm,
+    loadFirstUsers
 } from './views/moderation.js';
 
 import {
@@ -437,6 +441,10 @@ window.app = {
     addModerator,
     removeModerator,
     handleAddModeratorForm,
+    addFirstUser,
+    removeFirstUser,
+    handleAddFirstUserForm,
+    loadFirstUsers,
 
     // Suggestions
     openSuggestionModal,
