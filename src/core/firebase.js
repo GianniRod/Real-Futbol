@@ -11,6 +11,10 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
+    initializeAppCheck,
+    ReCaptchaV3Provider
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
+import {
     getFirestore,
     collection,
     addDoc,
@@ -53,6 +57,12 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
+
+// Initialize App Check with reCAPTCHA v3
+const appCheck = initializeAppCheck(fbApp, {
+    provider: new ReCaptchaV3Provider('6LeqflUsAAAAADt9Rs3soVcJIy_C5E-8Yf50wk-G'),
+    isTokenAutoRefreshEnabled: true
+});
 
 // Export database instance and Firestore helpers
 export {
