@@ -59,7 +59,12 @@ import {
     loginWithPhone,
     verifyPhoneCode,
     resendPhoneCode,
-    initRecaptcha
+    initRecaptcha,
+    startPhoneLinking,
+    confirmPhoneLinking,
+    hasLinkedPhone,
+    getAuthProvider,
+    getLinkedPhone
 } from './views/auth.js';
 
 import {
@@ -348,6 +353,110 @@ const closePhoneVerification = () => {
     document.getElementById('resend-text').innerHTML = 'Reenviar en <span id="resend-countdown">40</span>s';
 };
 
+// Phone Linking State
+let linkingPhoneNumber = '';
+
+/**
+ * Abre el modal de vinculación de teléfono
+ */
+const openPhoneLinkingModal = () => {
+    document.getElementById('profile-modal').classList.add('hidden');
+    document.getElementById('phone-linking-modal').classList.remove('hidden');
+    document.getElementById('link-phone-error').classList.add('hidden');
+    document.getElementById('link-phone-number-input').value = '';
+};
+
+/**
+ * Cierra el modal de vinculación de teléfono
+ */
+const closePhoneLinkingModal = () => {
+    document.getElementById('phone-linking-modal').classList.add('hidden');
+    document.getElementById('link-phone-number-input').value = '';
+    linkingPhoneNumber = '';
+};
+
+/**
+ * Handler para iniciar vinculación de teléfono
+ */
+const handlePhoneLinking = async () => {
+    const countryCode = document.getElementById('link-phone-country-code').value;
+    const phoneInput = document.getElementById('link-phone-number-input').value.replace(/\s/g, '');
+    const errorDiv = document.getElementById('link-phone-error');
+
+    // Validaciones
+    if (!phoneInput) {
+        errorDiv.textContent = 'Por favor ingresa tu número de teléfono';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+
+    linkingPhoneNumber = countryCode + phoneInput;
+
+    try {
+        errorDiv.classList.add('hidden');
+
+        // Enviar SMS para vinculación
+        await startPhoneLinking(linkingPhoneNumber);
+
+        // Mostrar modal de verificación
+        document.getElementById('phone-linking-modal').classList.add('hidden');
+        document.getElementById('phone-linking-verification-modal').classList.remove('hidden');
+
+        // Mostrar número en el modal
+        document.getElementById('link-phone-display').textContent = linkingPhoneNumber;
+
+    } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = error.message || 'Error al enviar código. Intenta de nuevo.';
+        errorDiv.classList.remove('hidden');
+    }
+};
+
+/**
+ * Handler para verificar código de vinculación de teléfono
+ */
+const handlePhoneLinkingVerification = async () => {
+    const code = document.getElementById('link-sms-code-input').value;
+    const errorDiv = document.getElementById('link-verification-error');
+
+    if (!code || code.length !== 6) {
+        errorDiv.textContent = 'Por favor ingresa el código de 6 dígitos';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        errorDiv.classList.add('hidden');
+
+        // Verificar código y vincular
+        await confirmPhoneLinking(code);
+
+        // Cerrar modal y limpiar
+        closePhoneLinkingVerification();
+
+        // Mostrar mensaje de éxito
+        alert('¡Teléfono vinculado exitosamente!');
+
+        // Recargar modal de perfil para mostrar el teléfono vinculado
+        showProfileModal();
+
+    } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = error.message || 'Código incorrecto. Intenta de nuevo.';
+        errorDiv.classList.remove('hidden');
+    }
+};
+
+/**
+ * Cierra el modal de verificación de vinculación
+ */
+const closePhoneLinkingVerification = () => {
+    document.getElementById('phone-linking-verification-modal').classList.add('hidden');
+    document.getElementById('link-sms-code-input').value = '';
+    document.getElementById('link-phone-number-input').value = '';
+    linkingPhoneNumber = '';
+};
+
 /**
  * Inicializa la aplicación
  */
@@ -434,6 +543,13 @@ window.app = {
     handleSMSVerification,
     handleResendSMS,
     closePhoneVerification,
+
+    // Phone Linking (for Google users)
+    openPhoneLinkingModal,
+    closePhoneLinkingModal,
+    handlePhoneLinking,
+    handlePhoneLinkingVerification,
+    closePhoneLinkingVerification,
 
     // Moderation
     openModerationPanel,
