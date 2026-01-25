@@ -10,10 +10,13 @@
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+// App Check temporarily disabled - uncomment when re-enabling
+/*
 import {
     initializeAppCheck,
     ReCaptchaV3Provider
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
+*/
 import {
     getFirestore,
     collection,
@@ -58,11 +61,15 @@ const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
 
-// Initialize App Check with reCAPTCHA v3
+// TEMPORARILY DISABLED - App Check causing SecurityError with reCAPTCHA frames
+// Re-enable after configuring reCAPTCHA Enterprise correctly in Firebase Console
+// and adding 'realfutbol.app' and 'www.realfutbol.app' to allowed domains
+/*
 const appCheck = initializeAppCheck(fbApp, {
     provider: new ReCaptchaV3Provider('6LeqflUsAAAAADT9Rs3soVcJly_C5E-8Yf50wk-G'),
     isTokenAutoRefreshEnabled: true
 });
+*/
 
 // Export database instance and Firestore helpers
 export {
