@@ -9,10 +9,6 @@
       "destination": "/politica-de-privacidad.html"
     },
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
       "source": "/((?!api/|src/|.*\\..*).*)",
       "destination": "/index.html"
     }
