@@ -42,7 +42,9 @@ import {
     onAuthStateChanged,
     RecaptchaVerifier,
     signInWithPhoneNumber,
-    PhoneAuthProvider
+    PhoneAuthProvider,
+    linkWithPhoneNumber,
+    linkWithCredential
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // Firebase Configuration
@@ -95,5 +97,7 @@ export {
     onAuthStateChanged,
     RecaptchaVerifier,
     signInWithPhoneNumber,
-    PhoneAuthProvider
+    PhoneAuthProvider,
+    linkWithPhoneNumber,
+    linkWithCredential
 };
