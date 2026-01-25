@@ -426,7 +426,6 @@ window.app = {
     closeProfileModal,
 
     // Phone Authentication
-    initPhoneRecaptcha,
     handlePhoneLogin,
     handleSMSVerification,
     handleResendSMS,
@@ -461,3 +460,4 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
+}
