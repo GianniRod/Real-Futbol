@@ -13,7 +13,7 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/((?!api/|.*\\..*).*)",
+      "source": "/((?!api/|src/|.*\\..*).*)",
       "destination": "/index.html"
     }
   ]
