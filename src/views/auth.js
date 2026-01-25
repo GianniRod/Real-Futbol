@@ -588,21 +588,15 @@ export const loginWithPhone = async (phoneNumber) => {
             throw new Error('El número debe empezar con código de país (ej: +54)');
         }
 
-        // Inicializar y renderizar reCAPTCHA si no existe
-        if (!recaptchaVerifier) {
-            console.log('Inicializando reCAPTCHA...');
-            initRecaptcha();
-
-            // Intentar renderizar
-            try {
-                await recaptchaVerifier.render();
-                console.log('reCAPTCHA renderizado correctamente');
-            } catch (renderErr) {
-                console.warn('No se pudo renderizar (puede que ya esté renderizado):', renderErr);
-            }
-        }
-
         console.log('Enviando SMS a:', phoneNumber);
+
+        // App Check maneja la verificación automáticamente
+        // Solo necesitamos un reCAPTCHA invisible para la API
+        if (!recaptchaVerifier) {
+            recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                'size': 'invisible'
+            });
+        }
 
         // Enviar SMS
         const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
@@ -613,7 +607,6 @@ export const loginWithPhone = async (phoneNumber) => {
     } catch (error) {
         console.error('Error detallado:', error);
         console.error('Code:', error.code);
-        console.error('Message:', error.message);
 
         // Reset reCAPTCHA en error
         if (recaptchaVerifier) {
@@ -623,13 +616,13 @@ export const loginWithPhone = async (phoneNumber) => {
             recaptchaVerifier = null;
         }
 
-        // Mensaje de error más útil
-        if (error.code === 'auth/captcha-check-failed') {
-            throw new Error('Error de verificación. Recarga la página e intenta de nuevo.');
-        } else if (error.code === 'auth/invalid-phone-number') {
+        // Mensajes de error específicos
+        if (error.code === 'auth/invalid-phone-number') {
             throw new Error('Número inválido. Verifica el formato (+54...)');
         } else if (error.code === 'auth/quota-exceeded') {
             throw new Error('Demasiados intentos. Espera un momento.');
+        } else if (error.code === 'auth/captcha-check-failed') {
+            throw new Error('Error de verificación. Por favor intenta de nuevo.');
         }
 
         throw error;
