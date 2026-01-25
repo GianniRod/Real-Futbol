@@ -74,17 +74,34 @@ export const initForum = (context, containerId, usernameInputId) => {
         const currentUserId = currentUser ? currentUser.uid : null;
         const canDelete = userRole === 'developer' || userRole === 'moderator';
 
+        // Cargar lista de "Primer Usuario" para mostrar badges
+        let firstUsersSet = new Set();
+        try {
+            const { getDocs, query, collection } = await import('../core/firebase.js');
+            const firstUsersSnapshot = await getDocs(query(collection(db, 'first_users')));
+            firstUsersSnapshot.forEach(doc => {
+                firstUsersSet.add(doc.id);
+            });
+        } catch (e) {
+            console.warn('Could not load first_users:', e);
+        }
 
         container.innerHTML = messagesData.map(msg => {
             // Comparar por userId en lugar de username de localStorage
             const isMe = currentUserId && msg.userId === currentUserId;
             const date = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-            // Badge según role del autor
+
+            // Badge según role del autor y badges especiales
             let badge = '';
             if (msg.userId === DEVELOPER_UID) {
                 badge = '<span class="ml-2 px-2 py-0.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-black text-[9px] font-black uppercase rounded shadow-lg">DESARROLLADOR</span>';
             } else if (msg.userRole === 'moderator') {
                 badge = '<span class="ml-2 px-1.5 py-0.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-[9px] font-black uppercase rounded">MOD</span>';
+            }
+
+            // Agregar badge "PRIMER USUARIO" si aplica (puede tener ambos badges)
+            if (firstUsersSet.has(msg.userId)) {
+                badge += '<span class="ml-2 px-2 py-0.5 bg-gradient-to-r from-cyan-400 to-sky-500 text-black text-[9px] font-black uppercase rounded">PRIMER USUARIO</span>';
             }
 
             return `
