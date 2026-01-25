@@ -60,7 +60,7 @@ const auth = getAuth(fbApp);
 
 // Initialize App Check with reCAPTCHA v3
 const appCheck = initializeAppCheck(fbApp, {
-    provider: new ReCaptchaV3Provider('6LeqflUsAAAAADt9Rs3soVcJIy_C5E-8Yf50wk-G'),
+    provider: new ReCaptchaV3Provider('6LeqflUsAAAAADT9Rs3soVcJly_C5E-8Yf50wk-G'),
     isTokenAutoRefreshEnabled: true
 });
 
