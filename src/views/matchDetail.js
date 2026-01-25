@@ -408,14 +408,29 @@ export const openDetail = async (params) => {
     document.getElementById('detail-loader').classList.add('hidden');
     document.getElementById('detail-content-wrapper').classList.remove('hidden');
 
-    // Forzar scroll al inicio DESPUÉS de que el contenido se muestre
-    // Usar requestAnimationFrame + setTimeout para asegurar que funciona en móvil
+    // Forzar scroll al inicio de manera agresiva para móvil
+    // Usar múltiples métodos para máxima compatibilidad
+
+    // Método 1: Scroll del modal al inicio
+    detailView.scrollTop = 0;
+
+    // Método 2: Scroll del window también
+    window.scrollTo(0, 0);
+
+    // Método 3: Forzar scroll después del siguiente frame
     requestAnimationFrame(() => {
         detailView.scrollTop = 0;
-        // Backup por si requestAnimationFrame no es suficiente
+        window.scrollTo(0, 0);
+
+        // Método 4: Hacer que el scoreboard sea visible usando scrollIntoView
         setTimeout(() => {
+            const scoreboard = document.querySelector('#detail-content-wrapper > div:first-child');
+            if (scoreboard) {
+                scoreboard.scrollIntoView({ behavior: 'instant', block: 'start' });
+            }
+            // Backup final
             detailView.scrollTop = 0;
-        }, 50);
+        }, 100);
     });
 
     // Determinar si el partido ha comenzado
