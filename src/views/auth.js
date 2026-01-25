@@ -22,6 +22,9 @@ import {
     signInWithPopup,
     signOut,
     onAuthStateChanged,
+    RecaptchaVerifier,
+    signInWithPhoneNumber,
+    PhoneAuthProvider,
     db,
     collection,
     doc,
@@ -41,6 +44,10 @@ let currentUserProfile = null;
 let currentUserRole = 'user'; // 'developer', 'moderator', or 'user'
 let isRoleLoaded = false;
 let roleReadyCallbacks = [];
+
+// Phone Auth State
+let recaptchaVerifier = null;
+let phoneConfirmationResult = null;
 
 /**
  * Obtiene el perfil de un usuario desde Firestore
@@ -543,3 +550,113 @@ export const closeProfileModal = () => {
         modal.classList.add('hidden');
     }
 };
+/**
+ * Inicializa el reCAPTCHA para phone authentication
+ * @param {string} containerId - ID del contenedor del reCAPTCHA
+ */
+export const initRecaptcha = (containerId = 'recaptcha-container') => {
+    if (!recaptchaVerifier) {
+        recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+            'size': 'invisible',
+            'callback': (response) => {
+                console.log('reCAPTCHA solved');
+            }
+        });
+    }
+    return recaptchaVerifier;
+};
+
+/**
+ * Inicia sesión con número de teléfono
+ * @param {string} phoneNumber - Número de teléfono en formato internacional (ej: +54911XXXXXXXX)
+ * @returns {Promise<object>} - Confirmation result para verificación
+ */
+export const loginWithPhone = async (phoneNumber) => {
+    try {
+        // Validar formato básico
+        if (!phoneNumber.startsWith('+')) {
+            throw new Error('El número debe empezar con código de país (ej: +54)');
+        }
+
+        // Inicializar reCAPTCHA si no existe
+        if (!recaptchaVerifier) {
+            initRecaptcha();
+        }
+
+        // Enviar SMS
+        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+        phoneConfirmationResult = confirmationResult;
+        
+        console.log('SMS enviado a:', phoneNumber);
+        return confirmationResult;
+    } catch (error) {
+        console.error('Error al enviar SMS:', error);
+        
+        // Reset reCAPTCHA en error
+        if (recaptchaVerifier) {
+            recaptchaVerifier.clear();
+            recaptchaVerifier = null;
+        }
+        
+        throw error;
+    }
+};
+
+/**
+ * Verifica el código SMS y completa la autenticación
+ * @param {string} code - Código de 6 dígitos
+ * @returns {Promise<object>} - User credentials
+ */
+export const verifyPhoneCode = async (code) => {
+    try {
+        if (!phoneConfirmationResult) {
+            throw new Error('No hay confirmación pendiente');
+        }
+
+        // Verificar código
+        const result = await phoneConfirmationResult.confirm(code);
+        const user = result.user;
+
+        console.log('Phone auth exitosa:', user.uid);
+
+        // Crear/actualizar perfil como con Google
+        const profile = await getUserProfile(user.uid);
+        
+        if (!profile || !profile.username) {
+            // Mostrar modal de username
+            showUsernameModal(user);
+        } else {
+            currentUserProfile = profile;
+            updateAuthUI(user, profile);
+        }
+
+        // Reset state
+        phoneConfirmationResult = null;
+        if (recaptchaVerifier) {
+            recaptchaVerifier.clear();
+            recaptchaVerifier = null;
+        }
+
+        return result;
+    } catch (error) {
+        console.error('Error al verificar código:', error);
+        throw error;
+    }
+};
+
+/**
+ * Reenvía el código SMS
+ * @param {string} phoneNumber - Número de teléfono
+ * @returns {Promise<object>} - Nuevo confirmation result
+ */
+export const resendPhoneCode = async (phoneNumber) => {
+    // Reset reCAPTCHA para reenvío
+    if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+        recaptchaVerifier = null;
+    }
+    
+    return await loginWithPhone(phoneNumber);
+};
+
+export { currentUser, currentUserProfile, currentUserRole };
