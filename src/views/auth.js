@@ -534,6 +534,43 @@ export const initRecaptcha = (containerId = 'recaptcha-container') => {
 };
 
 /**
+ * Normaliza números de teléfono argentinos para formato móvil consistente
+ * En Argentina, los móviles deben tener el formato +54 9 XXXX XXXX
+ * Esta función agrega el '9' si falta para evitar duplicados
+ * @param {string} phoneNumber - Número en formato internacional
+ * @returns {string} - Número normalizado
+ */
+const normalizeArgentinePhone = (phoneNumber) => {
+    // Solo normalizar números argentinos
+    if (!phoneNumber.startsWith('+54')) {
+        return phoneNumber;
+    }
+
+    // Quitar espacios y guiones
+    let normalized = phoneNumber.replace(/[\s-]/g, '');
+
+    // Formato esperado: +54 9 XXXXXXXXXX (móvil)
+    // Si tiene +54 y NO tiene el 9 después, agregarlo
+
+    // Obtener la parte después de +54
+    const afterCountryCode = normalized.substring(3);
+
+    // Si ya tiene el 9 al inicio, está bien
+    if (afterCountryCode.startsWith('9')) {
+        return normalized;
+    }
+
+    // Si empieza con 11, 15, o códigos de área (2XX, 3XX), agregar el 9
+    // Los móviles argentinos sin el 9 tienen 10 dígitos después de +54
+    if (afterCountryCode.length === 10) {
+        // Agregar el 9 para formato móvil correcto
+        normalized = '+549' + afterCountryCode;
+    }
+
+    return normalized;
+};
+
+/**
  * Inicia sesión con número de teléfono
  * @param {string} phoneNumber - Número de teléfono en formato internacional (ej: +54911XXXXXXXX)
  * @returns {Promise<object>} - Confirmation result para verificación
@@ -545,7 +582,9 @@ export const loginWithPhone = async (phoneNumber) => {
             throw new Error('El número debe empezar con código de país (ej: +54)');
         }
 
-        console.log('Enviando SMS a:', phoneNumber);
+        // Normalizar número argentino
+        const normalizedNumber = normalizeArgentinePhone(phoneNumber);
+        console.log('Enviando SMS a:', normalizedNumber);
 
         // App Check maneja la verificación automáticamente
         // Solo necesitamos un reCAPTCHA invisible para la API
@@ -556,7 +595,7 @@ export const loginWithPhone = async (phoneNumber) => {
         }
 
         // Enviar SMS
-        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+        const confirmationResult = await signInWithPhoneNumber(auth, normalizedNumber, recaptchaVerifier);
         phoneConfirmationResult = confirmationResult;
 
         console.log('SMS enviado exitosamente');
@@ -710,7 +749,9 @@ export const startPhoneLinking = async (phoneNumber) => {
             throw new Error('El número debe empezar con código de país (ej: +54)');
         }
 
-        console.log('Vinculando teléfono:', phoneNumber);
+        // Normalizar número argentino
+        const normalizedNumber = normalizeArgentinePhone(phoneNumber);
+        console.log('Vinculando teléfono:', normalizedNumber);
 
         // Inicializar reCAPTCHA para linking
         if (!recaptchaVerifier) {
@@ -720,7 +761,7 @@ export const startPhoneLinking = async (phoneNumber) => {
         }
 
         // Enviar SMS usando linkWithPhoneNumber
-        const confirmationResult = await linkWithPhoneNumber(currentUser, phoneNumber, recaptchaVerifier);
+        const confirmationResult = await linkWithPhoneNumber(currentUser, normalizedNumber, recaptchaVerifier);
         phoneLinkingConfirmationResult = confirmationResult;
 
         console.log('SMS de vinculación enviado');
