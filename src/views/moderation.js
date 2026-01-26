@@ -74,6 +74,163 @@ export const closeModerationPanel = () => {
     }
 };
 
+// ==================== MOD PANEL (GREEN - For Moderators Only) ====================
+
+/**
+ * Abre el panel verde de moderadores
+ */
+export const openModPanel = () => {
+    const modal = document.getElementById('mod-panel-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        loadModMutedUsers();
+        loadModBannedUsers();
+    }
+};
+
+/**
+ * Cierra el panel de moderadores
+ */
+export const closeModPanel = () => {
+    const modal = document.getElementById('mod-panel-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+/**
+ * Carga la lista de muteados para el panel de moderadores
+ */
+const loadModMutedUsers = async () => {
+    const container = document.getElementById('mod-muted-users-list');
+    if (!container) return;
+
+    container.innerHTML = '<div class="text-gray-500 text-xs text-center py-2">Cargando...</div>';
+
+    try {
+        const q = query(collection(db, 'muted_users'));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            container.innerHTML = '<div class="text-gray-500 text-xs text-center py-2">No hay usuarios muteados</div>';
+            return;
+        }
+
+        let html = '';
+        const now = Date.now();
+
+        for (const docSnap of snapshot.docs) {
+            const data = docSnap.data();
+
+            if (data.expiresAt && data.expiresAt < now) {
+                await deleteDoc(doc(db, 'muted_users', docSnap.id));
+                continue;
+            }
+
+            const timeRemaining = getMuteTimeRemaining(data);
+
+            html += `
+                <div class="flex items-center justify-between p-2 bg-[#0a0a0a] rounded border border-[#222] text-xs">
+                    <div>
+                        <div class="text-white font-bold">${data.username || 'Usuario'}</div>
+                        <div class="text-yellow-500 text-[10px]">⏱ ${timeRemaining}</div>
+                    </div>
+                    <button onclick="app.unmuteUser('${data.uid}')" 
+                        class="text-green-500 hover:text-green-400 text-[10px] font-bold px-2 py-1 border border-green-500 rounded">
+                        Quitar
+                    </button>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html || '<div class="text-gray-500 text-xs text-center py-2">No hay usuarios muteados</div>';
+    } catch (error) {
+        console.error('Error loading muted users:', error);
+        container.innerHTML = '<div class="text-red-500 text-xs text-center py-2">Error</div>';
+    }
+};
+
+/**
+ * Carga la lista de baneados para el panel de moderadores
+ */
+const loadModBannedUsers = async () => {
+    const container = document.getElementById('mod-banned-users-list');
+    if (!container) return;
+
+    container.innerHTML = '<div class="text-gray-500 text-xs text-center py-2">Cargando...</div>';
+
+    try {
+        const q = query(collection(db, 'banned_users'));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            container.innerHTML = '<div class="text-gray-500 text-xs text-center py-2">No hay usuarios baneados</div>';
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            html += `
+                <div class="flex items-center justify-between p-2 bg-[#0a0a0a] rounded border border-red-500/30 text-xs">
+                    <div>
+                        <div class="text-white font-bold">${data.username || 'Usuario'}</div>
+                        <div class="text-red-500 text-[10px]">⛔ Baneado</div>
+                    </div>
+                    <button onclick="app.unbanUser('${data.uid}')" 
+                        class="text-green-500 hover:text-green-400 text-[10px] font-bold px-2 py-1 border border-green-500 rounded">
+                        Quitar
+                    </button>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Error loading banned users:', error);
+        container.innerHTML = '<div class="text-red-500 text-xs text-center py-2">Error</div>';
+    }
+};
+
+/**
+ * Procesa el formulario de muteo del panel de moderadores
+ */
+export const handleModMuteForm = () => {
+    const usernameInput = document.getElementById('mod-mute-username-input');
+    const durationSelect = document.getElementById('mod-mute-duration-select');
+
+    if (usernameInput && durationSelect) {
+        const username = usernameInput.value;
+        const duration = parseInt(durationSelect.value);
+
+        muteUser(username, duration).then(success => {
+            if (success) {
+                usernameInput.value = '';
+                loadModMutedUsers();
+            }
+        });
+    }
+};
+
+/**
+ * Procesa el formulario de baneo del panel de moderadores
+ */
+export const handleModBanForm = () => {
+    const usernameInput = document.getElementById('mod-ban-username-input');
+
+    if (usernameInput) {
+        const username = usernameInput.value;
+
+        banUser(username).then(success => {
+            if (success) {
+                usernameInput.value = '';
+                loadModBannedUsers();
+                loadModMutedUsers();
+            }
+        });
+    }
+};
+
 /**
  * Carga y muestra la lista de moderadores
  */
