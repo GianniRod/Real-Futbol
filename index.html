@@ -375,7 +375,7 @@
             </button>
 
             <!-- Botón de Moderador (solo visible para moderadores, clickeable) -->
-            <button id="moderator-badge-btn" onclick="app.openModerationPanel()"
+            <button id="moderator-badge-btn" onclick="app.openModPanel()"
                 class="hidden px-2 lg:px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-black uppercase tracking-wider rounded cursor-pointer flex items-center gap-1.5 shadow-lg hover:from-green-400 hover:to-emerald-500 transition-colors"
                 title="Abrir Panel de Moderación">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
@@ -1449,6 +1449,99 @@
                             <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Moderator Panel Modal (GREEN - Only Sanctions) -->
+    <div id="mod-panel-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-[#111] border border-[#333] rounded-lg w-full max-w-md overflow-hidden shadow-2xl max-h-[85vh] flex flex-col">
+            <!-- Header Verde -->
+            <div
+                class="bg-gradient-to-r from-green-500 to-emerald-600 p-4 flex justify-between items-center flex-shrink-0">
+                <h3 class="font-bold text-white text-lg font-sport uppercase flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Panel de Moderador
+                </h3>
+                <button onclick="app.closeModPanel()" class="text-white hover:text-gray-200 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="p-5 overflow-y-auto flex-1 space-y-5">
+                <!-- Mutear -->
+                <div class="space-y-3">
+                    <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                        <span class="text-yellow-500">🔇</span> Mutear Usuario
+                    </h4>
+                    <p class="text-gray-400 text-xs">Silencia temporalmente a un usuario. No podrá enviar mensajes.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="mod-mute-username-input" placeholder="Nombre de usuario"
+                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-green-500">
+                        <select id="mod-mute-duration-select"
+                            class="bg-[#0a0a0a] border border-[#333] text-white text-xs p-2.5 rounded w-24">
+                            <option value="60">1h</option>
+                            <option value="360">6h</option>
+                            <option value="1440">24h</option>
+                            <option value="10080">1 sem</option>
+                            <option value="43200">1 mes</option>
+                        </select>
+                        <button onclick="app.handleModMuteForm()"
+                            class="bg-yellow-500 text-black px-3 py-2 rounded text-xs font-bold hover:bg-yellow-400">
+                            Mutear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista Muteados -->
+                <div class="space-y-2">
+                    <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios Muteados</h4>
+                    <div id="mod-muted-users-list" class="space-y-2 max-h-28 overflow-y-auto">
+                        <div class="text-gray-500 text-xs text-center py-2">Cargando...</div>
+                    </div>
+                </div>
+
+                <div class="border-t border-[#333]"></div>
+
+                <!-- Banear -->
+                <div class="space-y-3">
+                    <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                        <span class="text-red-500">⛔</span> Banear Usuario
+                    </h4>
+                    <p class="text-gray-400 text-xs">Suspende permanentemente a un usuario. Usar con precaución.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="mod-ban-username-input" placeholder="Nombre de usuario"
+                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-red-500">
+                        <button onclick="app.handleModBanForm()"
+                            class="bg-red-500 text-white px-4 py-2 rounded text-xs font-bold hover:bg-red-400">
+                            Banear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista Baneados -->
+                <div class="space-y-2">
+                    <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios Baneados</h4>
+                    <div id="mod-banned-users-list" class="space-y-2 max-h-28 overflow-y-auto">
+                        <div class="text-gray-500 text-xs text-center py-2">Cargando...</div>
+                    </div>
+                </div>
+
+                <div class="border-t border-[#333] pt-3">
+                    <p class="text-gray-600 text-[10px] text-center">
+                        Eres moderador. Si tienes dudas, consulta con el desarrollador.
+                    </p>
                 </div>
             </div>
         </div>
