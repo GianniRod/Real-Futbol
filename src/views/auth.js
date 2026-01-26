@@ -151,7 +151,7 @@ export const setUserUsername = async (uid, email, username, photoURL = '') => {
  * @param {object|null} user - Usuario de Firebase Auth
  * @param {object|null} profile - Perfil del usuario
  */
-const updateAuthUI = (user, profile) => {
+const updateAuthUI = async (user, profile) => {
     const loginContainer = document.getElementById('auth-login-container');
     const userInfo = document.getElementById('auth-user-info');
     const userAvatar = document.getElementById('auth-user-avatar');
@@ -163,6 +163,22 @@ const updateAuthUI = (user, profile) => {
     const matchForumLoginRequired = document.getElementById('match-forum-login-required');
     const matchForumInputContainer = document.getElementById('match-forum-input-container');
 
+    // Muted/Banned containers
+    const forumMutedContainer = document.getElementById('forum-muted-container');
+    const forumBannedContainer = document.getElementById('forum-banned-container');
+    const matchForumMutedContainer = document.getElementById('match-forum-muted-container');
+    const matchForumBannedContainer = document.getElementById('match-forum-banned-container');
+
+    // Helper to hide all forum containers
+    const hideAllForumContainers = () => {
+        if (forumInputContainer) forumInputContainer.classList.add('hidden');
+        if (forumMutedContainer) forumMutedContainer.classList.add('hidden');
+        if (forumBannedContainer) forumBannedContainer.classList.add('hidden');
+        if (matchForumInputContainer) matchForumInputContainer.classList.add('hidden');
+        if (matchForumMutedContainer) matchForumMutedContainer.classList.add('hidden');
+        if (matchForumBannedContainer) matchForumBannedContainer.classList.add('hidden');
+    };
+
     if (!user) {
         // No autenticado
         if (loginContainer) loginContainer.classList.remove('hidden');
@@ -171,20 +187,49 @@ const updateAuthUI = (user, profile) => {
 
         // Mostrar login requerido en foros
         if (forumLoginRequired) forumLoginRequired.classList.remove('hidden');
-        if (forumInputContainer) forumInputContainer.classList.add('hidden');
         if (matchForumLoginRequired) matchForumLoginRequired.classList.remove('hidden');
-        if (matchForumInputContainer) matchForumInputContainer.classList.add('hidden');
+        hideAllForumContainers();
     } else {
         // Autenticado
         if (loginContainer) loginContainer.classList.add('hidden');
         if (userInfo) userInfo.classList.remove('hidden');
         if (suggestionBtn) suggestionBtn.classList.remove('hidden');
 
-        // Mostrar inputs de foros
+        // Ocultar login requerido
         if (forumLoginRequired) forumLoginRequired.classList.add('hidden');
-        if (forumInputContainer) forumInputContainer.classList.remove('hidden');
         if (matchForumLoginRequired) matchForumLoginRequired.classList.add('hidden');
-        if (matchForumInputContainer) matchForumInputContainer.classList.remove('hidden');
+
+        // Verificar estado de muteo/baneo
+        const { isUserBanned, isUserMuted, getMuteTimeRemaining } = await import('./moderation.js');
+
+        const banStatus = await isUserBanned(user.uid);
+        const muteStatus = await isUserMuted(user.uid);
+
+        hideAllForumContainers();
+
+        if (banStatus) {
+            // Usuario baneado - mostrar mensaje de baneo
+            if (forumBannedContainer) forumBannedContainer.classList.remove('hidden');
+            if (matchForumBannedContainer) matchForumBannedContainer.classList.remove('hidden');
+        } else if (muteStatus) {
+            // Usuario muteado - mostrar mensaje con tiempo restante
+            const timeRemaining = getMuteTimeRemaining(muteStatus);
+
+            if (forumMutedContainer) {
+                forumMutedContainer.classList.remove('hidden');
+                const timeEl = document.getElementById('forum-mute-time');
+                if (timeEl) timeEl.textContent = `Tiempo restante: ${timeRemaining}`;
+            }
+            if (matchForumMutedContainer) {
+                matchForumMutedContainer.classList.remove('hidden');
+                const timeEl = document.getElementById('match-forum-mute-time');
+                if (timeEl) timeEl.textContent = `Restante: ${timeRemaining}`;
+            }
+        } else {
+            // Usuario normal - mostrar input
+            if (forumInputContainer) forumInputContainer.classList.remove('hidden');
+            if (matchForumInputContainer) matchForumInputContainer.classList.remove('hidden');
+        }
 
         if (profile && profile.username) {
             if (userAvatar) {
