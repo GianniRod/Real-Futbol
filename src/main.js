@@ -442,8 +442,21 @@ const handlePhoneLinkingVerification = async () => {
 
     } catch (error) {
         console.error('Error:', error);
-        errorDiv.textContent = error.message || 'Código incorrecto. Intenta de nuevo.';
-        errorDiv.classList.remove('hidden');
+
+        // Si el número ya está vinculado a otra cuenta, mostrar mensaje especial
+        if (error.message && error.message.includes('ya está vinculado')) {
+            // Cerrar modal de verificación
+            closePhoneLinkingVerification();
+
+            // Volver al modal de perfil con un mensaje de error
+            document.getElementById('profile-modal').classList.remove('hidden');
+
+            // Mostrar alerta estética
+            alert('⚠️ Este número ya está vinculado a otra cuenta.\n\nNo es posible vincular este número porque ya pertenece a otro usuario.');
+        } else {
+            errorDiv.textContent = error.message || 'Código incorrecto. Intenta de nuevo.';
+            errorDiv.classList.remove('hidden');
+        }
     }
 };
 
