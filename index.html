@@ -1327,9 +1327,71 @@
                     </div>
                 </div>
 
+                <!-- MUTEAR USUARIO -->
+                <div class="space-y-3 border-t border-[#333] pt-4">
+                    <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                        <span class="text-yellow-500">🔇</span>
+                        Mutear Usuario
+                    </h4>
+                    <p class="text-gray-400 text-xs leading-relaxed">Silencia temporalmente a un usuario. No podrá
+                        enviar mensajes durante el tiempo seleccionado.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="mute-username-input" placeholder="Nombre de usuario"
+                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-yellow-500">
+                        <select id="mute-duration-select"
+                            class="bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-yellow-500">
+                            <option value="60">1 hora</option>
+                            <option value="360">6 horas</option>
+                            <option value="1440">24 horas</option>
+                            <option value="10080">1 semana</option>
+                            <option value="43200">1 mes</option>
+                        </select>
+                        <button onclick="app.handleMuteForm()"
+                            class="bg-yellow-500 text-black px-4 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-yellow-400 transition-colors shadow-lg">
+                            Mutear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista de Muteados -->
+                <div class="space-y-3">
+                    <h4 class="text-white font-bold text-sm uppercase tracking-wider">
+                        Usuarios Muteados</h4>
+                    <div id="muted-users-list" class="space-y-2 max-h-32 overflow-y-auto">
+                        <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
+                    </div>
+                </div>
+
+                <!-- BANEAR USUARIO -->
+                <div class="space-y-3 border-t border-[#333] pt-4">
+                    <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                        <span class="text-red-500">⛔</span>
+                        Banear Usuario
+                    </h4>
+                    <p class="text-gray-400 text-xs leading-relaxed">Suspende permanentemente a un usuario. Esta acción
+                        es severa y debe usarse con precaución.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="ban-username-input" placeholder="Nombre de usuario"
+                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-red-500">
+                        <button onclick="app.handleBanForm()"
+                            class="bg-red-500 text-white px-6 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-red-400 transition-colors shadow-lg">
+                            Banear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista de Baneados -->
+                <div class="space-y-3">
+                    <h4 class="text-white font-bold text-sm uppercase tracking-wider">
+                        Usuarios Baneados</h4>
+                    <div id="banned-users-list" class="space-y-2 max-h-32 overflow-y-auto">
+                        <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
+                    </div>
+                </div>
+
                 <div class="border-t border-[#333] pt-4">
-                    <p class="text-gray-600 text-[10px] text-center">Los moderadores pueden eliminar mensajes pero no
-                        pueden agregar o quitar otros moderadores.</p>
+                    <p class="text-gray-600 text-[10px] text-center">Los moderadores pueden eliminar mensajes, mutear y
+                        banear usuarios.</p>
                 </div>
             </div>
         </div>
