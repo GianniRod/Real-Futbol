@@ -277,6 +277,23 @@ export const sendMessage = async (userFieldId, textFieldId) => {
         return;
     }
 
+    // Verificar si está baneado
+    const { isUserBanned, isUserMuted, getMuteTimeRemaining } = await import('./moderation.js');
+
+    const banStatus = await isUserBanned(user.uid);
+    if (banStatus) {
+        alert("⛔ Tu cuenta ha sido suspendida permanentemente.\n\nSi crees que esto fue un error, por favor escríbenos a:\ncontacto@realfutbol.app");
+        return;
+    }
+
+    // Verificar si está muteado
+    const muteStatus = await isUserMuted(user.uid);
+    if (muteStatus) {
+        const timeRemaining = getMuteTimeRemaining(muteStatus);
+        alert(`🔇 Has sido silenciado temporalmente.\n\nPodrás volver a escribir en: ${timeRemaining}`);
+        return;
+    }
+
     const textInp = document.getElementById(textFieldId);
     const text = textInp.value.trim();
 
