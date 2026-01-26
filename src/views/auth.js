@@ -738,11 +738,11 @@ export const startPhoneLinking = async (phoneNumber) => {
 
         // Mensajes de error específicos
         if (error.code === 'auth/provider-already-linked') {
-            throw new Error('Ya tienes un número de teléfono vinculado');
+            throw new Error('Ya tienes un número de teléfono vinculado a esta cuenta.');
         } else if (error.code === 'auth/credential-already-in-use') {
-            throw new Error('Este número ya está vinculado a otra cuenta');
+            throw new Error('Este número ya está vinculado a otra cuenta.');
         } else if (error.code === 'auth/invalid-phone-number') {
-            throw new Error('Número inválido. Verifica el formato (+54...)');
+            throw new Error('Número inválido. Verifica el formato.');
         } else if (error.code === 'auth/captcha-check-failed') {
             throw new Error('Error de verificación. Por favor intenta de nuevo.');
         }
