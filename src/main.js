@@ -85,7 +85,11 @@ import {
     handleMuteForm,
     handleBanForm,
     loadMutedUsers,
-    loadBannedUsers
+    loadBannedUsers,
+    openModPanel,
+    closeModPanel,
+    handleModMuteForm,
+    handleModBanForm
 } from './views/moderation.js';
 
 import {
@@ -620,6 +624,12 @@ window.app = {
     loadMutedUsers,
     loadBannedUsers,
     switchModTab,
+
+    // Mod Panel (Green)
+    openModPanel,
+    closeModPanel,
+    handleModMuteForm,
+    handleModBanForm,
 
     // Suggestions
     openSuggestionModal,
