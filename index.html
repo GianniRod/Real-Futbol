@@ -606,6 +606,31 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Estado Muteado/Baneado (foro global) -->
+                    <div id="forum-muted-container"
+                        class="bg-[#111] p-4 border border-yellow-500/50 rounded-lg sticky bottom-12 lg:bottom-0 z-10 w-full hidden">
+                        <div class="flex items-center justify-center gap-3 text-yellow-500">
+                            <span class="text-xl">🔇</span>
+                            <div class="text-center">
+                                <div class="font-bold text-sm">Estás silenciado</div>
+                                <div id="forum-mute-time" class="text-xs text-yellow-400">Tiempo restante: --</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="forum-banned-container"
+                        class="bg-[#111] p-4 border border-red-500/50 rounded-lg sticky bottom-12 lg:bottom-0 z-10 w-full hidden">
+                        <div class="text-center">
+                            <div class="flex items-center justify-center gap-2 text-red-500 mb-2">
+                                <span class="text-xl">⛔</span>
+                                <span class="font-bold text-sm">Tu cuenta ha sido suspendida</span>
+                            </div>
+                            <div class="text-xs text-gray-400">Si crees que esto fue un error, escríbenos a:</div>
+                            <a href="mailto:contacto@realfutbol.app"
+                                class="text-xs text-blue-400 hover:underline">contacto@realfutbol.app</a>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Match Detail Overlay -->
@@ -728,6 +753,31 @@
                                             class="btn-primary px-4 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-gray-200 transition-colors">
                                             Enviar
                                         </button>
+                                    </div>
+
+                                    <!-- Estado Muteado/Baneado (foro partido) -->
+                                    <div id="match-forum-muted-container"
+                                        class="hidden p-3 border border-yellow-500/50 rounded-lg bg-[#111]">
+                                        <div class="flex items-center justify-center gap-2 text-yellow-500">
+                                            <span>🔇</span>
+                                            <div class="text-center">
+                                                <div class="font-bold text-xs">Estás silenciado</div>
+                                                <div id="match-forum-mute-time" class="text-[10px] text-yellow-400">
+                                                    Tiempo restante: --</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div id="match-forum-banned-container"
+                                        class="hidden p-3 border border-red-500/50 rounded-lg bg-[#111]">
+                                        <div class="text-center">
+                                            <div class="flex items-center justify-center gap-2 text-red-500 mb-1">
+                                                <span>⛔</span>
+                                                <span class="font-bold text-xs">Cuenta suspendida</span>
+                                            </div>
+                                            <a href="mailto:contacto@realfutbol.app"
+                                                class="text-[10px] text-blue-400 hover:underline">contacto@realfutbol.app</a>
+                                        </div>
                                     </div>
                                 </div>
 
