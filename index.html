@@ -374,10 +374,10 @@
                 <span class="hidden lg:inline">DESARROLLADOR</span>
             </button>
 
-            <!-- Botón de Moderador (solo visible para moderadores, visual only) -->
-            <button id="moderator-badge-btn"
-                class="hidden px-2 lg:px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-black uppercase tracking-wider rounded cursor-default flex items-center gap-1.5 shadow-lg"
-                title="Eres Moderador">
+            <!-- Botón de Moderador (solo visible para moderadores, clickeable) -->
+            <button id="moderator-badge-btn" onclick="app.openModerationPanel()"
+                class="hidden px-2 lg:px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-black uppercase tracking-wider rounded cursor-pointer flex items-center gap-1.5 shadow-lg hover:from-green-400 hover:to-emerald-500 transition-colors"
+                title="Abrir Panel de Moderación">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -1255,11 +1255,14 @@
 
     <!-- Moderation Panel Modal -->
     <div id="moderation-modal"
-        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-md overflow-hidden shadow-2xl">
-            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 p-5 flex justify-between items-center">
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-[#111] border border-[#333] rounded-lg w-full max-w-lg overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+            <!-- Header -->
+            <div
+                class="bg-gradient-to-r from-yellow-500 to-orange-500 p-4 flex justify-between items-center flex-shrink-0">
                 <h3 class="font-bold text-black text-lg font-sport uppercase flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -1273,125 +1276,129 @@
                     </svg>
                 </button>
             </div>
-            <div class="p-6 space-y-6">
-                <!-- Agregar Moderador -->
-                <div class="space-y-3">
-                    <h4 class="text-white font-bold text-sm uppercase tracking-wider">Agregar Moderador</h4>
-                    <p class="text-gray-400 text-xs leading-relaxed">Ingresa el UID del usuario que quieres hacer
-                        moderador. Los moderadores pueden eliminar mensajes en los foros.</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="add-mod-input" placeholder="UID del usuario"
-                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-orange-500 font-mono">
-                        <button onclick="app.handleAddModeratorForm()"
-                            class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 rounded text-xs uppercase font-bold tracking-widest hover:from-green-400 hover:to-emerald-500 transition-colors shadow-lg">
-                            Agregar
-                        </button>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-[#333] flex-shrink-0">
+                <button onclick="app.switchModTab('team')" id="mod-tab-team"
+                    class="flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider text-white bg-[#1a1a1a] border-b-2 border-orange-500">
+                    Equipo
+                </button>
+                <button onclick="app.switchModTab('sanctions')" id="mod-tab-sanctions"
+                    class="flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-white transition-colors border-b-2 border-transparent">
+                    Sanciones
+                </button>
+                <button onclick="app.switchModTab('badges')" id="mod-tab-badges"
+                    class="flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-white transition-colors border-b-2 border-transparent">
+                    Insignias
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-5 overflow-y-auto flex-1">
+                <!-- TAB: Equipo -->
+                <div id="mod-content-team" class="space-y-4">
+                    <!-- Agregar Moderador -->
+                    <div class="space-y-2">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider">Agregar Moderador</h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="add-mod-input" placeholder="UID del usuario"
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-orange-500 font-mono text-xs">
+                            <button onclick="app.handleAddModeratorForm()"
+                                class="bg-green-500 text-white px-4 py-2 rounded text-xs uppercase font-bold hover:bg-green-400 transition-colors">
+                                Agregar
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Lista de Moderadores -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Moderadores Actuales</h4>
+                        <div id="moderators-list" class="space-y-2 max-h-48 overflow-y-auto">
+                            <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Lista de Moderadores -->
-                <div class="space-y-3">
-                    <h4 class="text-white font-bold text-sm uppercase tracking-wider border-t border-[#333] pt-4">
-                        Moderadores Actuales</h4>
-                    <div id="moderators-list" class="space-y-2 max-h-40 overflow-y-auto">
-                        <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
+                <!-- TAB: Sanciones -->
+                <div id="mod-content-sanctions" class="space-y-4 hidden">
+                    <!-- Mutear -->
+                    <div class="space-y-2">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                            <span class="text-yellow-500">🔇</span> Mutear Usuario
+                        </h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="mute-username-input" placeholder="Username"
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-yellow-500">
+                            <select id="mute-duration-select"
+                                class="bg-[#0a0a0a] border border-[#333] text-white text-xs p-2.5 rounded w-24">
+                                <option value="60">1h</option>
+                                <option value="360">6h</option>
+                                <option value="1440">24h</option>
+                                <option value="10080">1 sem</option>
+                                <option value="43200">1 mes</option>
+                            </select>
+                            <button onclick="app.handleMuteForm()"
+                                class="bg-yellow-500 text-black px-3 py-2 rounded text-xs font-bold hover:bg-yellow-400">
+                                Mutear
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Lista Muteados -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios Muteados</h4>
+                        <div id="muted-users-list" class="space-y-2 max-h-24 overflow-y-auto">
+                            <div class="text-gray-500 text-xs text-center py-2">Cargando...</div>
+                        </div>
+                    </div>
+                    <!-- Banear -->
+                    <div class="space-y-2 border-t border-[#333] pt-4">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                            <span class="text-red-500">⛔</span> Banear Usuario
+                        </h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="ban-username-input" placeholder="Username"
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-red-500">
+                            <button onclick="app.handleBanForm()"
+                                class="bg-red-500 text-white px-4 py-2 rounded text-xs font-bold hover:bg-red-400">
+                                Banear
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Lista Baneados -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios Baneados</h4>
+                        <div id="banned-users-list" class="space-y-2 max-h-24 overflow-y-auto">
+                            <div class="text-gray-500 text-xs text-center py-2">Cargando...</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Agregar Primer Usuario -->
-                <div class="space-y-3 border-t border-[#333] pt-4">
-                    <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-                        <span
-                            class="px-2 py-0.5 bg-gradient-to-r from-cyan-400 to-sky-500 text-black text-[9px] font-black uppercase rounded">PRIMER
-                            USUARIO</span>
-                        Insignia Especial
-                    </h4>
-                    <p class="text-gray-400 text-xs leading-relaxed">Otorga la insignia "PRIMER USUARIO" a usuarios
-                        especiales. Esta insignia aparecerá junto a su nombre en el chat.</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="add-first-user-input" placeholder="UID del usuario"
-                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-cyan-500 font-mono">
-                        <button onclick="app.handleAddFirstUserForm()"
-                            class="bg-gradient-to-r from-cyan-400 to-sky-500 text-black px-6 py-2 rounded text-xs uppercase font-bold tracking-widest hover:from-cyan-300 hover:to-sky-400 transition-colors shadow-lg">
-                            Agregar
-                        </button>
+                <!-- TAB: Insignias -->
+                <div id="mod-content-badges" class="space-y-4 hidden">
+                    <!-- Agregar Primer Usuario -->
+                    <div class="space-y-2">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                            <span
+                                class="px-2 py-0.5 bg-gradient-to-r from-cyan-400 to-sky-500 text-black text-[9px] font-black uppercase rounded">PRIMER
+                                USUARIO</span>
+                        </h4>
+                        <p class="text-gray-400 text-xs">Otorga la insignia especial que aparece junto al nombre en el
+                            chat.</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="add-first-user-input" placeholder="UID del usuario"
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-cyan-500 font-mono text-xs">
+                            <button onclick="app.handleAddFirstUserForm()"
+                                class="bg-gradient-to-r from-cyan-400 to-sky-500 text-black px-4 py-2 rounded text-xs font-bold hover:from-cyan-300 hover:to-sky-400">
+                                Agregar
+                            </button>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Lista de Primer Usuario -->
-                <div class="space-y-3">
-                    <h4 class="text-white font-bold text-sm uppercase tracking-wider">
-                        Usuarios con Insignia</h4>
-                    <div id="first-users-list" class="space-y-2 max-h-40 overflow-y-auto">
-                        <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
+                    <!-- Lista -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios con Insignia</h4>
+                        <div id="first-users-list" class="space-y-2 max-h-48 overflow-y-auto">
+                            <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
+                        </div>
                     </div>
-                </div>
-
-                <!-- MUTEAR USUARIO -->
-                <div class="space-y-3 border-t border-[#333] pt-4">
-                    <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-                        <span class="text-yellow-500">🔇</span>
-                        Mutear Usuario
-                    </h4>
-                    <p class="text-gray-400 text-xs leading-relaxed">Silencia temporalmente a un usuario. No podrá
-                        enviar mensajes durante el tiempo seleccionado.</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="mute-username-input" placeholder="Nombre de usuario"
-                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-yellow-500">
-                        <select id="mute-duration-select"
-                            class="bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-yellow-500">
-                            <option value="60">1 hora</option>
-                            <option value="360">6 horas</option>
-                            <option value="1440">24 horas</option>
-                            <option value="10080">1 semana</option>
-                            <option value="43200">1 mes</option>
-                        </select>
-                        <button onclick="app.handleMuteForm()"
-                            class="bg-yellow-500 text-black px-4 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-yellow-400 transition-colors shadow-lg">
-                            Mutear
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Lista de Muteados -->
-                <div class="space-y-3">
-                    <h4 class="text-white font-bold text-sm uppercase tracking-wider">
-                        Usuarios Muteados</h4>
-                    <div id="muted-users-list" class="space-y-2 max-h-32 overflow-y-auto">
-                        <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
-                    </div>
-                </div>
-
-                <!-- BANEAR USUARIO -->
-                <div class="space-y-3 border-t border-[#333] pt-4">
-                    <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-                        <span class="text-red-500">⛔</span>
-                        Banear Usuario
-                    </h4>
-                    <p class="text-gray-400 text-xs leading-relaxed">Suspende permanentemente a un usuario. Esta acción
-                        es severa y debe usarse con precaución.</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="ban-username-input" placeholder="Nombre de usuario"
-                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-red-500">
-                        <button onclick="app.handleBanForm()"
-                            class="bg-red-500 text-white px-6 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-red-400 transition-colors shadow-lg">
-                            Banear
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Lista de Baneados -->
-                <div class="space-y-3">
-                    <h4 class="text-white font-bold text-sm uppercase tracking-wider">
-                        Usuarios Baneados</h4>
-                    <div id="banned-users-list" class="space-y-2 max-h-32 overflow-y-auto">
-                        <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
-                    </div>
-                </div>
-
-                <div class="border-t border-[#333] pt-4">
-                    <p class="text-gray-600 text-[10px] text-center">Los moderadores pueden eliminar mensajes, mutear y
-                        banear usuarios.</p>
                 </div>
             </div>
         </div>
