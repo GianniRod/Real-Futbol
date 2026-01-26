@@ -77,7 +77,15 @@ import {
     addFirstUser,
     removeFirstUser,
     handleAddFirstUserForm,
-    loadFirstUsers
+    loadFirstUsers,
+    muteUser,
+    unmuteUser,
+    banUser,
+    unbanUser,
+    handleMuteForm,
+    handleBanForm,
+    loadMutedUsers,
+    loadBannedUsers
 } from './views/moderation.js';
 
 import {
@@ -574,6 +582,16 @@ window.app = {
     removeFirstUser,
     handleAddFirstUserForm,
     loadFirstUsers,
+
+    // Mute/Ban
+    muteUser,
+    unmuteUser,
+    banUser,
+    unbanUser,
+    handleMuteForm,
+    handleBanForm,
+    loadMutedUsers,
+    loadBannedUsers,
 
     // Suggestions
     openSuggestionModal,
