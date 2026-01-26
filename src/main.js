@@ -479,6 +479,33 @@ const closePhoneLinkingVerification = () => {
 };
 
 /**
+ * Cambia entre tabs del panel de moderación
+ * @param {string} tabName - 'team', 'sanctions', o 'badges'
+ */
+const switchModTab = (tabName) => {
+    // Ocultar todos los contenidos
+    const contents = ['team', 'sanctions', 'badges'];
+    contents.forEach(name => {
+        const content = document.getElementById(`mod-content-${name}`);
+        const tab = document.getElementById(`mod-tab-${name}`);
+        if (content) content.classList.add('hidden');
+        if (tab) {
+            tab.classList.remove('text-white', 'bg-[#1a1a1a]', 'border-orange-500');
+            tab.classList.add('text-gray-500', 'border-transparent');
+        }
+    });
+
+    // Mostrar el tab seleccionado
+    const selectedContent = document.getElementById(`mod-content-${tabName}`);
+    const selectedTab = document.getElementById(`mod-tab-${tabName}`);
+    if (selectedContent) selectedContent.classList.remove('hidden');
+    if (selectedTab) {
+        selectedTab.classList.remove('text-gray-500', 'border-transparent');
+        selectedTab.classList.add('text-white', 'bg-[#1a1a1a]', 'border-orange-500');
+    }
+};
+
+/**
  * Inicializa la aplicación
  */
 const init = () => {
@@ -592,6 +619,7 @@ window.app = {
     handleBanForm,
     loadMutedUsers,
     loadBannedUsers,
+    switchModTab,
 
     // Suggestions
     openSuggestionModal,
