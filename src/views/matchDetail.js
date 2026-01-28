@@ -241,20 +241,26 @@ const renderLineups = (m) => {
 
                 if (isMobile) {
                     // En móvil: cancha vertical
+                    // Calcular número total de líneas para distribuir mejor
+                    const totalLines = Object.keys(lines).length;
+
                     if (side === 'home') {
-                        // Equipo local arriba (3-47%)
-                        y = 3 + (lineIdx - 1) * 8;
+                        // Equipo local arriba (3-48%) - espaciado dinámico
+                        const spacing = Math.min(10, 45 / totalLines);
+                        y = 3 + (lineIdx - 1) * spacing;
                         if (lineIdx === 1) y = 2;
                     } else {
-                        // Equipo visitante abajo (53-97%)
-                        y = 97 - (lineIdx - 1) * 8;
+                        // Equipo visitante abajo (52-97%) - espaciado dinámico
+                        const spacing = Math.min(10, 45 / totalLines);
+                        y = 97 - (lineIdx - 1) * spacing;
                         if (lineIdx === 1) y = 98;
                     }
 
+                    // Aprovechar más el ancho de la pantalla
                     const segment = 100 / (count + 1);
                     x = segment * (index + 1);
-                    if (x < 12) x = 12;
-                    if (x > 88) x = 88;
+                    if (x < 5) x = 5;
+                    if (x > 95) x = 95;
                 } else {
                     // En desktop: cancha horizontal
                     if (side === 'home') {
