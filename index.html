@@ -92,11 +92,11 @@
             border: 1px solid #444;
         }
 
-        /* Cancha Táctica - Estilo Verde */
+        /* Cancha Táctica - Estilo Negro */
         .football-pitch {
-            background-color: #1a472a;
-            /* Verde oscuro */
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            background-color: #151515;
+            /* Negro */
+            border: 2px solid #444;
             position: relative;
             width: 100%;
             aspect-ratio: 7 / 5;
@@ -197,47 +197,40 @@
             border-right: none;
         }
 
-        /* Corner Arcs */
+        /* Corner Arcs - 4 iguales */
         .corner-arc {
             position: absolute;
-            width: 30px;
-            height: 30px;
+            width: 20px;
+            height: 20px;
             border: 1px solid #444;
             border-radius: 50%;
         }
 
-        /* Ocultar corner arcs en móvil para evitar duplicados */
-        @media (max-width: 768px) {
-            .corner-arc {
-                display: none;
-            }
-        }
-
         .corner-top-left {
-            top: -15px;
-            left: -15px;
+            top: -10px;
+            left: -10px;
         }
 
         .corner-top-right {
-            top: -15px;
-            right: -15px;
+            top: -10px;
+            right: -10px;
         }
 
         .corner-bottom-left {
-            bottom: -15px;
-            left: -15px;
+            bottom: -10px;
+            left: -10px;
         }
 
         .corner-bottom-right {
-            bottom: -15px;
-            right: -15px;
+            bottom: -10px;
+            right: -10px;
         }
 
-        /* Marcadores Jugadores - Camisetas */
+        /* Marcadores Jugadores - Camisetas (20% más chicos) */
         .player-marker {
             position: absolute;
-            width: 32px;
-            height: 36px;
+            width: 26px;
+            height: 29px;
             display: flex;
             align-items: center;
             justify-content: center;
