@@ -226,19 +226,38 @@ const renderLineups = (m) => {
                     el.appendChild(ballIcon);
                 }
 
-                let x;
-                if (side === 'home') {
-                    x = 4 + (lineIdx - 1) * 11;
-                    if (lineIdx === 1) x = 2;
-                } else {
-                    x = 96 - (lineIdx - 1) * 11;
-                    if (lineIdx === 1) x = 98;
-                }
+                let x, y;
+                const isMobile = window.innerWidth < 768;
 
-                const segment = 100 / (count + 1);
-                let y = segment * (index + 1);
-                if (y < 5) y = 5;
-                if (y > 95) y = 95;
+                if (isMobile) {
+                    // En móvil: cancha vertical, intercambiar X e Y
+                    if (side === 'home') {
+                        y = 4 + (lineIdx - 1) * 10;
+                        if (lineIdx === 1) y = 3;
+                    } else {
+                        y = 96 - (lineIdx - 1) * 10;
+                        if (lineIdx === 1) y = 97;
+                    }
+
+                    const segment = 100 / (count + 1);
+                    x = segment * (index + 1);
+                    if (x < 8) x = 8;
+                    if (x > 92) x = 92;
+                } else {
+                    // En desktop: cancha horizontal (comportamiento original)
+                    if (side === 'home') {
+                        x = 4 + (lineIdx - 1) * 11;
+                        if (lineIdx === 1) x = 2;
+                    } else {
+                        x = 96 - (lineIdx - 1) * 11;
+                        if (lineIdx === 1) x = 98;
+                    }
+
+                    const segment = 100 / (count + 1);
+                    y = segment * (index + 1);
+                    if (y < 5) y = 5;
+                    if (y > 95) y = 95;
+                }
 
                 el.style.left = x + '%';
                 el.style.top = y + '%';
