@@ -245,22 +245,26 @@ const renderLineups = (m) => {
                     const totalLines = Object.keys(lines).length;
 
                     if (side === 'home') {
-                        // Equipo local arriba (3-48%) - espaciado dinámico
-                        const spacing = Math.min(10, 45 / totalLines);
-                        y = 3 + (lineIdx - 1) * spacing;
+                        // Equipo local arriba (2-48%) - espaciado más amplio
+                        const spacing = Math.max(8, 46 / (totalLines - 1 || 1));
+                        y = 2 + (lineIdx - 1) * spacing;
                         if (lineIdx === 1) y = 2;
+                        // No pasar del 48%
+                        if (y > 48) y = 48;
                     } else {
-                        // Equipo visitante abajo (52-97%) - espaciado dinámico
-                        const spacing = Math.min(10, 45 / totalLines);
-                        y = 97 - (lineIdx - 1) * spacing;
+                        // Equipo visitante abajo (52-98%) - espaciado más amplio
+                        const spacing = Math.max(8, 46 / (totalLines - 1 || 1));
+                        y = 98 - (lineIdx - 1) * spacing;
                         if (lineIdx === 1) y = 98;
+                        // No bajar del 52%
+                        if (y < 52) y = 52;
                     }
 
-                    // Aprovechar más el ancho de la pantalla
+                    // Aprovechar todo el ancho de la pantalla
                     const segment = 100 / (count + 1);
                     x = segment * (index + 1);
-                    if (x < 5) x = 5;
-                    if (x > 95) x = 95;
+                    if (x < 3) x = 3;
+                    if (x > 97) x = 97;
                 } else {
                     // En desktop: cancha horizontal
                     if (side === 'home') {
