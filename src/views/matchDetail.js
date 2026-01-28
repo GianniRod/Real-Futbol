@@ -350,10 +350,22 @@ export const openDetail = async (params) => {
     // Mostrar el modal
     detailView.classList.remove('hidden');
 
-    // Ocultar el date-nav para que no cubra el scoreboard en móvil
+    // Ocultar elementos que cubren el scoreboard en móvil
     const dateNav = document.getElementById('date-nav');
     if (dateNav) {
         dateNav.style.display = 'none';
+    }
+
+    // Ocultar header principal en móvil
+    const header = document.querySelector('header');
+    if (header && window.innerWidth < 1024) {
+        header.style.display = 'none';
+    }
+
+    // Ocultar bottom nav en móvil
+    const bottomNav = document.querySelector('nav.fixed.bottom-0');
+    if (bottomNav) {
+        bottomNav.style.display = 'none';
     }
 
     // Prevenir scroll del fondo (método simple que funciona)
@@ -472,10 +484,22 @@ export const closeDetail = () => {
     // Restaurar scroll del body
     document.body.style.overflow = '';
 
-    // Restaurar el date-nav que se ocultó al abrir el detalle
+    // Restaurar elementos ocultos al abrir el detalle
     const dateNav = document.getElementById('date-nav');
     if (dateNav) {
         dateNav.style.display = '';
+    }
+
+    // Restaurar header principal
+    const header = document.querySelector('header');
+    if (header) {
+        header.style.display = '';
+    }
+
+    // Restaurar bottom nav
+    const bottomNav = document.querySelector('nav.fixed.bottom-0');
+    if (bottomNav) {
+        bottomNav.style.display = '';
     }
 
     // Navegar de vuelta a matches
