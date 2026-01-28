@@ -212,7 +212,17 @@ const renderLineups = (m) => {
                     }
                 }
 
-                el.innerHTML = `<span class="text-xs font-bold font-mono pointer-events-none">${displayNumber}</span>`;
+                // SVG de camiseta con número
+                const shirtColor = side === 'home' ? '#ffffff' : '#333333';
+                const textColor = side === 'home' ? '#000000' : '#ffffff';
+                el.innerHTML = `
+                    <svg viewBox="0 0 40 44" width="100%" height="100%" class="pointer-events-none">
+                        <path d="M8 4 L16 0 L24 0 L32 4 L40 10 L36 18 L32 16 L32 44 L8 44 L8 16 L4 18 L0 10 Z" 
+                              fill="${shirtColor}" stroke="${side === 'home' ? '#000' : '#fff'}" stroke-width="1"/>
+                        <text x="20" y="28" text-anchor="middle" fill="${textColor}" 
+                              font-size="14" font-weight="bold" font-family="monospace">${displayNumber}</text>
+                    </svg>
+                `;
 
                 const playerGoals = events.filter(e => e.type === 'Goal' && (idsMatch(e.player.id, p.player.id) || (isSubbed && subOutEvent && idsMatch(e.player.id, subOutEvent.player.id))));
 
@@ -265,13 +275,22 @@ const renderLineups = (m) => {
                 const nameEl = document.createElement('div');
                 nameEl.className = `absolute -bottom-7 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap bg-black/80 px-2 py-1 rounded flex flex-col items-center leading-none z-30 border border-[#333] pointer-events-none`;
 
+                // Función para formatear nombre como "L. Messi"
+                const formatPlayerName = (fullName) => {
+                    const parts = fullName.trim().split(' ');
+                    if (parts.length === 1) return parts[0];
+                    const firstName = parts[0];
+                    const lastName = parts[parts.length - 1];
+                    return `${firstName.charAt(0)}. ${lastName}`;
+                };
+
                 if (isSubbed) {
-                    const inNameShort = subInName.split(' ').pop();
-                    const outNameShort = displayName.split(' ').pop();
-                    nameEl.innerHTML = `<span class="text-white mb-0.5">${inNameShort}</span><span class="text-gray-400 opacity-50 text-[7px]">${outNameShort}</span>`;
+                    const inNameFormatted = formatPlayerName(subInName);
+                    const outNameFormatted = formatPlayerName(displayName);
+                    nameEl.innerHTML = `<span class="text-white mb-0.5">${displayNumber} ${inNameFormatted}</span><span class="text-gray-400 opacity-50 text-[7px]">${outNameFormatted}</span>`;
                 } else {
-                    const shortName = displayName.split(' ').pop();
-                    nameEl.innerHTML = `<span class="text-white">${shortName}</span>`;
+                    const formattedName = formatPlayerName(displayName);
+                    nameEl.innerHTML = `<span class="text-white">${displayNumber} ${formattedName}</span>`;
                 }
                 el.appendChild(nameEl);
 
