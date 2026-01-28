@@ -221,36 +221,30 @@
             right: -25px;
         }
 
-        /* Marcadores Jugadores B&W */
+        /* Marcadores Jugadores - Camisetas */
         .player-marker {
             position: absolute;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
+            width: 32px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
-            font-size: 10px;
             z-index: 10;
             transition: transform 0.2s;
             cursor: pointer;
-            border: 1px solid #000;
+            transform: translate(-50%, -50%);
         }
 
         .home-player {
-            background-color: #ffffff;
-            color: #000000;
+            /* Los estilos se aplican via SVG */
         }
 
         .away-player {
-            background-color: #333333;
-            color: #ffffff;
-            border: 1px solid #fff;
+            /* Los estilos se aplican via SVG */
         }
 
         .player-marker:active {
-            transform: scale(1.3);
+            transform: translate(-50%, -50%) scale(1.2);
             z-index: 20;
         }
 
