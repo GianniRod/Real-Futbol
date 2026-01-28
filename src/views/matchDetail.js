@@ -285,7 +285,7 @@ const renderLineups = (m) => {
                 el.style.top = y + '%';
 
                 const nameEl = document.createElement('div');
-                nameEl.className = `absolute -bottom-7 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap bg-black/80 px-2 py-1 rounded flex flex-col items-center leading-none z-30 border border-[#333] pointer-events-none`;
+                nameEl.className = `absolute -bottom-6 left-1/2 -translate-x-1/2 text-[7px] font-bold whitespace-nowrap bg-black/80 px-1.5 py-0.5 rounded flex flex-col items-center leading-none z-30 border border-[#333] pointer-events-none`;
 
                 // Función para formatear nombre como "L. Messi"
                 const formatPlayerName = (fullName) => {
