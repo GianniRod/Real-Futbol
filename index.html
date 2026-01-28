@@ -104,10 +104,50 @@
             overflow: hidden;
         }
 
-        /* Cancha más vertical en móvil */
-        @media (max-width: 640px) {
+        /* Cancha vertical en móvil */
+        @media (max-width: 768px) {
             .football-pitch {
-                aspect-ratio: 5 / 7;
+                aspect-ratio: 3 / 4;
+            }
+
+            /* Línea central horizontal en móvil */
+            .football-pitch .center-line {
+                top: 50%;
+                bottom: auto;
+                left: 0;
+                right: 0;
+                width: 100%;
+                height: 1px;
+                transform: translateY(-50%);
+            }
+
+            /* Círculo central ajustado */
+            .football-pitch .center-circle {
+                width: 35%;
+                height: 20%;
+            }
+
+            /* Áreas rotadas para móvil */
+            .football-pitch .penalty-box {
+                width: 50%;
+                height: 12%;
+                left: 25%;
+                top: auto;
+            }
+
+            .football-pitch .home-box {
+                top: 0;
+                border-top: none;
+                border-left: 1px solid #444;
+                border-bottom: 1px solid #444;
+            }
+
+            .football-pitch .away-box {
+                bottom: 0;
+                top: auto;
+                border-bottom: none;
+                border-left: 1px solid #444;
+                border-top: 1px solid #444;
             }
         }
 
