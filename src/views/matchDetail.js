@@ -240,30 +240,30 @@ const renderLineups = (m) => {
                 const isMobile = window.innerWidth < 768;
 
                 if (isMobile) {
-                    // En móvil: cancha vertical, más espacio entre líneas
+                    // En móvil: cancha vertical
                     if (side === 'home') {
-                        // Equipo local arriba (0-45%)
-                        y = 5 + (lineIdx - 1) * 9;
-                        if (lineIdx === 1) y = 4;
+                        // Equipo local arriba (3-47%)
+                        y = 3 + (lineIdx - 1) * 8;
+                        if (lineIdx === 1) y = 2;
                     } else {
-                        // Equipo visitante abajo (55-100%)
-                        y = 95 - (lineIdx - 1) * 9;
-                        if (lineIdx === 1) y = 96;
+                        // Equipo visitante abajo (53-97%)
+                        y = 97 - (lineIdx - 1) * 8;
+                        if (lineIdx === 1) y = 98;
                     }
 
                     const segment = 100 / (count + 1);
                     x = segment * (index + 1);
-                    if (x < 10) x = 10;
-                    if (x > 90) x = 90;
+                    if (x < 12) x = 12;
+                    if (x > 88) x = 88;
                 } else {
-                    // En desktop: cancha horizontal, más separación en el centro
+                    // En desktop: cancha horizontal
                     if (side === 'home') {
-                        // Equipo local izquierda (0-45%)
-                        x = 3 + (lineIdx - 1) * 9;
+                        // Equipo local izquierda (2-48%)
+                        x = 2 + (lineIdx - 1) * 10;
                         if (lineIdx === 1) x = 2;
                     } else {
-                        // Equipo visitante derecha (55-100%)
-                        x = 97 - (lineIdx - 1) * 9;
+                        // Equipo visitante derecha (52-98%)
+                        x = 98 - (lineIdx - 1) * 10;
                         if (lineIdx === 1) x = 98;
                     }
 
