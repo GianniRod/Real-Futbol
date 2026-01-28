@@ -350,6 +350,12 @@ export const openDetail = async (params) => {
     // Mostrar el modal
     detailView.classList.remove('hidden');
 
+    // Ocultar el date-nav para que no cubra el scoreboard en móvil
+    const dateNav = document.getElementById('date-nav');
+    if (dateNav) {
+        dateNav.style.display = 'none';
+    }
+
     // Prevenir scroll del fondo (método simple que funciona)
     document.body.style.overflow = 'hidden';
 
@@ -465,6 +471,12 @@ export const closeDetail = () => {
 
     // Restaurar scroll del body
     document.body.style.overflow = '';
+
+    // Restaurar el date-nav que se ocultó al abrir el detalle
+    const dateNav = document.getElementById('date-nav');
+    if (dateNav) {
+        dateNav.style.display = '';
+    }
 
     // Navegar de vuelta a matches
     if (window.app && window.app.navigate) {
