@@ -258,27 +258,33 @@ const renderLineups = (m) => {
                         if (lineIdx === 1) y = 95;
                     }
 
-                    // Aprovechar todo el ancho de la pantalla
+                    // Aprovechar más los costados en móvil
                     const segment = 100 / (count + 1);
                     x = segment * (index + 1);
-                    if (x < 5) x = 5;
-                    if (x > 95) x = 95;
+                    if (x < 3) x = 3;
+                    if (x > 97) x = 97;
                 } else {
-                    // En desktop: cancha horizontal
+                    // En desktop: cancha horizontal - reducir separación entre equipos
+                    const totalLines = Object.keys(lines).length;
+
                     if (side === 'home') {
-                        // Equipo local izquierda (2-48%)
-                        x = 2 + (lineIdx - 1) * 10;
-                        if (lineIdx === 1) x = 2;
+                        // Equipo local izquierda (3-46%) - espaciado dinámico
+                        const availableSpace = 43;
+                        const spacing = availableSpace / Math.max(1, totalLines - 1);
+                        x = 3 + (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) x = 3;
                     } else {
-                        // Equipo visitante derecha (52-98%)
-                        x = 98 - (lineIdx - 1) * 10;
-                        if (lineIdx === 1) x = 98;
+                        // Equipo visitante derecha (54-97%) - espaciado dinámico
+                        const availableSpace = 43;
+                        const spacing = availableSpace / Math.max(1, totalLines - 1);
+                        x = 97 - (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) x = 97;
                     }
 
                     const segment = 100 / (count + 1);
                     y = segment * (index + 1);
-                    if (y < 8) y = 8;
-                    if (y > 92) y = 92;
+                    if (y < 6) y = 6;
+                    if (y > 94) y = 94;
                 }
 
                 el.style.left = x + '%';
