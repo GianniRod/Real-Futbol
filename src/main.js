@@ -114,6 +114,20 @@ const navigateToMatches = () => {
     document.getElementById('sidebar').classList.add('-translate-x-full');
     document.getElementById('mobile-backdrop').classList.add('hidden');
 
+    // Desactivar filtro EN VIVO si estaba activo
+    const toggle = document.getElementById('live-toggle');
+    if (toggle && toggle.checked) {
+        toggle.checked = false;
+        toggleLiveFilter();
+    }
+
+    // Resetear color del botón EN VIVO a gris
+    const liveBtn = document.getElementById('btn-nav-live');
+    if (liveBtn) {
+        liveBtn.classList.remove('text-red-500');
+        liveBtn.classList.add('text-gray-400');
+    }
+
     updateMobileNav('btn-nav-results');
 };
 
@@ -191,20 +205,28 @@ const toggleLiveFromMobile = () => {
     const toggle = document.getElementById('live-toggle');
     const liveBtn = document.getElementById('btn-nav-live');
 
+    // Si ya está activo EN VIVO, no hacer nada
+    if (toggle && toggle.checked) {
+        return;
+    }
+
     if (toggle) {
-        toggle.checked = !toggle.checked;
+        toggle.checked = true;
         toggleLiveFilter();
     }
 
-    // Actualizar estado visual del botón
+    // Apagar todos los botones de navegación
+    ['btn-nav-results', 'btn-nav-live', 'btn-nav-leagues', 'btn-nav-forum'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.classList.add('text-gray-400');
+        btn.classList.remove('text-white', 'text-red-500');
+    });
+
+    // Activar solo el botón EN VIVO en rojo
     if (liveBtn) {
-        if (toggle && toggle.checked) {
-            liveBtn.classList.remove('text-gray-400');
-            liveBtn.classList.add('text-red-500');
-        } else {
-            liveBtn.classList.remove('text-red-500');
-            liveBtn.classList.add('text-gray-400');
-        }
+        liveBtn.classList.remove('text-gray-400');
+        liveBtn.classList.add('text-red-500');
     }
 };
 
