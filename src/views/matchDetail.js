@@ -251,11 +251,11 @@ const renderLineups = (m) => {
                         y = 5 + (lineIdx - 1) * spacing;
                         if (lineIdx === 1) y = 5;
                     } else {
-                        // Equipo local abajo (55%-95%)
-                        const availableSpace = 40;
+                        // Equipo local abajo (55%-92%)
+                        const availableSpace = 37;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        y = 95 - (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) y = 95;
+                        y = 92 - (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) y = 92;
                     }
 
                     // Aprovechar más los costados en móvil
