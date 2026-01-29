@@ -633,7 +633,9 @@
                 </div>
 
                 <!-- Match Detail Overlay -->
-                <div id="view-match-detail" class="hidden fixed inset-0 bg-black z-[60] overflow-y-auto animate-fade-in"
+                <!-- LG: Modificado para que en PC sea parte del flujo (static) y no un overlay (fixed) -->
+                <div id="view-match-detail"
+                    class="hidden fixed inset-0 lg:static lg:w-full lg:h-full lg:z-0 bg-black z-[60] overflow-y-auto lg:overflow-y-visible animate-fade-in"
                     style="touch-action: pan-y; -webkit-overflow-scrolling: touch;">
                     <div class="max-w-4xl mx-auto bg-[#050505] relative">
 
