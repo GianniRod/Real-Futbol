@@ -406,13 +406,23 @@ export const openDetail = async (params) => {
     // Mostrar el modal
     detailView.classList.remove('hidden');
 
-    // Ocultar elementos que cubren el scoreboard en móvil
+    // Ocultar otras vistas para que no se solapen en Desktop
+    document.getElementById('view-match-list').classList.add('hidden');
+    document.getElementById('view-standings').classList.add('hidden');
+    document.getElementById('view-forum').classList.add('hidden');
+
+    // Ocultar fecha en mobile (en desktop ya está en sidebar/header o no molesta)
     const dateNav = document.getElementById('date-nav');
     if (dateNav) {
-        dateNav.style.display = 'none';
+        if (window.innerWidth < 1024) {
+            dateNav.style.display = 'none';
+        } else {
+            // En desktop ocultamos el date-nav porque el detalle ocupa su lugar
+            dateNav.classList.add('hidden');
+        }
     }
 
-    // Ocultar header principal en móvil
+    // Ocultar header principal SOLO en móvil
     const header = document.querySelector('header');
     if (header && window.innerWidth < 1024) {
         header.style.display = 'none';
@@ -424,11 +434,13 @@ export const openDetail = async (params) => {
         bottomNav.style.display = 'none';
     }
 
-    // Prevenir scroll del fondo (método simple que funciona)
-    document.body.style.overflow = 'hidden';
+    // Prevenir scroll del fondo SOLO en móvil
+    if (window.innerWidth < 1024) {
+        document.body.style.overflow = 'hidden';
+    }
 
     // Asegurar que el modal inicia desde arriba
-    detailView.scrollTo(0, 0);
+    detailView.scrollTop = 0;
 
     document.getElementById('detail-content-wrapper').classList.add('hidden');
     document.getElementById('detail-loader').classList.remove('hidden');
@@ -544,6 +556,7 @@ export const closeDetail = () => {
     const dateNav = document.getElementById('date-nav');
     if (dateNav) {
         dateNav.style.display = '';
+        dateNav.classList.remove('hidden');
     }
 
     // Restaurar header principal
