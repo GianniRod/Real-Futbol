@@ -310,6 +310,13 @@ export const saveUsername = async () => {
         return;
     }
 
+    // Solo permitir letras, números y guión bajo
+    const validUsernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!validUsernameRegex.test(username)) {
+        showUsernameError('Solo se permiten letras, números y guión bajo (_)');
+        return;
+    }
+
     if (!currentUser) {
         showUsernameError('Error: no hay usuario autenticado');
         return;
