@@ -69,8 +69,8 @@ const renderTimeline = (m) => {
         if (e.type === 'subst') {
             content = `
                 <div class="flex flex-col gap-0.5">
-                    <span class="text-xs font-bold text-green-400 uppercase">Entra: ${e.player.name}</span>
-                    <span class="text-[10px] font-bold text-red-400 uppercase opacity-70">Sale: ${e.assist.name}</span>
+                    <span class="text-xs font-bold text-green-400 uppercase">Entra: ${e.assist.name}</span>
+                    <span class="text-[10px] font-bold text-red-400 uppercase opacity-70">Sale: ${e.player.name}</span>
                 </div>
             `;
         } else {
