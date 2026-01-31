@@ -64,7 +64,9 @@ import {
     confirmPhoneLinking,
     hasLinkedPhone,
     getAuthProvider,
-    getLinkedPhone
+    getLinkedPhone,
+    openRankingModal,
+    closeRankingModal
 } from './views/auth.js';
 
 import {
@@ -676,17 +678,22 @@ window.app = {
     handlePhoneLinking,
     handlePhoneLinkingVerification,
     closePhoneLinkingVerification,
-
     // Moderation
     openModerationPanel,
     closeModerationPanel,
-    addModerator,
-    removeModerator,
+    switchModTab,
     handleAddModeratorForm,
-    addFirstUser,
-    removeFirstUser,
+    handleMuteForm,
+    handleBanForm,
     handleAddFirstUserForm,
+    // Ranking
+    openRankingModal,
+    closeRankingModal,
     loadFirstUsers,
+
+    // New Ranking Modal
+    openRankingModal,
+    closeRankingModal,
 
     // Mute/Ban
     muteUser,
