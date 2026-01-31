@@ -1002,20 +1002,14 @@ export const openRankingModal = async () => {
                     const highlightClass = isCurrentUser ? 'bg-orange-500/10 border-orange-500/50' : 'bg-[#1a1a1a] border-[#222]';
                     const textClass = isCurrentUser ? 'text-orange-500' : 'text-white';
 
-                    // Avatar styling
-                    const avatarHtml = user.photoURL
-                        ? `<img src="${user.photoURL}" class="w-8 h-8 rounded-full border border-[#333]" alt="${user.username}">`
-                        : `<div class="w-8 h-8 rounded-full bg-[#333] flex items-center justify-center text-xs font-bold text-gray-400">${user.username.charAt(0).toUpperCase()}</div>`;
-
                     html += `
-                        <div class="flex items-center gap-3 p-3 rounded border ${highlightClass} mb-2">
-                            <div class="font-mono font-bold text-lg w-8 text-center ${index < 3 ? 'text-yellow-500' : 'text-gray-500'}">#${user.rank}</div>
-                            <div class="flex-shrink-0">${avatarHtml}</div>
+                        <div class="flex items-center gap-4 p-3 rounded border ${highlightClass} mb-2">
+                            <div class="font-mono font-bold text-lg w-8 text-center text-gray-500">#${user.rank}</div>
                             <div class="flex-1 min-w-0">
                                 <div class="font-bold text-sm truncate ${textClass}">${user.username}</div>
                             </div>
-                            <div class="text-xs font-mono text-gray-400">
-                                <span class="text-white font-bold">${user.commentCount}</span> msgs
+                            <div class="text-white font-bold text-lg font-mono">
+                                ${user.commentCount}
                             </div>
                         </div>
                     `;
