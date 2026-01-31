@@ -360,11 +360,6 @@ export const navigateToForum = () => {
     document.getElementById('mobile-backdrop').classList.add('hidden');
 
     initForum('global', 'forum-messages', 'forum-username');
-
-    // Actualizar URL
-    if (window.app && window.app.navigate) {
-        window.app.navigate('/foro', true); // replace para no agregar al historial
-    }
 };
 
 /**
