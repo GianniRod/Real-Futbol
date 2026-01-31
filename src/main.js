@@ -102,10 +102,13 @@ import {
  * Navega a la vista de partidos
  */
 const navigateToMatches = () => {
-    // PRIMERO: Forzar URL a '/' SIEMPRE
-    window.history.pushState(null, '', '/');
+    // Si no estamos en la ruta raíz, navegar allí
+    if (window.location.pathname !== '/') {
+        navigate('/');
+        return;
+    }
 
-    // SEGUNDO: Cambiar vistas
+    // Cambiar vistas
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-forum').classList.add('hidden');
     document.getElementById('view-match-detail').classList.add('hidden');
@@ -168,6 +171,12 @@ const openDetailWithTab = (id, tab) => {
  * Navega al foro global (Wrapper para manejar estado de navegación)
  */
 const navigateToForumWrapper = () => {
+    // Si no estamos en la ruta del foro, navegar allí
+    if (window.location.pathname !== '/foro') {
+        navigate('/foro');
+        return;
+    }
+
     // Desactivar filtro EN VIVO si estaba activo
     const toggle = document.getElementById('live-toggle');
     if (toggle && toggle.checked) {
@@ -175,7 +184,10 @@ const navigateToForumWrapper = () => {
         toggleLiveFilter();
     }
 
+    // Renderizar foro
     navigateToForum();
+
+    // Asegurar estado visual de los botones
     updateMobileNav('btn-nav-forum');
 };
 
