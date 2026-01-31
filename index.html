@@ -1101,6 +1101,34 @@
         </div>
     </div>
 
+    <!-- Ranking Modal -->
+    <div id="ranking-modal"
+        class="fixed inset-0 bg-black/90 z-[90] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div
+            class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl flex flex-col max-h-[80vh]">
+            <div class="bg-black p-4 flex justify-between items-center border-b border-[#222] flex-shrink-0">
+                <h3 class="font-bold text-white text-lg font-sport uppercase flex items-center gap-2">
+                    <span class="text-yellow-500">🏆</span> Ranking Top 20
+                </h3>
+                <button onclick="app.closeRankingModal()" class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="ranking-list" class="p-4 overflow-y-auto flex-1 space-y-1">
+                <!-- User list will be injected here -->
+            </div>
+            <div class="p-3 border-t border-[#333] bg-[#0a0a0a] text-center flex-shrink-0">
+                <p class="text-[10px] text-gray-500">
+                    ¡Comenta en los foros para subir en el ranking!
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- Username Modal -->
     <div id="username-modal"
         class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
