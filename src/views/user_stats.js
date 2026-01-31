@@ -207,3 +207,50 @@ export const incrementUserCommentCount = async (uid) => {
         console.error("Error incrementing comment count:", error);
     }
 };
+/**
+ * Obtiene los usuarios con más comentarios para el ranking
+ * @param {number} limitCount - Cantidad de usuarios a obtener (default 20)
+ * @returns {Promise<Array>} - Array de objetos de usuario con ranking
+ */
+export const getTopUsers = async (limitCount = 20) => {
+    try {
+        console.log('getTopUsers called with limit:', limitCount);
+
+        // Obtener todos los perfiles que tengan comentarios (> 0)
+        // Nota: Idealmente esto debería ser una query ordenada con index compuesta
+        // pero por ahora traemos todos y ordenamos en memoria para simplificar
+        // y evitar problemas de índices inexistentes
+        const q = query(collection(db, "user_profiles"));
+        const snapshot = await getDocs(q);
+
+        const users = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.commentCount && data.commentCount > 0) {
+                users.push({
+                    uid: doc.id,
+                    username: data.username,
+                    photoURL: data.photoURL,
+                    commentCount: data.commentCount,
+                    // badge: data.badge // Si existiera
+                });
+            }
+        });
+
+        // Ordenar descendente por comentarios
+        users.sort((a, b) => b.commentCount - a.commentCount);
+
+        // Tomar los top N
+        const topUsers = users.slice(0, limitCount);
+
+        // Agregar posición
+        return topUsers.map((user, index) => ({
+            ...user,
+            rank: index + 1
+        }));
+
+    } catch (error) {
+        console.error("Error getting top users:", error);
+        return [];
+    }
+};
