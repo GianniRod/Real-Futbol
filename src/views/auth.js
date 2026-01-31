@@ -38,7 +38,7 @@ import {
 } from '../core/firebase.js';
 
 import { getUserRole, DEVELOPER_UID } from './moderation.js';
-import { getUserStats } from './user_stats.js';
+import { getUserStats, getTopUsers } from './user_stats.js';
 
 // State
 let currentUser = null;
@@ -945,12 +945,102 @@ export const showProfileModal = async () => {
             profileCommentCount.textContent = stats.commentCount;
         }
         if (profileRanking) {
-            profileRanking.textContent = `#${stats.ranking}`;
+            if (stats.commentCount === 0) {
+                profileRanking.textContent = "ESCRIBE PARA APARECER EN EL RANKING";
+                profileRanking.classList.add('text-[10px]', 'leading-tight');
+                profileRanking.classList.remove('text-3xl');
+            } else {
+                profileRanking.textContent = `#${stats.ranking}`;
+                profileRanking.classList.remove('text-[10px]', 'leading-tight');
+                profileRanking.classList.add('text-3xl');
+            }
+
+            // Hacer clickeable el container del ranking
+            const rankingContainer = profileRanking.parentElement;
+            if (rankingContainer) {
+                rankingContainer.onclick = () => app.openRankingModal();
+                rankingContainer.classList.add('cursor-pointer', 'hover:bg-[#1a1a1a]', 'transition-colors');
+            }
         }
     } catch (error) {
         console.error('Error loading user stats:', error);
         if (profileCommentCount) profileCommentCount.textContent = '0';
-        if (profileRanking) profileRanking.textContent = '#-';
+        if (profileRanking) {
+            profileRanking.textContent = "ESCRIBE PARA APARECER EN EL RANKING";
+            profileRanking.classList.add('text-[10px]', 'leading-tight');
+            profileRanking.classList.remove('text-3xl');
+        }
+    }
+};
+
+/**
+ * Abre el modal de ranking con el top 20
+ */
+export const openRankingModal = async () => {
+    // Cerrar perfil si está abierto
+    closeProfileModal();
+
+    const modal = document.getElementById('ranking-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+
+        const listContainer = document.getElementById('ranking-list');
+        if (listContainer) {
+            listContainer.innerHTML = '<div class="text-center text-gray-500 py-8">Cargando ranking...</div>';
+
+            try {
+                const topUsers = await getTopUsers(20);
+
+                if (topUsers.length === 0) {
+                    listContainer.innerHTML = '<div class="text-center text-gray-500 py-8">Aún no hay usuarios en el ranking</div>';
+                    return;
+                }
+
+                let html = '';
+                topUsers.forEach((user, index) => {
+                    const isCurrentUser = currentUser && user.uid === currentUser.uid;
+                    const highlightClass = isCurrentUser ? 'bg-orange-500/10 border-orange-500/50' : 'bg-[#1a1a1a] border-[#222]';
+                    const textClass = isCurrentUser ? 'text-orange-500' : 'text-white';
+
+                    // Avatar styling
+                    const avatarHtml = user.photoURL
+                        ? `<img src="${user.photoURL}" class="w-8 h-8 rounded-full border border-[#333]" alt="${user.username}">`
+                        : `<div class="w-8 h-8 rounded-full bg-[#333] flex items-center justify-center text-xs font-bold text-gray-400">${user.username.charAt(0).toUpperCase()}</div>`;
+
+                    html += `
+                        <div class="flex items-center gap-3 p-3 rounded border ${highlightClass} mb-2">
+                            <div class="font-mono font-bold text-lg w-8 text-center ${index < 3 ? 'text-yellow-500' : 'text-gray-500'}">#${user.rank}</div>
+                            <div class="flex-shrink-0">${avatarHtml}</div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-sm truncate ${textClass}">${user.username}</div>
+                            </div>
+                            <div class="text-xs font-mono text-gray-400">
+                                <span class="text-white font-bold">${user.commentCount}</span> msgs
+                            </div>
+                        </div>
+                    `;
+                });
+
+                listContainer.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading ranking:', error);
+                listContainer.innerHTML = '<div class="text-center text-red-500 py-8">Error al cargar el ranking</div>';
+            }
+        }
+    }
+};
+
+/**
+ * Cierra el modal de ranking
+ */
+export const closeRankingModal = () => {
+    const modal = document.getElementById('ranking-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    // Reabrir perfil
+    if (currentUser) {
+        showProfileModal();
     }
 };
 
