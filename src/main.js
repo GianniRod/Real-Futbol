@@ -165,6 +165,21 @@ const openDetailWithTab = (id, tab) => {
 };
 
 /**
+ * Navega al foro global (Wrapper para manejar estado de navegación)
+ */
+const navigateToForumWrapper = () => {
+    // Desactivar filtro EN VIVO si estaba activo
+    const toggle = document.getElementById('live-toggle');
+    if (toggle && toggle.checked) {
+        toggle.checked = false;
+        toggleLiveFilter();
+    }
+
+    navigateToForum();
+    updateMobileNav('btn-nav-forum');
+};
+
+/**
  * Abre/cierra el sidebar mobile
  * @param {string} tabName - Nombre del tab ('leagues', 'results', etc)
  */
@@ -173,6 +188,14 @@ const openMobileTab = (tabName) => {
     if (tabName === 'leagues') {
         sidebar.classList.remove('-translate-x-full');
         document.getElementById('mobile-backdrop').classList.remove('hidden');
+
+        // Desactivar filtro EN VIVO si estaba activo
+        const toggle = document.getElementById('live-toggle');
+        if (toggle && toggle.checked) {
+            toggle.checked = false;
+            toggleLiveFilter();
+        }
+
         updateMobileNav('btn-nav-leagues');
     } else {
         sidebar.classList.add('-translate-x-full');
@@ -188,12 +211,14 @@ const updateMobileNav = (activeId) => {
     ['btn-nav-results', 'btn-nav-live', 'btn-nav-leagues', 'btn-nav-forum'].forEach(id => {
         const btn = document.getElementById(id);
         if (!btn) return;
+
+        // Reset completo de clases
+        btn.classList.remove('text-white', 'text-red-500');
+        btn.classList.add('text-gray-400');
+
         if (id === activeId) {
             btn.classList.remove('text-gray-400');
             btn.classList.add('text-white');
-        } else {
-            btn.classList.add('text-gray-400');
-            btn.classList.remove('text-white');
         }
     });
 };
@@ -205,7 +230,22 @@ const toggleLiveFromMobile = () => {
     const toggle = document.getElementById('live-toggle');
     const liveBtn = document.getElementById('btn-nav-live');
 
-    // Si ya está activo EN VIVO, no hacer nada
+    // Cerrar sidebar si está abierto
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.add('-translate-x-full');
+        document.getElementById('mobile-backdrop').classList.add('hidden');
+    }
+
+    // Si estamos en otra vista (Foro, etc), volver a matches
+    if (!document.getElementById('view-match-list').classList.contains('hidden') === false) {
+        // Estamos en otra vista, navegar a matches primero
+        navigateToMatches();
+        // navigateToMatches resetea el toggle, así que lo activamos después
+    }
+
+    // Si ya está activo EN VIVO, no hacer nada (o podríamos togglear off?)
+    // Como es un tab, clickearlo debería mantenerlo activo.
     if (toggle && toggle.checked) {
         return;
     }
@@ -563,7 +603,7 @@ const init = () => {
     // Inicializar router con todos los handlers
     initRouter({
         navigateToMatches,
-        navigateToForum,
+        navigateToForum: navigateToForumWrapper,
         openMatchDetail,
         showStandingsById,
         showStandingsByIdAndName
@@ -593,7 +633,7 @@ window.app = {
     renderTable,
 
     // Forum
-    navigateToForum,
+    navigateToForum: navigateToForumWrapper,
     initForum,
     sendMessage,
     deleteMessage,
