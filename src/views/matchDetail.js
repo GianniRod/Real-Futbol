@@ -484,7 +484,7 @@ export const openDetail = async (params) => {
     }
 
     try {
-        const data = await fetchAPI(`/fixtures?id=${id}`);
+        const data = await fetchAPI(`/fixtures?id=${id}`, true);
         const fullMatch = data.response[0];
 
         renderTimeline(fullMatch);
