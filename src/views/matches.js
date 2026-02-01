@@ -225,7 +225,7 @@ export const renderMatches = () => {
 
             html += `
                 <div class="p-4 match-card ${clickableClass} relative bg-[#0a0a0a] rounded" ${clickAttr}>
-                    ${isLive ? '<div class="absolute top-3 right-3"><div class="live-dot"></div></div>' : ''}
+                    ${isLive ? '<div class="absolute top-3 right-3 flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div><span class="text-[9px] font-bold text-red-500 uppercase tracking-widest">EN VIVO</span></div>' : ''}
                     
                     <div class="flex items-center justify-between">
                         <!-- HOME TEAM -->
