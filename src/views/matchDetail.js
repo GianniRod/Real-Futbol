@@ -83,6 +83,7 @@ const renderTimeline = (m) => {
             } else if (e.type === 'Card') {
                 const isYellow = e.detail === 'Yellow Card';
                 const isRed = e.detail === 'Red Card';
+
                 if (isYellow || isRed) {
                     eventClass = 'bg-[#222] text-gray-300 border border-[#333]';
                     const colorClass = isYellow ? 'bg-yellow-400' : 'bg-red-600';
