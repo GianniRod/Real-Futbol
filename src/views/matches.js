@@ -216,8 +216,8 @@ export const renderMatches = () => {
                 const redCards = m.events.filter(e => e.type === 'Card' && e.detail === 'Red Card');
                 const hReds = redCards.filter(e => e.team.id === m.teams.home.id).length;
                 const aReds = redCards.filter(e => e.team.id === m.teams.away.id).length;
-                if (hReds > 0) hRedCards = `<div class="flex gap-0.5 ml-1">${'<div class="w-2 h-3 bg-red-600 rounded-sm"></div>'.repeat(hReds)}</div>`;
-                if (aReds > 0) aRedCards = `<div class="flex gap-0.5 mr-1">${'<div class="w-2 h-3 bg-red-600 rounded-sm"></div>'.repeat(aReds)}</div>`;
+                if (hReds > 0) hRedCards = `<div class="absolute -top-1 -right-3 flex gap-0.5">${'<div class="w-1.5 h-2 bg-red-600 rounded-[1px]"></div>'.repeat(hReds)}</div>`;
+                if (aReds > 0) aRedCards = `<div class="absolute -top-1 -right-3 flex gap-0.5">${'<div class="w-1.5 h-2 bg-red-600 rounded-[1px]"></div>'.repeat(aReds)}</div>`;
             }
 
             const clickableClass = notStarted ? 'not-clickable' : 'clickable';
@@ -233,7 +233,6 @@ export const renderMatches = () => {
                             <div class="flex flex-col items-end min-w-0 max-w-full">
                                 <div class="flex items-center gap-1 w-full justify-end">
                                     <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap">${m.teams.home.name}</span>
-                                    ${hRedCards}
                                 </div>
                                 ${hScorers ? `<div class="text-[9px] text-gray-500 font-mono w-full overflow-hidden">${hScorers}</div>` : ''}
                             </div>
@@ -245,9 +244,15 @@ export const renderMatches = () => {
                             ${notStarted
                     ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
                     : `<div class="flex gap-2 text-xl md:text-2xl font-black text-white score-font tracking-widest">
-                                     <span class="${homeOpacity}">${m.goals.home ?? 0}</span>
+                                     <span class="${homeOpacity} relative">
+                                        ${m.goals.home ?? 0}
+                                        ${hRedCards}
+                                     </span>
                                      <span class="text-gray-700">-</span>
-                                     <span class="${awayOpacity}">${m.goals.away ?? 0}</span>
+                                     <span class="${awayOpacity} relative">
+                                        ${m.goals.away ?? 0}
+                                        ${aRedCards}
+                                     </span>
                                    </div>`
                 }
                             <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap">${isLive || isHT || isFin ? timeDisplay : ''}</span>
@@ -262,7 +267,6 @@ export const renderMatches = () => {
                             <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain shrink-0">
                             <div class="flex flex-col items-start min-w-0 max-w-full">
                                 <div class="flex items-center gap-1 w-full justify-start">
-                                    ${aRedCards}
                                     <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap">${m.teams.away.name}</span>
                                 </div>
                                 ${aScorers ? `<div class="text-[9px] text-gray-500 font-mono w-full overflow-hidden">${aScorers}</div>` : ''}
