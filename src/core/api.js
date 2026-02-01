@@ -39,10 +39,11 @@ export const fetchAPI = async (endpoint, force = false) => {
         console.error("API Error:", data.errors);
 
         // Si falló y tenemos caché (aunque vieja), usarla como fallback
-        if (cached) {
+        // Si falló y tenemos caché (aunque vieja), usarla como fallback
+        /* if (cached) {
             console.warn("Usando caché fallback por error de API");
             return JSON.parse(cached).data;
-        }
+        } */
 
         throw new Error("API Limit Reached");
     }
