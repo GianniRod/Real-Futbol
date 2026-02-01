@@ -163,16 +163,20 @@ export const renderMatches = () => {
         return;
     }
 
-    const groups = {};
+    const groupsList = [];
+    const groupsMap = {};
+
     list.forEach(m => {
-        if (!groups[m.league.id]) {
-            groups[m.league.id] = { name: m.league.name, logo: m.league.logo, matches: [] };
+        if (!groupsMap[m.league.id]) {
+            const group = { id: m.league.id, name: m.league.name, logo: m.league.logo, matches: [] };
+            groupsMap[m.league.id] = group;
+            groupsList.push(group);
         }
-        groups[m.league.id].matches.push(m);
+        groupsMap[m.league.id].matches.push(m);
     });
 
     let html = '';
-    Object.values(groups).forEach(g => {
+    groupsList.forEach(g => {
         html += `<div class="mb-6"><div class="px-2 py-2 flex items-center gap-3"><img src="${g.logo}" class="w-4 h-4 object-contain"><h3 class="text-xs font-bold text-white uppercase tracking-widest">${g.name}</h3></div><div class="space-y-2">`;
 
         g.matches.forEach(m => {
