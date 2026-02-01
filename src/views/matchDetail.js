@@ -449,7 +449,16 @@ export const openDetail = async (params) => {
     document.getElementById('detail-away-logo').src = m.teams.away.logo;
     document.getElementById('detail-home-score').innerText = m.goals.home ?? 0;
     document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
-    document.getElementById('detail-status').innerText = m.fixture.status.long;
+    const statusShort = m.fixture.status.short;
+    let statusText = m.fixture.status.long;
+
+    if (['1H', '2H', 'ET', 'P'].includes(statusShort)) {
+        statusText = m.fixture.status.elapsed + "'";
+    } else if (statusShort === 'HT') {
+        statusText = 'ENTRETIEMPO';
+    }
+
+    document.getElementById('detail-status').innerText = statusText;
 
     // Red cards
     let homeRedCardsHTML = '';
