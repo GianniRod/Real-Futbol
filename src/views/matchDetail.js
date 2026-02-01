@@ -74,9 +74,26 @@ const renderTimeline = (m) => {
                 </div>
             `;
         } else {
+            let eventLabel = e.detail;
+            let eventClass = 'bg-[#333] text-gray-400';
+
+            if (e.type === 'Goal') {
+                eventLabel = 'GOL';
+                eventClass = 'bg-white text-black';
+            } else if (e.type === 'Card') {
+                const isYellow = e.detail === 'Yellow Card';
+                const isRed = e.detail === 'Red Card';
+                if (isYellow || isRed) {
+                    eventClass = 'bg-[#222] text-gray-300 border border-[#333]';
+                    const colorClass = isYellow ? 'bg-yellow-400' : 'bg-red-600';
+                    const text = isYellow ? 'TARJETA AMARILLA' : 'TARJETA ROJA';
+                    eventLabel = `<div class="w-2 h-3 ${colorClass} rounded-[1px] mr-1.5"></div>${text}`;
+                }
+            }
+
             content = `
                 <span class="text-sm font-bold text-white">${e.player.name}</span>
-                <span class="text-[9px] px-2 py-0.5 uppercase font-bold tracking-wider ${e.type === 'Goal' ? 'bg-white text-black' : 'bg-[#333] text-gray-400'}">${e.type === 'Goal' ? 'GOL' : e.detail}</span>
+                <span class="text-[9px] px-2 py-1 uppercase font-bold tracking-wider ${eventClass} flex items-center h-6 rounded">${eventLabel}</span>
             `;
         }
 
