@@ -96,7 +96,7 @@ export const loadMatches = async (silent = false) => {
     }
 
     const dateStr = formatDate(state.date);
-    const targetIds = [128, 1032, 129, 130, 39, 140, 78, 71, 13, 11, 135, 2, 3, 848];
+    const targetIds = [128, 1032, 129, 130, 39, 140, 78, 71, 13, 11, 135, 2, 3, 848, 143, 137];
 
     try {
         const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires`, silent);
