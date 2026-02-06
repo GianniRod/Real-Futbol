@@ -150,22 +150,48 @@ const renderTimeline = (m) => {
         // Probemos mostrar penales en orden de tiro (ascendente).
 
         // Re-ordenar penales Ascendente para calcular score
-        // (Nota: m.events original NO estaba ordenado por nosotros, hicimos copia `ev` y ordenamos `ev` DESC al inicio)
-        // Vamos a agarrar penaltyEvents (que viene de `ev` ya ordenado DESC) y revertirlo para tener ASC
-        const penAsc = [...penaltyEvents].reverse();
+        // El usuario reportó que estaba invertido.
+        // Si API devuelve en orden cronológico (0->N), y ev (que usamos para filtrar) estaba ordenado DESC (N->0),
+        // entonces penaltyEvents estaba DESC.
+        // Mi fix anterior hacía reverse() para volver a ASC.
+        // Sin embargo, usuario dice que estaba al revés.
+        // Vamos a confiar en la lógica: penaltyEvents viene de 'ev' (DESC). Entonces penaltyEvents[0] es el ULTIMO penal.
+        // reverse() debería poner penaltyEvents[0] (ULTIMO) al final. 
+        // Tal vez el sort inicial mezcló los penales si tienen mismo timestamp.
+
+        // CORRECCION: Usar array original m.events para obtener orden correcto de API
+        // API suele mandar index 0 = primer evento.
+        const originalPenalties = (m.events || []).filter(e => isPenalty(e));
+        // Asumimos originalPenalties[0] es el primer tiro.
+
+        const penAsc = [...originalPenalties]; // Ya debería estar en orden correcto
 
         html += `<div class="space-y-3">`;
 
         html += penAsc.map(e => {
             const isHome = e.team.id === m.teams.home.id;
-            const isGoal = e.type === 'Goal'; // En penales, Goal es metido, Missed es errado
-            // A veces API manda type 'Goal' detail 'Penalty' y type 'Var' etc.
-            // En tanda, suele ser type 'Goal' (metido) o type 'Missed Penalty' (errado) (verificar data real)
-            // Asumiremos: si detail o comments dice Missed, es fallo. Pero e.type 'Goal' es gol.
 
-            // Logica simple basada en lo comun de la API:
-            // Goal = Gol.
-            // Cualquier otra cosa (Missed, Saved) = No Gol.
+            // Detección de Gol o Fallo
+            // API-Football:
+            // Goal + Penalty = Gol
+            // Missed Penalty = Fallo
+            // Saved Penalty = Fallo (atajado)
+            // A veces type='Goal' pero detail='Missed Penalty' -> Fallo
+            // A veces type='Var' -> Fallo
+
+            const detail = (e.detail || '').toLowerCase();
+            const type = (e.type || '').toLowerCase();
+            const comments = (e.comments || '').toLowerCase();
+
+            let isGoal = false;
+
+            if (type === 'goal' && detail !== 'missed penalty' && detail !== 'saved penalty') {
+                isGoal = true;
+            }
+
+            if (detail.includes('missed') || detail.includes('saved')) {
+                isGoal = false;
+            }
 
             if (isGoal) {
                 if (isHome) penHome++; else penAway++;
