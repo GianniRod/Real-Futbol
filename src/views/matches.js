@@ -243,18 +243,20 @@ export const renderMatches = () => {
                         <div class="px-2 md:px-3 flex flex-col items-center w-20 md:w-24 shrink-0">
                             ${notStarted
                     ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
-                    : `<div class="flex gap-2 text-xl md:text-2xl font-black text-white score-font tracking-widest">
-                                     <span class="${homeOpacity} relative flex flex-col items-center">
-                                        <span>${m.goals.home ?? 0}</span>
+                    : `<div class="flex items-center gap-1.5 justify-center">
+                                    ${(m.score?.penalty?.home != null) ? `<span class="text-[11px] text-gray-500 font-bold mt-1">(${m.score.penalty.home})</span>` : ''}
+                                    <div class="flex gap-2 text-xl md:text-2xl font-black text-white score-font tracking-widest">
+                                     <span class="${homeOpacity} relative">
+                                        ${m.goals.home ?? 0}
                                         ${hRedCards}
-                                        ${(m.score && m.score.penalty && m.score.penalty.home !== null) ? `<span class="text-[10px] text-gray-500 font-normal mt-[-2px]">(${m.score.penalty.home})</span>` : ''}
                                      </span>
                                      <span class="text-gray-700">-</span>
-                                     <span class="${awayOpacity} relative flex flex-col items-center">
-                                        <span>${m.goals.away ?? 0}</span>
+                                     <span class="${awayOpacity} relative">
+                                        ${m.goals.away ?? 0}
                                         ${aRedCards}
-                                        ${(m.score && m.score.penalty && m.score.penalty.away !== null) ? `<span class="text-[10px] text-gray-500 font-normal mt-[-2px]">(${m.score.penalty.away})</span>` : ''}
                                      </span>
+                                   </div>
+                                   ${(m.score?.penalty?.away != null) ? `<span class="text-[11px] text-gray-500 font-bold mt-1">(${m.score.penalty.away})</span>` : ''}
                                    </div>`
                 }
                             <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap">${isLive || isHT || isFin ? timeDisplay : ''}</span>
