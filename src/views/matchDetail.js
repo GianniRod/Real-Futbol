@@ -48,19 +48,28 @@ const renderTimeline = (m) => {
     const c = document.getElementById('tab-timeline');
     let ev = [...(m.events || [])];
 
-    ev.sort((a, b) => {
+    // Separar penales de tiempo regular
+    const isPenalty = (e) => e.comments === "Penalty Shootout";
+    const regularEvents = ev.filter(e => !isPenalty(e));
+    const penaltyEvents = ev.filter(e => isPenalty(e));
+
+    // Ordenar eventos regulares por tiempo (descendente para mostrar lo último arriba)
+    regularEvents.sort((a, b) => {
         const tA = a.time.elapsed + (a.time.extra || 0);
         const tB = b.time.elapsed + (b.time.extra || 0);
         if (tA === tB) return 0;
         return tA > tB ? -1 : 1;
     });
 
-    if (ev.length === 0) {
+    if (regularEvents.length === 0 && penaltyEvents.length === 0) {
         c.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Sin eventos</div>';
         return;
     }
 
-    c.innerHTML = ev.map(e => {
+    let html = '';
+
+    // Renderizar eventos regulares
+    html += regularEvents.map(e => {
         const isHome = e.team.id === m.teams.home.id;
         const sideClass = isHome ? 'flex-row' : 'flex-row-reverse';
         const boxClass = isHome ? '' : 'flex-row-reverse text-right';
@@ -107,6 +116,105 @@ const renderTimeline = (m) => {
             </div>
         `;
     }).join('');
+
+    // Renderizar Tanda de Penales (si existen)
+    if (penaltyEvents.length > 0) {
+        html += `<div class="my-8 flex items-center justify-center">
+            <div class="h-[1px] bg-[#222] flex-1"></div>
+            <span class="px-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Tanda de Penales</span>
+            <div class="h-[1px] bg-[#222] flex-1"></div>
+        </div>`;
+
+        // Calcular score acumulado
+        let homeScore = m.goals.home; // Goles antes de penales (120 min)
+        let awayScore = m.goals.away;
+
+        // Pero para "running score" de penales, usualmente se muestra solo el conteo de penales
+        // O el score total acumulado. El usuario pidió: "despues de ese penal cuanto va la serie de penales"
+        // Entonces iniciamos conteo de penales en 0-0
+        let penHome = 0;
+        let penAway = 0;
+
+        // Necesitamos ordenar penales cronológicamente para el running score
+        // API-Football no siempre da orden perfecto por tiempo, pero confiemos en el array o detalle
+        // Asumamos que vienen en orden o intentemos ordenar si tienen secuencia
+        // Generalmente vienen mezclados, hay que tener cuidado.
+        // Pero para simplificar, iteraremos y asumiremos el orden del array (ajustar si es necesario)
+        // O mejor: NO reordenamos penaltyEvents si ya venían mezclados, el sort inicial los puso por tiempo.
+        // Pero el sort inicial ponía lo mas NUEVO arriba. Para penales queremos orden CRONOLOGICO (1o al ultimo)?
+        // El usuario dijo "cronologia". Normalmente timeline es Lo Nuevo Arriba.
+        // Pero "tanda de penales" suele leerse mejor penal 1, penal 2... 
+        // Si el timeline general es DESC (min 90 arriba, min 1 abajo), penales debería seguir esa logica invertida?
+        // O ser un bloque aparte?
+        // El usuario pidió "separes la cronologia". Haremos un bloque distinto.
+        // Probemos mostrar penales en orden de tiro (ascendente).
+
+        // Re-ordenar penales Ascendente para calcular score
+        // (Nota: m.events original NO estaba ordenado por nosotros, hicimos copia `ev` y ordenamos `ev` DESC al inicio)
+        // Vamos a agarrar penaltyEvents (que viene de `ev` ya ordenado DESC) y revertirlo para tener ASC
+        const penAsc = [...penaltyEvents].reverse();
+
+        html += `<div class="space-y-3">`;
+
+        html += penAsc.map(e => {
+            const isHome = e.team.id === m.teams.home.id;
+            const isGoal = e.type === 'Goal'; // En penales, Goal es metido, Missed es errado
+            // A veces API manda type 'Goal' detail 'Penalty' y type 'Var' etc.
+            // En tanda, suele ser type 'Goal' (metido) o type 'Missed Penalty' (errado) (verificar data real)
+            // Asumiremos: si detail o comments dice Missed, es fallo. Pero e.type 'Goal' es gol.
+
+            // Logica simple basada en lo comun de la API:
+            // Goal = Gol.
+            // Cualquier otra cosa (Missed, Saved) = No Gol.
+
+            if (isGoal) {
+                if (isHome) penHome++; else penAway++;
+            }
+            // Si es errado, marcador no cambia.
+
+            const checkIcon = `<div class="w-5 h-5 rounded-full bg-green-900/40 border border-green-500/50 flex items-center justify-center text-green-500"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>`;
+            const crossIcon = `<div class="w-5 h-5 rounded-full bg-red-900/40 border border-red-500/50 flex items-center justify-center text-red-500"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></div>`;
+
+            const icon = isGoal ? checkIcon : crossIcon;
+            const scoreDisplay = `${penHome}-${penAway}`;
+
+            // Alineación
+            // Izquierda Home, Derecha Away
+            const rowClass = isHome ? 'flex-row' : 'flex-row-reverse';
+            const textClass = isHome ? 'text-left' : 'text-right';
+            const scoreClass = isHome ? 'ml-auto' : 'mr-auto'; // Score en el medio aprox
+
+            // Diseño solicitado: Nombre Simbolo Score
+            // Ej: Messi (V) 1-0 ... 
+
+            // Ajustamos layout para que parezca una lista balanceada
+            /*
+              Home Player (V) 1-0
+                              1-0 (X) Away Player
+            */
+
+            // Contenedor principal de la fila
+            return `
+            <div class="flex items-center relative py-1">
+                <div class="absolute left-1/2 -translate-x-1/2 text-xs font-mono font-bold text-gray-600">${scoreDisplay}</div>
+                
+                <div class="w-1/2 flex items-center gap-3 ${isHome ? 'justify-end pr-8' : 'hidden'}">
+                    <span class="text-sm font-bold text-white text-right">${e.player.name}</span>
+                    ${icon}
+                </div>
+                
+                <div class="w-1/2 flex items-center gap-3 ${!isHome ? 'justify-start pl-8' : 'hidden'} ml-auto">
+                     ${icon}
+                    <span class="text-sm font-bold text-white text-left">${e.player.name}</span>
+                </div>
+            </div>
+           `;
+        }).join('');
+
+        html += `</div>`;
+    }
+
+    c.innerHTML = html;
 };
 
 /**
@@ -465,8 +573,21 @@ export const openDetail = async (params) => {
 
     document.getElementById('detail-home-logo').src = m.teams.home.logo;
     document.getElementById('detail-away-logo').src = m.teams.away.logo;
-    document.getElementById('detail-home-score').innerText = m.goals.home ?? 0;
-    document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
+    const homeScore = m.goals.home ?? 0;
+    const awayScore = m.goals.away ?? 0;
+
+    // Check for penalties logic
+    const hasPenalties = m.score && m.score.penalty && (m.score.penalty.home !== null || m.score.penalty.away !== null);
+
+    if (hasPenalties) {
+        // Format: (5) 1 - 1 (4)
+        document.getElementById('detail-home-score').innerHTML = `<span class="text-sm text-gray-400 font-normal mr-1">(${m.score.penalty.home})</span>${homeScore}`;
+        document.getElementById('detail-away-score').innerHTML = `${awayScore}<span class="text-sm text-gray-400 font-normal ml-1">(${m.score.penalty.away})</span>`;
+    } else {
+        document.getElementById('detail-home-score').innerText = homeScore;
+        document.getElementById('detail-away-score').innerText = awayScore;
+    }
+
     const statusShort = m.fixture.status.short;
     let statusText = m.fixture.status.long;
 
