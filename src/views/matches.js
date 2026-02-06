@@ -244,14 +244,16 @@ export const renderMatches = () => {
                             ${notStarted
                     ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
                     : `<div class="flex gap-2 text-xl md:text-2xl font-black text-white score-font tracking-widest">
-                                     <span class="${homeOpacity} relative">
-                                        ${m.goals.home ?? 0}
+                                     <span class="${homeOpacity} relative flex flex-col items-center">
+                                        <span>${m.goals.home ?? 0}</span>
                                         ${hRedCards}
+                                        ${(m.score && m.score.penalty && m.score.penalty.home !== null) ? `<span class="text-[10px] text-gray-500 font-normal mt-[-2px]">(${m.score.penalty.home})</span>` : ''}
                                      </span>
                                      <span class="text-gray-700">-</span>
-                                     <span class="${awayOpacity} relative">
-                                        ${m.goals.away ?? 0}
+                                     <span class="${awayOpacity} relative flex flex-col items-center">
+                                        <span>${m.goals.away ?? 0}</span>
                                         ${aRedCards}
+                                        ${(m.score && m.score.penalty && m.score.penalty.away !== null) ? `<span class="text-[10px] text-gray-500 font-normal mt-[-2px]">(${m.score.penalty.away})</span>` : ''}
                                      </span>
                                    </div>`
                 }
