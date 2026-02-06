@@ -240,11 +240,11 @@ export const renderMatches = () => {
                         </div>
 
                         <!-- SCORE / TIME -->
-                        <div class="px-2 md:px-3 flex flex-col items-center w-20 md:w-24 shrink-0">
+                        <div class="px-2 md:px-3 flex flex-col items-center w-auto min-w-[80px] shrink-0">
                             ${notStarted
                     ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
-                    : `<div class="flex items-center gap-1.5 justify-center">
-                                    ${(m.score?.penalty?.home != null) ? `<span class="text-[11px] text-gray-500 font-bold mt-1">(${m.score.penalty.home})</span>` : ''}
+                    : `<div class="flex items-center gap-2 justify-center">
+                                    ${(m.score?.penalty?.home != null) ? `<span class="text-xs text-gray-400 font-bold mt-1">(${m.score.penalty.home})</span>` : ''}
                                     <div class="flex gap-2 text-xl md:text-2xl font-black text-white score-font tracking-widest">
                                      <span class="${homeOpacity} relative">
                                         ${m.goals.home ?? 0}
@@ -256,7 +256,7 @@ export const renderMatches = () => {
                                         ${aRedCards}
                                      </span>
                                    </div>
-                                   ${(m.score?.penalty?.away != null) ? `<span class="text-[11px] text-gray-500 font-bold mt-1">(${m.score.penalty.away})</span>` : ''}
+                                   ${(m.score?.penalty?.away != null) ? `<span class="text-xs text-gray-400 font-bold mt-1">(${m.score.penalty.away})</span>` : ''}
                                    </div>`
                 }
                             <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap">${isLive || isHT || isFin ? timeDisplay : ''}</span>
