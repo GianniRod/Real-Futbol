@@ -113,6 +113,9 @@ export const loadMatches = async (silent = false) => {
         state.matches = matches;
         renderMatches();
         loadMessageCounts();
+
+        // Cargar eventos de partidos finalizados en background para mostrar tarjetas rojas
+        loadEventsForFinishedMatches();
     } catch (e) {
         console.error("Full API Error:", e);
         const container = document.getElementById('view-match-list');
@@ -312,6 +315,37 @@ export const toggleLiveFilter = () => {
     const isChecked = document.getElementById('live-toggle').checked;
     state.liveOnly = isChecked;
     renderMatches();
+};
+
+/**
+ * Carga eventos de partidos finalizados en background para mostrar tarjetas rojas
+ */
+const loadEventsForFinishedMatches = async () => {
+    const finishedStatuses = ['FT', 'AET', 'PEN'];
+    const finishedMatches = state.matches.filter(m =>
+        finishedStatuses.includes(m.fixture.status.short) && !m.events
+    );
+
+    // Limitar a máximo 5 partidos para no sobrecargar la API
+    const matchesToLoad = finishedMatches.slice(0, 5);
+
+    for (const match of matchesToLoad) {
+        try {
+            const data = await fetchAPI(`/fixtures?id=${match.fixture.id}`, true);
+            const fullMatch = data.response[0];
+
+            if (fullMatch && fullMatch.events) {
+                match.events = fullMatch.events;
+            }
+        } catch (e) {
+            console.warn('Error cargando eventos para partido:', match.fixture.id, e);
+        }
+    }
+
+    // Re-renderizar solo si se cargaron eventos
+    if (matchesToLoad.length > 0) {
+        renderMatches();
+    }
 };
 
 /**
