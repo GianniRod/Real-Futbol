@@ -99,7 +99,7 @@ export const loadMatches = async (silent = false) => {
     const targetIds = [128, 1032, 129, 130, 39, 140, 78, 71, 13, 11, 135, 2, 3, 848, 143, 137];
 
     try {
-        const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires&events=true`, silent);
+        const data = await fetchAPI(`/fixtures?date=${dateStr}&timezone=America/Argentina/Buenos_Aires`, silent);
 
         let matches = data.response.filter(m => targetIds.includes(m.league.id));
         matches.sort((a, b) => {
