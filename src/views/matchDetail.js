@@ -11,7 +11,7 @@
  */
 
 import { fetchAPI } from '../core/api.js';
-import { getMatches } from './matches.js';
+import { getMatches, updateMatchEvents } from './matches.js';
 import { initForum } from './forum.js';
 
 // State
@@ -660,6 +660,11 @@ export const openDetail = async (params) => {
     try {
         const data = await fetchAPI(`/fixtures?id=${id}`, true);
         const fullMatch = data.response[0];
+
+        // Actualizar eventos en el state de matches para mostrar tarjetas rojas en la lista
+        if (fullMatch && fullMatch.events) {
+            updateMatchEvents(id, fullMatch.events);
+        }
 
         renderTimeline(fullMatch);
         renderLineups(fullMatch);
