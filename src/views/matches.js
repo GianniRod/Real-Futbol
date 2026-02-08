@@ -328,3 +328,17 @@ export const initMatches = () => {
 // Exportar state para acceso desde otros módulos si es necesario
 export const getMatchesState = () => state;
 export const getMatches = () => state.matches;
+
+/**
+ * Actualiza los eventos de un partido específico en el state
+ * @param {number|string} fixtureId - ID del partido
+ * @param {Array} events - Array de eventos del partido
+ */
+export const updateMatchEvents = (fixtureId, events) => {
+    const match = state.matches.find(m => String(m.fixture.id) === String(fixtureId));
+    if (match && events) {
+        match.events = events;
+        // Re-renderizar para mostrar las tarjetas rojas
+        renderMatches();
+    }
+};
