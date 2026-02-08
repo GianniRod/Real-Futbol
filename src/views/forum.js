@@ -350,6 +350,9 @@ export const sendMessage = async (userFieldId, textFieldId) => {
  * Navega al foro global
  */
 export const navigateToForum = () => {
+    // Actualizar título de la página
+    document.title = 'Foro Global - RealFutbol';
+
     document.getElementById('view-match-list').classList.add('hidden');
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-match-detail').classList.add('hidden');
