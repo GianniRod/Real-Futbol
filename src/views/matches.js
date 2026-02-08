@@ -201,26 +201,15 @@ export const renderMatches = () => {
                 }
             }
 
-            let hScorers = '';
-            let aScorers = '';
             let hRedCards = '';
             let aRedCards = '';
 
             if (m.events && m.events.length > 0) {
-                const goals = m.events.filter(e => e.type === 'Goal');
-                if (goals.length > 0) {
-                    const formatScorer = (ev, align) => `<div class="truncate leading-tight ${align}">${ev.player.name} ${ev.time.elapsed}'</div>`;
-                    const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(g => formatScorer(g, 'text-right'));
-                    const aGoals = goals.filter(e => e.team.id === m.teams.away.id).map(g => formatScorer(g, 'text-left'));
-                    if (hGoals.length > 0) hScorers = `<div class="flex flex-col items-end gap-0.5 mt-1 min-w-0 w-full">${hGoals.join('')}</div>`;
-                    if (aGoals.length > 0) aScorers = `<div class="flex flex-col items-start gap-0.5 mt-1 min-w-0 w-full">${aGoals.join('')}</div>`;
-                }
-
                 const redCards = m.events.filter(e => e.type === 'Card' && e.detail === 'Red Card');
                 const hReds = redCards.filter(e => e.team.id == m.teams.home.id).length;
                 const aReds = redCards.filter(e => e.team.id == m.teams.away.id).length;
                 if (hReds > 0) hRedCards = `<div class="absolute -top-1 -left-2 flex gap-0.5 z-10">${'<div class="w-1.5 h-2 bg-red-600 rounded-[1px]"></div>'.repeat(hReds)}</div>`;
-                if (aReds > 0) aRedCards = `<div class="absolute -top-1 -left-2 flex gap-0.5 z-10">${'<div class="w-1.5 h-2 bg-red-600 rounded-[1px]"></div>'.repeat(aReds)}</div>`;
+                if (aReds > 0) aRedCards = `<div class="absolute -top-1 -right-2 flex gap-0.5 z-10">${'<div class="w-1.5 h-2 bg-red-600 rounded-[1px]"></div>'.repeat(aReds)}</div>`;
             }
 
             const clickableClass = notStarted ? 'not-clickable' : 'clickable';
@@ -233,12 +222,7 @@ export const renderMatches = () => {
                     <div class="flex items-center justify-between">
                         <!-- HOME TEAM -->
                         <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 transition-opacity duration-300 text-right min-w-0">
-                            <div class="flex flex-col items-end min-w-0 max-w-full">
-                                <div class="flex items-center gap-1 w-full justify-end">
-                                    <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap">${m.teams.home.name}</span>
-                                </div>
-                                ${hScorers ? `<div class="text-[9px] text-gray-500 font-mono w-full overflow-hidden">${hScorers}</div>` : ''}
-                            </div>
+                            <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-right">${m.teams.home.name}</span>
                             <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain shrink-0">
                         </div>
 
@@ -249,13 +233,13 @@ export const renderMatches = () => {
                     : `<div class="flex items-center gap-2 justify-center">
                                     ${(m.score?.penalty?.home != null) ? `<span class="text-xs text-gray-400 font-bold mt-1">(${m.score.penalty.home})</span>` : ''}
                                     <div class="flex gap-2 text-xl md:text-2xl font-black text-white score-font tracking-widest">
-                                     <span class="${homeOpacity} relative">
-                                        ${m.goals.home ?? 0}
+                                     <span class="relative">
                                         ${hRedCards}
+                                        <span class="${homeOpacity}">${m.goals.home ?? 0}</span>
                                      </span>
                                      <span class="text-gray-700">-</span>
-                                     <span class="${awayOpacity} relative">
-                                        ${m.goals.away ?? 0}
+                                     <span class="relative">
+                                        <span class="${awayOpacity}">${m.goals.away ?? 0}</span>
                                         ${aRedCards}
                                      </span>
                                    </div>
@@ -272,12 +256,7 @@ export const renderMatches = () => {
                         <!-- AWAY TEAM -->
                         <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 transition-opacity duration-300 text-left min-w-0">
                             <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain shrink-0">
-                            <div class="flex flex-col items-start min-w-0 max-w-full">
-                                <div class="flex items-center gap-1 w-full justify-start">
-                                    <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap">${m.teams.away.name}</span>
-                                </div>
-                                ${aScorers ? `<div class="text-[9px] text-gray-500 font-mono w-full overflow-hidden">${aScorers}</div>` : ''}
-                            </div>
+                            <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-left">${m.teams.away.name}</span>
                         </div>
                     </div>
                 </div>`;
@@ -326,8 +305,8 @@ const loadEventsForFinishedMatches = async () => {
         finishedStatuses.includes(m.fixture.status.short) && !m.events
     );
 
-    // Limitar a máximo 5 partidos para no sobrecargar la API
-    const matchesToLoad = finishedMatches.slice(0, 5);
+    // Limitar a máximo 10 partidos para no sobrecargar la API
+    const matchesToLoad = finishedMatches.slice(0, 10);
 
     for (const match of matchesToLoad) {
         try {
