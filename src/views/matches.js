@@ -113,9 +113,6 @@ export const loadMatches = async (silent = false) => {
         state.matches = matches;
         renderMatches();
         loadMessageCounts();
-
-        // Cargar eventos de partidos finalizados en background para mostrar tarjetas rojas
-        loadEventsForFinishedMatches();
     } catch (e) {
         console.error("Full API Error:", e);
         const container = document.getElementById('view-match-list');
@@ -296,36 +293,8 @@ export const toggleLiveFilter = () => {
     renderMatches();
 };
 
-/**
- * Carga eventos de partidos finalizados en background para mostrar tarjetas rojas
- */
-const loadEventsForFinishedMatches = async () => {
-    const finishedStatuses = ['FT', 'AET', 'PEN'];
-    const finishedMatches = state.matches.filter(m =>
-        finishedStatuses.includes(m.fixture.status.short) && !m.events
-    );
-
-    // Limitar a máximo 10 partidos para no sobrecargar la API
-    const matchesToLoad = finishedMatches.slice(0, 10);
-
-    for (const match of matchesToLoad) {
-        try {
-            const data = await fetchAPI(`/fixtures?id=${match.fixture.id}`, true);
-            const fullMatch = data.response[0];
-
-            if (fullMatch && fullMatch.events) {
-                match.events = fullMatch.events;
-            }
-        } catch (e) {
-            console.warn('Error cargando eventos para partido:', match.fixture.id, e);
-        }
-    }
-
-    // Re-renderizar solo si se cargaron eventos
-    if (matchesToLoad.length > 0) {
-        renderMatches();
-    }
-};
+// loadEventsForFinishedMatches eliminado — los eventos se cargan
+// solo cuando el usuario abre el detalle de un partido (ahorra ~10 req/ciclo)
 
 /**
  * Inicializa el módulo de matches
@@ -334,8 +303,8 @@ export const initMatches = () => {
     renderCalendar();
     loadMatches();
 
-    // Auto-refresh cada minuto
-    setInterval(() => loadMatches(true), 60000);
+    // Auto-refresh cada 2 minutos (antes era 1 min)
+    setInterval(() => loadMatches(true), 120000);
 };
 
 // Exportar state para acceso desde otros módulos si es necesario
