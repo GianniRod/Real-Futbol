@@ -31,7 +31,7 @@ export const ARGENTINE_TEAMS = [
     { id: 1064, name: 'Platense', logo: 'https://media.api-sports.io/football/teams/1064.png' },
     { id: 436, name: 'Racing Club', logo: 'https://media.api-sports.io/football/teams/436.png' },
     { id: 476, name: 'Riestra', logo: 'https://media.api-sports.io/football/teams/476.png' },
-    { id: 435, name: 'River Plate', logo: 'https://media.api-sports.io/football/teams/435.png' },
+    { id: 435, name: 'River Plate', logo: 'https://i.postimg.cc/tgq0pH2p/i.png' },
     { id: 437, name: 'Rosario Central', logo: 'https://media.api-sports.io/football/teams/437.png' },
     { id: 460, name: 'San Lorenzo', logo: 'https://media.api-sports.io/football/teams/460.png' },
     { id: 474, name: 'Sarmiento Junín', logo: 'https://media.api-sports.io/football/teams/474.png' },
