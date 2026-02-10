@@ -491,24 +491,6 @@
                         </svg>
                         Foro Global
                     </button>
-                    <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
-                        class="w-full py-3 px-4 text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 border border-[#333] text-gray-300 hover:text-white hover:border-white transition-all bg-transparent rounded">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path
-                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
-                            </path>
-                        </svg>
-                        Apoyar el proyecto
-                    </button>
-                    <a href="https://x.com/RealFutbolApp" target="_blank" rel="noopener noreferrer"
-                        class="w-full py-2.5 px-4 text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 text-gray-500 hover:text-white transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                        </svg>
-                        Seguinos en X
-                    </a>
                 </div>
             </div>
         </aside>
@@ -558,7 +540,7 @@
                 style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
 
                 <!-- Match List -->
-                <div id="view-match-list" class="max-w-2xl mx-auto space-y-6 animate-fade-in pb-24"></div>
+                <div id="view-match-list" class="max-w-3xl mx-auto space-y-6 animate-fade-in pb-24"></div>
 
                 <!-- Standings View -->
                 <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-24">
@@ -864,6 +846,63 @@
 
             </div>
         </main>
+
+        <!-- Right Sidebar (Desktop only) -->
+        <aside class="hidden lg:flex w-64 bg-black border-l border-[#222] flex-col shrink-0">
+            <div class="flex-1 p-4 flex flex-col">
+                <div class="px-2 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Links</div>
+
+                <!-- Twitter/X -->
+                <a href="https://x.com/RealFutbolApp" target="_blank" rel="noopener noreferrer"
+                    class="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all group">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <path
+                            d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    <span class="text-sm font-medium">Seguinos en X</span>
+                </a>
+
+                <!-- Donate -->
+                <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
+                    class="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all text-left">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                        </path>
+                    </svg>
+                    <span class="text-sm font-medium">Apoyar el proyecto</span>
+                </button>
+
+                <div class="my-3 border-t border-[#222]"></div>
+
+                <!-- Privacy Policy -->
+                <a href="/politica-de-privacidad.html"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:bg-[#1a1a1a] hover:text-gray-300 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <span class="text-xs font-medium">Política de Privacidad</span>
+                </a>
+
+                <!-- Terms -->
+                <a href="/terminos-y-condiciones.html"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:bg-[#1a1a1a] hover:text-gray-300 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span class="text-xs font-medium">Términos y Condiciones</span>
+                </a>
+            </div>
+        </aside>
     </div>
 
     <!-- Player Modal -->
