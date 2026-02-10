@@ -111,7 +111,7 @@ export const initForum = (context, containerId, usernameInputId) => {
                      data-message-text="${msg.text.substring(0, 100).replace(/"/g, '&quot;').replace(/\n/g, ' ')}">
                     <div class="flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : ''}">
                         <!-- Team Logo / Avatar -->
-                        <div class="w-8 h-8 flex items-center justify-center shrink-0">
+                        <div class="w-14 h-14 flex items-center justify-center shrink-0">
                             ${msg.userTeamLogo
                     ? `<img src="${msg.userTeamLogo}" class="w-full h-full object-contain filter drop-shadow-sm" alt="Team">`
                     : '<span class="text-xs">⚽</span>'}
