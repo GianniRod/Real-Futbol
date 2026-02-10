@@ -698,31 +698,28 @@ const renderCupView = async (leagueId, season, container) => {
             return `
                 <div class="flex items-center">
                     <!-- Children Column -->
-                    <div class="flex flex-col justify-center relative"> 
+                    <div class="flex flex-col justify-center"> 
                         
-                        <!-- Vertical Bridge Patch (Fills the gap at the junction) -->
-                        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-[2px] h-6 bg-[#444]"></div>
-
                         <!-- Top Child Wrapper -->
-                        <div class="flex items-stretch pr-2 py-4 z-10"> 
-                            <div class="flex items-center">
+                        <div class="flex items-stretch pr-2"> 
+                            <div class="flex items-center py-6">
                                 ${renderTree(feeders[0], roundIndex - 1)}
                             </div>
                             <!-- Top Connector Half -->
                             <div class="w-8 flex flex-col">
                                 <div class="flex-1"></div> <!-- Empty Top Space -->
-                                <div class="flex-1 border-t-2 border-r-2 border-[#444] rounded-tr-xl bg-[#050505] z-20"></div> <!-- Line from Center Left to Right-Down -->
+                                <div class="flex-1 border-t-2 border-r-2 border-[#444] rounded-tr-xl"></div> <!-- Line from Center Left to Right-Down -->
                             </div>
                         </div>
 
                         <!-- Bottom Child Wrapper -->
-                        <div class="flex items-stretch pr-2 py-4 z-10">
-                            <div class="flex items-center">
+                        <div class="flex items-stretch pr-2">
+                            <div class="flex items-center py-6">
                                 ${renderTree(feeders[1] || null, roundIndex - 1)}
                             </div>
                             <!-- Bottom Connector Half -->
                             <div class="w-8 flex flex-col">
-                                <div class="flex-1 border-b-2 border-r-2 border-[#444] rounded-br-xl bg-[#050505] z-20"></div> <!-- Line from Center Left to Right-Up -->
+                                <div class="flex-1 border-b-2 border-r-2 border-[#444] rounded-br-xl"></div> <!-- Line from Center Left to Right-Up -->
                                 <div class="flex-1"></div> <!-- Empty Bottom Space -->
                             </div>
                         </div>
