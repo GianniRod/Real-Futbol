@@ -260,6 +260,14 @@ const showUsernameModal = (user) => {
     if (modal) {
         modal.classList.remove('hidden');
 
+        // Reset to step 1
+        document.getElementById('registration-step-1').classList.remove('hidden');
+        document.getElementById('registration-step-2').classList.add('hidden');
+
+        // Ensure back button is visible (might have been hidden by showTeamSelectionOnly)
+        const backBtn = document.getElementById('team-selection-back-btn');
+        if (backBtn) backBtn.classList.remove('hidden');
+
         // Focus en el input
         const input = document.getElementById('username-input');
         if (input) {
@@ -269,6 +277,29 @@ const showUsernameModal = (user) => {
 
         // Limpiar errores previos
         hideUsernameError();
+    }
+};
+
+/**
+ * Muestra SOLO la selección de equipo para usuarios existentes
+ * @param {object} user - Usuario de Firebase Auth
+ * @param {object} profile - Perfil actual
+ */
+const showTeamSelectionOnly = (user, profile) => {
+    const modal = document.getElementById('username-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+
+        // Go directly to step 2
+        document.getElementById('registration-step-1').classList.add('hidden');
+        document.getElementById('registration-step-2').classList.remove('hidden');
+
+        // Populate team grid
+        populateTeamGrid();
+
+        // Hide back button since they already have username
+        const backBtn = document.getElementById('team-selection-back-btn');
+        if (backBtn) backBtn.classList.add('hidden');
     }
 };
 
@@ -1138,8 +1169,14 @@ export const openRankingModal = async () => {
                     const textClass = isCurrentUser ? 'text-orange-500' : 'text-white';
 
                     html += `
-                        <div class="flex items-center gap-4 p-3 rounded border ${highlightClass} mb-2">
+                        <div class="flex items-center gap-3 p-3 rounded border ${highlightClass} mb-2">
                             <div class="font-mono font-bold text-lg w-8 text-center text-gray-500">#${user.rank}</div>
+                            
+                            <!-- Team Logo -->
+                            <div class="shrink-0 w-8 h-8 flex items-center justify-center bg-[#0a0a0a] rounded-full border border-[#333] overflow-hidden">
+                                ${user.teamLogo ? `<img src="${user.teamLogo}" class="w-6 h-6 object-contain">` : '<span class="text-xs">⚽</span>'}
+                            </div>
+
                             <div class="flex-1 min-w-0">
                                 <div class="font-bold text-sm truncate ${textClass}">${user.username}</div>
                             </div>
