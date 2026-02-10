@@ -20,7 +20,9 @@ import {
     resetDate,
     renderCalendar,
     toggleLiveFilter,
-    loadMessageCounts
+    loadMessageCounts,
+    toggleCalendar,
+    changeMonth
 } from './views/matches.js';
 
 import {
@@ -678,6 +680,8 @@ window.app = {
     renderCalendar,
     toggleLiveFilter,
     loadMessageCounts,
+    toggleCalendar,
+    changeMonth,
 
     // Match Detail
     openDetail,
