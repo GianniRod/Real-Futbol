@@ -320,13 +320,29 @@
             border-color: #ccc;
         }
 
-        /* Backdrop Móvil */
         .mobile-backdrop {
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.8);
             z-index: 40;
             backdrop-filter: blur(4px);
+        }
+
+        /* Slide Up Animation */
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.25s ease-out;
         }
     </style>
 </head>
@@ -476,15 +492,23 @@
                         Foro Global
                     </button>
                     <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
-                        class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg border-t-0 bg-yellow-500 border-yellow-500 text-black hover:bg-yellow-400 hover:border-yellow-400 font-bold flex items-center justify-center gap-2 mt-2">
+                        class="w-full py-3 px-4 text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 border border-[#333] text-gray-300 hover:text-white hover:border-white transition-all bg-transparent rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
-                            <path d="M12 18V6"></path>
+                            <path
+                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                            </path>
                         </svg>
-                        Donar
+                        Apoyar el proyecto
                     </button>
+                    <a href="https://x.com/RealFutbolApp" target="_blank" rel="noopener noreferrer"
+                        class="w-full py-2.5 px-4 text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 text-gray-500 hover:text-white transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                        Seguinos en X
+                    </a>
                 </div>
             </div>
         </aside>
@@ -534,7 +558,7 @@
                 style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
 
                 <!-- Match List -->
-                <div id="view-match-list" class="max-w-3xl mx-auto space-y-6 animate-fade-in pb-24"></div>
+                <div id="view-match-list" class="max-w-2xl mx-auto space-y-6 animate-fade-in pb-24"></div>
 
                 <!-- Standings View -->
                 <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-24">
@@ -902,16 +926,84 @@
                 </svg>
                 <span class="text-[8px] font-bold uppercase tracking-wider">Foro</span>
             </button>
-            <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
-                class="flex flex-col items-center justify-center flex-1 h-full text-yellow-500 hover:text-yellow-400 active:text-yellow-600 transition-colors rounded-r-full">
+            <button id="btn-nav-menu"
+                onclick="document.getElementById('mobile-menu-drawer').classList.remove('hidden'); document.getElementById('mobile-menu-drawer').classList.add('flex')"
+                class="flex flex-col items-center justify-center flex-1 h-full text-gray-400 hover:text-white active:text-white transition-colors rounded-r-full">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
                 </svg>
-                <span class="text-[8px] font-bold uppercase tracking-wider">Donar</span>
+                <span class="text-[8px] font-bold uppercase tracking-wider">Menú</span>
             </button>
         </nav>
+    </div>
+
+    <!-- Mobile Menu Drawer -->
+    <div id="mobile-menu-drawer" class="fixed inset-0 z-[70] hidden items-end justify-center lg:hidden"
+        onclick="if(event.target===this){this.classList.add('hidden');this.classList.remove('flex')}">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div
+            class="relative w-full max-w-md mx-4 mb-24 bg-[#111] border border-[#333] rounded-2xl overflow-hidden shadow-2xl animate-slide-up">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-[#222]">
+                <span class="text-sm font-bold text-white uppercase tracking-widest">Menú</span>
+                <button
+                    onclick="document.getElementById('mobile-menu-drawer').classList.add('hidden');document.getElementById('mobile-menu-drawer').classList.remove('flex')"
+                    class="p-1 text-gray-400 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <!-- Items -->
+            <div class="py-2">
+                <a href="https://x.com/RealFutbolApp" target="_blank" rel="noopener noreferrer"
+                    class="flex items-center gap-4 px-5 py-3.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <path
+                            d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    <span class="text-sm font-bold uppercase tracking-wider">Seguinos en X</span>
+                </a>
+                <button
+                    onclick="document.getElementById('donation-modal').classList.remove('hidden');document.getElementById('mobile-menu-drawer').classList.add('hidden');document.getElementById('mobile-menu-drawer').classList.remove('flex')"
+                    class="w-full flex items-center gap-4 px-5 py-3.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                        </path>
+                    </svg>
+                    <span class="text-sm font-bold uppercase tracking-wider">Apoyar el proyecto</span>
+                </button>
+                <div class="my-1 border-t border-[#222] mx-5"></div>
+                <a href="/politica-de-privacidad.html"
+                    class="flex items-center gap-4 px-5 py-3.5 text-gray-500 hover:bg-[#1a1a1a] hover:text-gray-300 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <span class="text-xs font-medium">Política de Privacidad</span>
+                </a>
+                <a href="/terminos-y-condiciones.html"
+                    class="flex items-center gap-4 px-5 py-3.5 text-gray-500 hover:bg-[#1a1a1a] hover:text-gray-300 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span class="text-xs font-medium">Términos y Condiciones</span>
+                </a>
+            </div>
+        </div>
     </div>
 
     <!-- Login Modal -->
