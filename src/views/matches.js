@@ -179,9 +179,9 @@ export const renderMatches = () => {
     groupsList.forEach(g => {
         html += `
             <div class="mb-6">
-                <div class="px-2 py-2 flex items-center gap-3 mb-1">
-                    <img src="${g.logo}" class="w-5 h-5 object-contain">
-                    <h3 class="text-xs font-black text-white uppercase tracking-widest">${g.name}</h3>
+                <div class="px-2 py-2 flex items-center gap-3 mb-1 cursor-pointer hover:bg-[#111] rounded transition-colors group" onclick="app.showStandings({id: ${g.id}, name: '${g.name}'})">
+                    <img src="${g.logo}" class="w-5 h-5 object-contain group-hover:scale-110 transition-transform">
+                    <h3 class="text-xs font-black text-white uppercase tracking-widest group-hover:text-yellow-500 transition-colors">${g.name}</h3>
                 </div>
                 <div class="bg-[#0a0a0a] border border-[#222] rounded-lg overflow-hidden flex flex-col">`;
 
