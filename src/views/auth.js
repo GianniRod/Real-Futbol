@@ -290,6 +290,10 @@ const showTeamSelectionOnly = (user, profile) => {
     if (modal) {
         modal.classList.remove('hidden');
 
+        // Change title
+        const title = modal.querySelector('h3');
+        if (title) title.textContent = 'Elige tu equipo';
+
         // Go directly to step 2
         document.getElementById('registration-step-1').classList.add('hidden');
         document.getElementById('registration-step-2').classList.remove('hidden');
