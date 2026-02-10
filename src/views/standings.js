@@ -575,7 +575,7 @@ export const showStandings = async (idOrParams, name) => {
 export const getStandingsState = () => state;
 
 /**
- * Renderiza la vista de Bracket para Copas
+ * Renderiza la vista de Bracket para Copas (Versión Refinada)
  */
 const renderCupView = async (leagueId, season, container) => {
     container.innerHTML = `<div class="flex justify-center items-center h-96"><div class="loader"></div></div>`;
@@ -590,10 +590,6 @@ const renderCupView = async (leagueId, season, container) => {
             return;
         }
 
-        // Filter and Group by Round
-        // Rounds of interest: 'Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'
-        // Note: API strings might vary slightly (e.g., 'Quarter-finals' vs 'Quarter Finals'). Using includes.
-
         const roundOrder = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'];
         const displayRounds = {
             'Round of 16': 'Octavos',
@@ -606,75 +602,88 @@ const renderCupView = async (leagueId, season, container) => {
 
         fixtures.forEach(f => {
             const r = f.league.round;
-            if (roundOrder.some(ro => r.includes(ro))) {
-                // Determine which main round bucket it belongs to
-                const bucket = roundOrder.find(ro => r.includes(ro));
+            const bucket = roundOrder.find(ro => r.includes(ro));
+            if (bucket) {
                 if (!grouped[bucket]) grouped[bucket] = [];
                 grouped[bucket].push(f);
             }
         });
 
-        // Ensure chronological sorting within rounds if needed (by date)
         Object.keys(grouped).forEach(k => {
             grouped[k].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp);
         });
 
-        // Build HTML
-        let html = `<div class="flex flex-nowrap overflow-x-auto gap-8 p-6 items-center min-h-[600px] lg:justify-center">`;
+        // Build HTML with reduced sizing and connector lines
+        let html = `<div class="flex flex-nowrap overflow-x-auto p-6 items-stretch min-h-[600px] lg:justify-center bg-[#050505] rounded-xl border border-[#222]">`;
 
         roundOrder.forEach((roundKey, idx) => {
             const matches = grouped[roundKey];
             if (!matches || matches.length === 0) return;
 
+            // Determine if first or last column for connector logic
+            const isFirst = idx === 0;
+            const isLast = idx === roundOrder.length - 1;
+
             html += `
-                <div class="flex flex-col gap-6 w-72 shrink-0">
-                    <h3 class="text-center font-bold text-gray-500 uppercase tracking-widest text-xs mb-4 border-b border-[#222] pb-2">
+                <div class="flex flex-col w-56 shrink-0 relative">
+                    <h3 class="text-center font-bold text-gray-500 uppercase tracking-widest text-[10px] mb-6 border-b border-[#222] pb-2 mx-4">
                         ${displayRounds[roundKey] || roundKey}
                     </h3>
-                    <div class="flex flex-col justify-center gap-6 h-full">
+                    <div class="flex flex-col justify-around flex-1 gap-4 relative px-2">
             `;
 
-            matches.forEach(m => {
+            matches.forEach((m, mIdx) => {
                 const isFin = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
                 const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(m.fixture.status.short);
 
-                const homeWin = (m.goals.home > m.goals.away) || (m.score.penalty.home > m.score.penalty.away);
-                const awayWin = (m.goals.away > m.goals.home) || (m.score.penalty.away > m.score.penalty.home);
+                const homeWin = isFin && ((m.goals.home > m.goals.away) || (m.score.penalty.home > m.score.penalty.away));
+                const awayWin = isFin && ((m.goals.away > m.goals.home) || (m.score.penalty.away > m.score.penalty.home));
 
-                // Highlight winner text color if finished
-                const homeClass = isFin && homeWin ? 'text-white' : 'text-gray-400';
-                const awayClass = isFin && awayWin ? 'text-white' : 'text-gray-400';
-                const scoreClass = 'font-bold text-white';
+                const homeClass = homeWin ? 'text-white' : 'text-gray-500';
+                const awayClass = awayWin ? 'text-white' : 'text-gray-500';
+                const scoreClass = 'font-bold text-white text-[10px]';
+
+                // Connectors
+                let connectors = '';
+                // Line to right (next round)
+                if (!isLast) {
+                    connectors += `<div class="absolute top-1/2 -right-4 w-4 h-[1px] bg-[#333]"></div>`;
+                }
+                // Line to left (prev round)
+                if (!isFirst) {
+                    connectors += `<div class="absolute top-1/2 -left-2 w-2 h-[1px] bg-[#333]"></div>`;
+                }
 
                 html += `
-                    <div class="bg-[#111] border border-[#222] rounded-lg p-3 flex flex-col gap-2 relative hover:border-gray-600 transition-colors cursor-pointer shadow-lg" onclick="app.navigate('/partido/${m.fixture.id}')">
-                        ${isLive ? '<div class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>' : ''}
+                    <div class="bg-[#111] border border-[#222] rounded p-2 flex flex-col gap-1 relative hover:border-gray-600 transition-colors cursor-pointer shadow-lg z-10" onclick="app.navigate('/partido/${m.fixture.id}')">
+                        ${connectors}
+                        ${isLive ? '<div class="absolute -top-1 -right-1 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>' : ''}
                         
                         <!-- Home -->
                         <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <img src="${m.teams.home.logo}" class="w-5 h-5 object-contain">
-                                <span class="text-xs ${homeClass} font-bold uppercase truncate max-w-[120px]">${m.teams.home.name}</span>
+                            <div class="flex items-center gap-2 min-w-0">
+                                <img src="${m.teams.home.logo}" class="w-4 h-4 object-contain shrink-0">
+                                <span class="text-[10px] ${homeClass} font-bold uppercase truncate">${m.teams.home.name}</span>
                             </div>
-                            <div class="flex items-center gap-1">
+                            <div class="flex items-center gap-1 shrink-0">
                                 <span class="${scoreClass}">${m.goals.home ?? '-'}</span>
-                                ${m.score.penalty.home ? `<span class="text-[10px] text-gray-500">(${m.score.penalty.home})</span>` : ''}
+                                ${m.score.penalty.home ? `<span class="text-[9px] text-gray-600">(${m.score.penalty.home})</span>` : ''}
                             </div>
                         </div>
 
                         <!-- Away -->
                         <div class="flex justify-between items-center">
-                             <div class="flex items-center gap-2">
-                                <img src="${m.teams.away.logo}" class="w-5 h-5 object-contain">
-                                <span class="text-xs ${awayClass} font-bold uppercase truncate max-w-[120px]">${m.teams.away.name}</span>
+                             <div class="flex items-center gap-2 min-w-0">
+                                <img src="${m.teams.away.logo}" class="w-4 h-4 object-contain shrink-0">
+                                <span class="text-[10px] ${awayClass} font-bold uppercase truncate">${m.teams.away.name}</span>
                             </div>
-                            <div class="flex items-center gap-1">
+                            <div class="flex items-center gap-1 shrink-0">
                                 <span class="${scoreClass}">${m.goals.away ?? '-'}</span>
-                                ${m.score.penalty.away ? `<span class="text-[10px] text-gray-500">(${m.score.penalty.away})</span>` : ''}
+                                ${m.score.penalty.away ? `<span class="text-[9px] text-gray-600">(${m.score.penalty.away})</span>` : ''}
                             </div>
                         </div>
                         
-                        <div class="text-[9px] text-gray-600 text-center mt-1 uppercase font-mono tracking-wider">
+                        <div class="text-[8px] text-gray-700 text-center mt-0.5 uppercase font-mono tracking-wider">
                             ${isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleDateString()}
                         </div>
                     </div>
@@ -683,9 +692,9 @@ const renderCupView = async (leagueId, season, container) => {
 
             html += `</div></div>`;
 
-            // Separator arrow if not last
-            if (idx < roundOrder.length - 1 && grouped[roundOrder[idx + 1]]) {
-                html += `<div class="hidden lg:flex flex-col justify-center text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></div>`;
+            // Spacer between columns for visual line continuity (handled by absolute lines now, but can keep small gap)
+            if (idx < roundOrder.length - 1) {
+                html += `<div class="w-8 shrink-0 relative"></div>`;
             }
         });
 
@@ -697,3 +706,4 @@ const renderCupView = async (leagueId, season, container) => {
         container.innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar el cuadro.</div>`;
     }
 };
+
