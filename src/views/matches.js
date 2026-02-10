@@ -304,6 +304,83 @@ export const toggleLiveFilter = () => {
 // loadEventsForFinishedMatches eliminado — los eventos se cargan
 // solo cuando el usuario abre el detalle de un partido (ahorra ~10 req/ciclo)
 
+// Calendar State
+let calendarDate = new Date(); // Para navegación del calendario
+let isCalendarOpen = false;
+
+/**
+ * Toggle del calendario desplegable
+ */
+export const toggleCalendar = () => {
+    const dropdown = document.getElementById('calendar-dropdown');
+    isCalendarOpen = !isCalendarOpen;
+
+    if (isCalendarOpen) {
+        dropdown.classList.remove('hidden');
+        // Sincronizar calendario con fecha seleccionada actual
+        calendarDate = new Date(state.date);
+        renderFullCalendar();
+    } else {
+        dropdown.classList.add('hidden');
+    }
+};
+
+/**
+ * Cambia el mes del calendario desplegable
+ * @param {number} delta - +1 o -1
+ */
+export const changeMonth = (delta) => {
+    calendarDate.setMonth(calendarDate.getMonth() + delta);
+    renderFullCalendar();
+};
+
+/**
+ * Renderiza el grid del calendario completo
+ */
+const renderFullCalendar = () => {
+    const grid = document.getElementById('calendar-grid');
+    const monthLabel = document.getElementById('cal-month-year');
+
+    // Texto Mes Año
+    const months = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+    monthLabel.innerText = `${months[calendarDate.getMonth()]} ${calendarDate.getFullYear()}`;
+
+    grid.innerHTML = '';
+
+    // Primer día del mes
+    const firstDay = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
+    const lastDay = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0);
+
+    // Días previos (padding)
+    let startDayVal = firstDay.getDay(); // 0 = Domingo
+
+    // Rellenar días vacíos
+    for (let i = 0; i < startDayVal; i++) {
+        const div = document.createElement('div');
+        grid.appendChild(div);
+    }
+
+    // Días del mes
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+        const currentDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), i);
+        const isSelected = currentDate.toDateString() === state.date.toDateString();
+        const isToday = currentDate.toDateString() === new Date().toDateString();
+
+        const btn = document.createElement('button');
+        btn.className = `p-2 rounded text-sm font-bold transition-colors ${isSelected
+            ? 'bg-white text-black'
+            : (isToday ? 'text-yellow-500 hover:bg-[#222]' : 'text-gray-300 hover:bg-[#222]')}`;
+        btn.innerText = i;
+        btn.onclick = () => {
+            state.date = currentDate;
+            renderCalendar(); // Renderiza la tira horizontal
+            loadMatches();
+            toggleCalendar(); // Cierra el dropdown
+        };
+        grid.appendChild(btn);
+    }
+};
+
 /**
  * Inicializa el módulo de matches
  */
@@ -313,6 +390,15 @@ export const initMatches = () => {
 
     // Auto-refresh cada 2 minutos (antes era 1 min)
     setInterval(() => loadMatches(true), 120000);
+
+    // Cerrar calendario al hacer click fuera
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('calendar-dropdown');
+        const nav = document.getElementById('date-nav');
+        if (isCalendarOpen && !dropdown.contains(e.target) && !nav.contains(e.target)) {
+            toggleCalendar();
+        }
+    });
 };
 
 // Exportar state para acceso desde otros módulos si es necesario
