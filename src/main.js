@@ -134,7 +134,10 @@ const navigateToMatches = () => {
     document.getElementById('date-nav').classList.remove('hidden');
     document.getElementById('sidebar').classList.remove('hidden'); // Restore if it was hidden by league view
     document.getElementById('sidebar').classList.add('-translate-x-full'); // Default mobile state
-    document.getElementById('right-sidebar').classList.remove('hidden'); // Restore right sidebar
+    // Restore right sidebar responsive state (hidden mobile, flex desktop)
+    const rightSidebar = document.getElementById('right-sidebar');
+    rightSidebar.classList.add('hidden', 'lg:flex');
+    rightSidebar.classList.remove('lg:hidden'); // Ensure it's not hidden on desktop
     document.querySelector('main').classList.add('lg:w-auto'); // Restore main width constraint
     document.getElementById('mobile-backdrop').classList.add('hidden');
 
@@ -234,7 +237,9 @@ const navigateToForumWrapper = () => {
 
     // Restaurar layout (si venimos de League View)
     document.getElementById('sidebar').classList.remove('hidden');
-    document.getElementById('right-sidebar').classList.remove('hidden');
+    const rightSidebar = document.getElementById('right-sidebar');
+    rightSidebar.classList.add('hidden', 'lg:flex');
+    rightSidebar.classList.remove('lg:hidden');
     document.querySelector('main').classList.add('lg:w-auto');
 
     // Asegurar estado visual de los botones
