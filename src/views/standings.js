@@ -589,8 +589,8 @@ const renderCupView = async (leagueId, season, container) => {
             return;
         }
 
-        const roundOrder = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'];
-        const displayRounds = { 'Round of 16': 'Octavos', 'Quarter-finals': 'Cuartos', 'Semi-finals': 'Semifinal', 'Final': 'Final' };
+        const roundOrder = ['Round of 64', 'Round of 32', 'Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'];
+        const displayRounds = { 'Round of 64': '32avos', 'Round of 32': '16avos', 'Round of 16': 'Octavos', 'Quarter-finals': 'Cuartos', 'Semi-finals': 'Semifinal', 'Final': 'Final' };
 
         // 1. Group by Round & Deduplicate Ties (Keep all matches in tie)
         const grouped = {};
@@ -744,11 +744,11 @@ const renderCupView = async (leagueId, season, container) => {
         }
 
         let html = `<div class="p-8 overflow-x-auto min-h-[600px] bg-[#050505] rounded-xl border border-[#222]">`;
-        html += `<div class="flex justify-between min-w-[1000px] mb-12 px-10 border-b border-[#222] pb-4 text-center">
+        html += `<div class="flex justify-between min-w-max mb-12 px-10 border-b border-[#222] pb-4 text-center">
                     ${roundOrder.map(r => `<div class="font-bold text-gray-500 uppercase tracking-widest text-xs w-60">${displayRounds[r]}</div>`).join('')}
                  </div>`;
 
-        html += `<div class="flex justify-end min-w-[1000px] pr-10">`;
+        html += `<div class="flex justify-end min-w-max pr-10">`;
 
         if (finalTies && finalTies.length > 0) {
             html += `<div class="flex flex-col gap-20">`;
