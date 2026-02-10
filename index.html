@@ -1348,7 +1348,8 @@
                 <!-- Step 2: Team Selection -->
                 <div id="registration-step-2" class="hidden">
                     <p class="text-gray-400 text-xs text-center mb-3 leading-relaxed">Paso 2: Elegí tu equipo de fútbol
-                        <span class="text-yellow-500 font-bold">(para siempre)</span></p>
+                        <span class="text-yellow-500 font-bold">(para siempre)</span>
+                    </p>
 
                     <!-- Search -->
                     <input type="text" id="team-search-input" placeholder="Buscar equipo..."
@@ -1369,7 +1370,7 @@
                     </div>
 
                     <div class="flex gap-2 mt-4">
-                        <button onclick="app.goBackToUsername()"
+                        <button id="team-selection-back-btn" onclick="app.goBackToUsername()"
                             class="flex-1 py-3 px-4 text-center text-sm font-bold uppercase tracking-widest bg-[#222] text-white rounded hover:bg-[#333] transition-colors">
                             ← Volver
                         </button>
@@ -1405,6 +1406,20 @@
                 <div class="flex flex-col items-center">
                     <div id="profile-avatar" class="w-20 h-20 mb-3"></div>
                     <h4 id="profile-username" class="text-white font-bold text-xl font-mono"></h4>
+
+                    <!-- Team (Click to change) -->
+                    <div id="profile-team-container"
+                        class="mt-2 flex items-center gap-2 cursor-pointer hover:bg-[#1a1a1a] p-2 rounded transition-colors group"
+                        title="Cambiar equipo">
+                        <img id="profile-team-logo" src="" class="w-8 h-8 object-contain">
+                        <span id="profile-team-name" class="text-gray-300 font-bold text-sm"></span>
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="w-3 h-3 text-gray-600 group-hover:text-white transition-colors ml-1" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                    </div>
                 </div>
 
                 <!-- Stats Grid -->
