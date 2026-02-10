@@ -297,7 +297,7 @@ export const processStandings = (standingsData) => {
         if (tabsContainer) {
             tabsContainer.innerHTML = standingsData.map((g, i) => `
                 <button onclick="app.renderTable(${i})" class="px-3 py-1 bg-[#111] text-[10px] font-bold uppercase border border-[#333] text-gray-400 hover:text-white hover:border-white transition-all whitespace-nowrap rounded mr-2 last:mr-0">
-                    ${g.group}
+                    ${g[0] && g[0].group ? g[0].group : 'GRUPO ' + (i + 1)}
                 </button>
             `).join('');
         }
