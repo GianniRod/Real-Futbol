@@ -27,6 +27,8 @@ const state = {
 
 // IDs de ligas europeas (para formato de temporada)
 const EUROPEAN_LEAGUES = [39, 140, 78, 135, 61, 2, 3, 143, 137]; // PL, LaLiga, Bundesliga, SerieA, Ligue1, UCL, UEL, CopaRey, CoppaItalia
+// IDs de Copas (para vista de Bracket)
+const CUP_LEAGUES = [130, 137, 143]; // Copa Argentina, Coppa Italia, Copa del Rey
 
 /**
  * Determina la temporada actual para una liga
@@ -469,6 +471,14 @@ export const showStandings = async (idOrParams, name) => {
     if (oldTabs) oldTabs.classList.add('hidden');
 
     // Setup Split Views Layout
+    // Setup Split Views Layout
+
+    // Check if Cup for Bracket View
+    if (CUP_LEAGUES.includes(parseInt(id))) {
+        renderCupView(id, state.season, container);
+        return;
+    }
+
     container.innerHTML = `
         <div class="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-140px)] gap-6 lg:overflow-hidden pb-20 lg:pb-0">
             <!-- Left: Table (Scrollable) -->
@@ -563,3 +573,127 @@ export const showStandings = async (idOrParams, name) => {
 };
 
 export const getStandingsState = () => state;
+
+/**
+ * Renderiza la vista de Bracket para Copas
+ */
+const renderCupView = async (leagueId, season, container) => {
+    container.innerHTML = `<div class="flex justify-center items-center h-96"><div class="loader"></div></div>`;
+
+    try {
+        // Fetch all fixtures for the cup season
+        const data = await fetchAPI(`/fixtures?league=${leagueId}&season=${season}&timezone=America/Argentina/Buenos_Aires`);
+        const fixtures = data.response;
+
+        if (!fixtures || fixtures.length === 0) {
+            container.innerHTML = `<div class="text-center text-gray-500 py-20 text-sm">No hay datos disponibles para el cuadro de esta copa.</div>`;
+            return;
+        }
+
+        // Filter and Group by Round
+        // Rounds of interest: 'Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'
+        // Note: API strings might vary slightly (e.g., 'Quarter-finals' vs 'Quarter Finals'). Using includes.
+
+        const roundOrder = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'];
+        const displayRounds = {
+            'Round of 16': 'Octavos',
+            'Quarter-finals': 'Cuartos',
+            'Semi-finals': 'Semifinal',
+            'Final': 'Final'
+        };
+
+        const grouped = {};
+
+        fixtures.forEach(f => {
+            const r = f.league.round;
+            if (roundOrder.some(ro => r.includes(ro))) {
+                // Determine which main round bucket it belongs to
+                const bucket = roundOrder.find(ro => r.includes(ro));
+                if (!grouped[bucket]) grouped[bucket] = [];
+                grouped[bucket].push(f);
+            }
+        });
+
+        // Ensure chronological sorting within rounds if needed (by date)
+        Object.keys(grouped).forEach(k => {
+            grouped[k].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp);
+        });
+
+        // Build HTML
+        let html = `<div class="flex flex-nowrap overflow-x-auto gap-8 p-6 items-center min-h-[600px] lg:justify-center">`;
+
+        roundOrder.forEach((roundKey, idx) => {
+            const matches = grouped[roundKey];
+            if (!matches || matches.length === 0) return;
+
+            html += `
+                <div class="flex flex-col gap-6 w-72 shrink-0">
+                    <h3 class="text-center font-bold text-gray-500 uppercase tracking-widest text-xs mb-4 border-b border-[#222] pb-2">
+                        ${displayRounds[roundKey] || roundKey}
+                    </h3>
+                    <div class="flex flex-col justify-center gap-6 h-full">
+            `;
+
+            matches.forEach(m => {
+                const isFin = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
+                const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(m.fixture.status.short);
+
+                const homeWin = (m.goals.home > m.goals.away) || (m.score.penalty.home > m.score.penalty.away);
+                const awayWin = (m.goals.away > m.goals.home) || (m.score.penalty.away > m.score.penalty.home);
+
+                // Highlight winner text color if finished
+                const homeClass = isFin && homeWin ? 'text-white' : 'text-gray-400';
+                const awayClass = isFin && awayWin ? 'text-white' : 'text-gray-400';
+                const scoreClass = 'font-bold text-white';
+
+                html += `
+                    <div class="bg-[#111] border border-[#222] rounded-lg p-3 flex flex-col gap-2 relative hover:border-gray-600 transition-colors cursor-pointer shadow-lg" onclick="app.navigate('/partido/${m.fixture.id}')">
+                        ${isLive ? '<div class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>' : ''}
+                        
+                        <!-- Home -->
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <img src="${m.teams.home.logo}" class="w-5 h-5 object-contain">
+                                <span class="text-xs ${homeClass} font-bold uppercase truncate max-w-[120px]">${m.teams.home.name}</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="${scoreClass}">${m.goals.home ?? '-'}</span>
+                                ${m.score.penalty.home ? `<span class="text-[10px] text-gray-500">(${m.score.penalty.home})</span>` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Away -->
+                        <div class="flex justify-between items-center">
+                             <div class="flex items-center gap-2">
+                                <img src="${m.teams.away.logo}" class="w-5 h-5 object-contain">
+                                <span class="text-xs ${awayClass} font-bold uppercase truncate max-w-[120px]">${m.teams.away.name}</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="${scoreClass}">${m.goals.away ?? '-'}</span>
+                                ${m.score.penalty.away ? `<span class="text-[10px] text-gray-500">(${m.score.penalty.away})</span>` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="text-[9px] text-gray-600 text-center mt-1 uppercase font-mono tracking-wider">
+                            ${isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleDateString()}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div></div>`;
+
+            // Separator arrow if not last
+            if (idx < roundOrder.length - 1 && grouped[roundOrder[idx + 1]]) {
+                html += `<div class="hidden lg:flex flex-col justify-center text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></div>`;
+            }
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error("Error rendering cup bracket:", e);
+        container.innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar el cuadro.</div>`;
+    }
+};
