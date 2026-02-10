@@ -417,20 +417,20 @@ export const showStandings = async (idOrParams, name) => {
 
     // Setup Split Views Layout
     container.innerHTML = `
-        <div class="flex flex-col lg:flex-row h-[calc(100vh-140px)] gap-6 overflow-hidden">
+        <div class="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-140px)] gap-6 lg:overflow-hidden pb-20 lg:pb-0">
             <!-- Left: Table (Scrollable) -->
-            <div class="flex-1 flex flex-col min-h-0 bg-[#050505] rounded-xl border border-[#222] overflow-hidden">
+            <div class="w-full lg:flex-1 flex flex-col min-h-[500px] lg:min-h-0 bg-[#050505] rounded-xl border border-[#222] overflow-hidden">
                  <div class="p-4 bg-black border-b border-[#222] flex justify-between items-center shrink-0">
                     <h3 class="font-bold text-gray-400 uppercase tracking-widest text-xs">Posiciones ${seasonLabel}</h3>
-                    <div id="standings-tabs-container" class="flex"></div>
+                    <div id="standings-tabs-container" class="flex overflow-x-auto no-scrollbar"></div>
                 </div>
-                <div id="standings-table-container" class="flex-1 overflow-y-auto p-0">
+                <div id="standings-table-container" class="flex-1 overflow-y-auto p-0 h-[500px] lg:h-auto">
                     <div class="flex justify-center py-20"><div class="loader"></div></div>
                 </div>
             </div>
 
             <!-- Right: Fixtures (Fixed width) -->
-            <div class="w-full lg:w-96 shrink-0 flex flex-col bg-[#050505] rounded-xl border border-[#222] overflow-hidden h-full">
+            <div class="w-full lg:w-96 shrink-0 flex flex-col bg-[#050505] rounded-xl border border-[#222] overflow-hidden h-[500px] lg:h-full">
                 <!-- Round Selector (Custom Nav) -->
                 <div class="p-4 border-b border-[#222] shrink-0 bg-black relative">
                     <div class="flex items-center justify-between mb-2">
