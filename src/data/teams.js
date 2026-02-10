@@ -44,7 +44,7 @@ export const ARGENTINE_TEAMS = [
     { id: 462, name: 'Agropecuario', logo: 'https://media.api-sports.io/football/teams/462.png' },
     { id: 463, name: 'Aldosivi', logo: 'https://media.api-sports.io/football/teams/463.png' },
     { id: 464, name: 'All Boys', logo: 'https://media.api-sports.io/football/teams/464.png' },
-    { id: 461, name: 'Almagro', logo: 'https://media.api-sports.io/football/teams/461.png' }, // My check said San Martin SJ... but maybe user list implies 461 is Almagro? User listed San Martin Tucuman 485. User didn't correct Almagro. I'll stick to original guess/image check for Almagro/San Martin SJ.
+    { id: 482, name: 'Almagro', logo: 'https://media.api-sports.io/football/teams/482.png' }, // My check said San Martin SJ... but maybe user list implies 461 is Almagro? User listed San Martin Tucuman 485. User didn't correct Almagro. I'll stick to original guess/image check for Almagro/San Martin SJ.
     // Wait, user didn't correct Almagro. My previous list had Almagro as 461 (San Martin SJ?). 
     // And San Martin SJ as 461.
     // If I have duplicate IDs, the grid will show duplicate logos? No, ID is key.
