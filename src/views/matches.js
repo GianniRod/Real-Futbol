@@ -175,22 +175,20 @@ export const renderMatches = () => {
         groupsMap[m.league.id].matches.push(m);
     });
 
-    let html = '<div class="bg-[#0a0a0a] border border-[#222] rounded-lg overflow-hidden flex flex-col mb-6">';
-
-    groupsList.forEach((g, groupIndex) => {
-        // Para grupos siguientes, agregamos border-top en el header para separar
-        const headerBorderClass = groupIndex > 0 ? 'border-t border-b border-[#222]' : 'border-b border-[#222]';
-
+    let html = '';
+    groupsList.forEach(g => {
         html += `
-            <div class="px-4 py-3 flex items-center justify-between ${headerBorderClass} cursor-pointer hover:bg-[#111] transition-colors group" onclick="app.showStandings({id: ${g.id}, name: '${g.name}'})">
-                <div class="flex items-center gap-3">
-                    <img src="${g.logo}" class="w-5 h-5 object-contain group-hover:scale-110 transition-transform">
-                    <h3 class="text-xs font-black text-white uppercase tracking-widest group-hover:text-gray-200 transition-colors">${g.name}</h3>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-            </div>`;
+            <div class="mb-6">
+                <div class="bg-[#0a0a0a] border border-[#222] rounded-lg overflow-hidden flex flex-col">
+                    <div class="px-4 py-3 flex items-center justify-between border-b border-[#222] cursor-pointer hover:bg-[#111] transition-colors group" onclick="app.showStandings({id: ${g.id}, name: '${g.name}'})">
+                        <div class="flex items-center gap-3">
+                            <img src="${g.logo}" class="w-5 h-5 object-contain group-hover:scale-110 transition-transform">
+                            <h3 class="text-xs font-black text-white uppercase tracking-widest group-hover:text-gray-200 transition-colors">${g.name}</h3>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>`;
 
         g.matches.forEach((m, index) => {
             const s = m.fixture.status;
@@ -224,7 +222,6 @@ export const renderMatches = () => {
 
             const clickableClass = notStarted ? 'not-clickable' : 'clickable';
             const clickAttr = notStarted ? '' : `onclick="app.navigate('/partido/${m.fixture.id}'); event.preventDefault();"`;
-            // El último match del grupo no lleva borde abajo, el header del siguiente grupo llevará borde arriba
             const isLast = index === g.matches.length - 1;
             const borderClass = isLast ? '' : 'border-b border-[#222]';
 
@@ -274,9 +271,9 @@ export const renderMatches = () => {
             </div>
         </div>`;
         });
-    });
 
-    html += '</div>';
+        html += `</div></div > `;
+    });
 
     container.innerHTML = html;
     loadMessageCounts();
