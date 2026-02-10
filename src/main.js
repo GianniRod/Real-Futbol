@@ -28,7 +28,9 @@ import {
 import {
     showStandings,
     changeSeason,
-    renderTable
+    renderTable,
+    changeRound,
+    toggleSidebarInLeague
 } from './views/standings.js';
 
 import {
@@ -130,7 +132,10 @@ const navigateToMatches = () => {
     document.getElementById('view-match-detail').classList.add('hidden');
     document.getElementById('view-match-list').classList.remove('hidden');
     document.getElementById('date-nav').classList.remove('hidden');
-    document.getElementById('sidebar').classList.add('-translate-x-full');
+    document.getElementById('sidebar').classList.remove('hidden'); // Restore if it was hidden by league view
+    document.getElementById('sidebar').classList.add('-translate-x-full'); // Default mobile state
+    document.getElementById('right-sidebar').classList.remove('hidden'); // Restore right sidebar
+    document.querySelector('main').classList.add('lg:w-auto'); // Restore main width constraint
     document.getElementById('mobile-backdrop').classList.add('hidden');
 
     // Desactivar filtro EN VIVO si estaba activo
@@ -226,6 +231,11 @@ const navigateToForumWrapper = () => {
 
     // Renderizar foro
     navigateToForum();
+
+    // Restaurar layout (si venimos de League View)
+    document.getElementById('sidebar').classList.remove('hidden');
+    document.getElementById('right-sidebar').classList.remove('hidden');
+    document.querySelector('main').classList.add('lg:w-auto');
 
     // Asegurar estado visual de los botones
     updateMobileNav('btn-nav-forum');
@@ -699,6 +709,8 @@ window.app = {
     showStandings,
     changeSeason,
     renderTable,
+    changeRound,
+    toggleSidebarInLeague,
 
     // Forum
     navigateToForum: navigateToForumWrapper,
