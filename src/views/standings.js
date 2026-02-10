@@ -1,19 +1,20 @@
 /**
  * Standings View Module
  * 
- * Propósito: Manejar vista de tabla de posiciones
+ * Propósito: Manejar vista de tabla de posiciones con layout dividido
  * 
  * Exports:
- * - showStandings(id, name): Muestra tabla de una liga
+ * - showStandings(id, name): Muestra tabla de una liga y calendario
  * - changeSeason(year): Cambia la temporada
  * - processStandings(data): Procesa datos de standings
  * - renderTable(groupIndex): Renderiza tabla específica
+ * - changeRound(round): Cambia la fecha del calendario
+ * - toggleSidebarInLeague(): Muestra/oculta sidebar de ligas
  */
 
 import { fetchAPI } from '../core/api.js';
 import { showOnly, hideView } from '../core/dom.js';
 
-// State
 // State extended for fixtures
 const state = {
     selectedLeague: null,
@@ -22,6 +23,46 @@ const state = {
     rounds: [],
     currentRound: null,
     fixtures: []
+};
+
+// IDs de ligas europeas (para formato de temporada)
+const EUROPEAN_LEAGUES = [39, 140, 78, 135, 61, 2, 3, 143, 137]; // PL, LaLiga, Bundesliga, SerieA, Ligue1, UCL, UEL, CopaRey, CoppaItalia
+
+/**
+ * Determina la temporada actual para una liga
+ * @param {number} leagueId 
+ */
+const determineCurrentSeason = (leagueId) => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const month = now.getMonth() + 1; // 1-12
+
+    if (EUROPEAN_LEAGUES.includes(parseInt(leagueId))) {
+        // En Europa, si estamos en la segunda mitad del año (Agosto+), es el inicio de temporada (ej: 2025 para 25/26)
+        // Si estamos en la primera mitad (Enero-Julio), es el final de la temporada que empezó el año anterior (ej: 2024 para 24/25)
+        if (month >= 7) {
+            return currentYear;
+        } else {
+            return currentYear - 1;
+        }
+    } else {
+        // En América (anual), la temporada es simplemente el año actual
+        return currentYear;
+    }
+};
+
+/**
+ * Formatea el label de la temporada
+ * @param {number} seasonYear 
+ * @param {number} leagueId 
+ */
+const formatSeasonLabel = (seasonYear, leagueId) => {
+    if (EUROPEAN_LEAGUES.includes(parseInt(leagueId))) {
+        const nextYear = (seasonYear + 1).toString().slice(-2);
+        const current = seasonYear.toString().slice(-2);
+        return `${current}/${nextYear}`;
+    }
+    return seasonYear.toString();
 };
 
 /**
@@ -42,8 +83,19 @@ const fetchRounds = async (leagueId, season) => {
     try {
         const data = await fetchAPI(`/fixtures/rounds?league=${leagueId}&season=${season}`);
         state.rounds = data.response;
-        // Seleccionar la última ronda por defecto o la actual
-        state.currentRound = state.rounds[state.rounds.length - 1]; // Default to last for now, or logic to find current
+
+        // Intentar obtener la ronda actual desde la API
+        try {
+            const currentData = await fetchAPI(`/fixtures/rounds?league=${leagueId}&season=${season}&current=true`);
+            if (currentData.response && currentData.response.length > 0) {
+                state.currentRound = currentData.response[0];
+            } else {
+                state.currentRound = state.rounds[state.rounds.length - 1]; // Fallback a la última
+            }
+        } catch {
+            state.currentRound = state.rounds[state.rounds.length - 1];
+        }
+
         return state.rounds;
     } catch (e) {
         console.error("Error fetching rounds:", e);
@@ -56,6 +108,9 @@ const fetchRounds = async (leagueId, season) => {
  */
 const fetchFixturesByRound = async (leagueId, season, round) => {
     try {
+        // Mostrar loader
+        document.getElementById('fixtures-list').innerHTML = `<div class="flex justify-center py-10"><div class="loader"></div></div>`;
+
         const data = await fetchAPI(`/fixtures?league=${leagueId}&season=${season}&round=${round}&timezone=America/Argentina/Buenos_Aires`);
         state.fixtures = data.response;
         renderFixtures();
@@ -69,10 +124,62 @@ const fetchFixturesByRound = async (leagueId, season, round) => {
  * Cambia la ronda seleccionada
  */
 export const changeRound = (round) => {
-    state.currentRound = round;
-    // Mostrar loader en lista de partidos
-    document.getElementById('fixtures-list').innerHTML = `<div class="flex justify-center py-10"><div class="loader"></div></div>`;
-    fetchFixturesByRound(state.selectedLeague.id, state.season, round);
+    // Si round es 'prev' o 'next', calcular índice
+    if (round === 'prev' || round === 'next') {
+        const currentIndex = state.rounds.indexOf(state.currentRound);
+        let newIndex = currentIndex;
+
+        if (round === 'prev' && currentIndex > 0) {
+            newIndex = currentIndex - 1;
+        } else if (round === 'next' && currentIndex < state.rounds.length - 1) {
+            newIndex = currentIndex + 1;
+        }
+
+        if (newIndex !== currentIndex) {
+            state.currentRound = state.rounds[newIndex];
+        } else {
+            return; // No change
+        }
+    } else {
+        state.currentRound = round;
+    }
+
+    // Actualizar selector UI
+    updateRoundSelectorUI();
+
+    // Cargar fixtures
+    fetchFixturesByRound(state.selectedLeague.id, state.season, state.currentRound);
+};
+
+/**
+ * Actualiza la UI del selector de rondas (texto y estado de botones)
+ */
+const updateRoundSelectorUI = () => {
+    const selector = document.getElementById('round-selector-text');
+    if (selector && state.currentRound) {
+        selector.innerText = state.currentRound.replace(/Regular Season - /g, 'FECHA ').replace(/_/g, ' ').toUpperCase();
+    }
+
+    // Actualizar value del select oculto si existe
+    const hiddenSelect = document.getElementById('hidden-round-select');
+    if (hiddenSelect) {
+        hiddenSelect.value = state.currentRound;
+    }
+};
+
+/**
+ * Abre el selector de rondas (dropdown nativo via JS)
+ */
+export const openRoundSelector = () => {
+    const select = document.getElementById('hidden-round-select');
+    if (select) {
+        if (typeof select.showPicker === 'function') {
+            select.showPicker();
+        } else {
+            select.focus(); // Fallback for some browsers
+            select.click();
+        }
+    }
 };
 
 /**
@@ -85,7 +192,7 @@ const renderFixtures = () => {
         return;
     }
 
-    // Agrupar por día
+    // Ordenar por fecha
     const matches = state.fixtures;
     matches.sort((a, b) => a.fixture.timestamp - b.fixture.timestamp);
 
@@ -134,10 +241,13 @@ const renderFixtures = () => {
  */
 export const renderTable = (groupIndex) => {
     const table = state.standingsData[groupIndex];
-    const container = document.getElementById('standings-table-container'); // Changed target ID
+    // NOTE: El container ID ahora es distinto porque está dentro del layout split
+    const container = document.getElementById('standings-table-container');
+
+    if (!container) return;
 
     container.innerHTML = `
-        <div class="bg-[#0a0a0a] border border-[#222] overflow-hidden rounded-lg">
+        <div class="bg-[#0a0a0a] border border-[#222] overflow-hidden rounded-lg mx-3 mb-3">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-400">
                     <thead class="text-[10px] text-gray-500 uppercase bg-[#111] border-b border-[#222] tracking-widest">
@@ -179,48 +289,45 @@ export const renderTable = (groupIndex) => {
  * @param {Array} standingsData - Datos de standings de la API
  */
 export const processStandings = (standingsData) => {
-    const tabs = document.getElementById('standings-tabs');
-    // Ensure table container exists inside the new layout
-    const tableContainer = document.getElementById('standings-table-container');
+    // El container de tabs ahora es diferente
+    const tabsContainer = document.getElementById('standings-tabs-container');
 
     if (standingsData.length > 1) {
         // Múltiples grupos
-        tabs.classList.remove('hidden');
-        tabs.innerHTML = standingsData.map((g, i) => `
-            <button onclick="app.renderTable(${i})" class="px-4 py-2 bg-[#111] text-xs font-bold uppercase border border-[#333] text-gray-400 hover:text-white hover:border-white transition-all whitespace-nowrap">
-                ${g.group}
-            </button>
-        `).join('');
+        if (tabsContainer) {
+            tabsContainer.innerHTML = standingsData.map((g, i) => `
+                <button onclick="app.renderTable(${i})" class="px-3 py-1 bg-[#111] text-[10px] font-bold uppercase border border-[#333] text-gray-400 hover:text-white hover:border-white transition-all whitespace-nowrap rounded mr-2 last:mr-0">
+                    ${g.group}
+                </button>
+            `).join('');
+        }
         state.standingsData = standingsData;
         renderTable(0);
     } else {
         // Un solo grupo
-        tabs.classList.add('hidden');
+        if (tabsContainer) tabsContainer.innerHTML = '';
         state.standingsData = standingsData;
         renderTable(0);
     }
 };
 
 /**
- * Toggle del menú lateral
+ * Toggle del menú lateral de ligas (Global Sidebar)
+ * Se usa especificamente en la vista de liga
  */
-export const toggleSidebar = () => {
+export const toggleSidebarInLeague = () => {
     const sidebar = document.getElementById('sidebar');
-    const backdrop = document.getElementById('mobile-backdrop');
+    // En escritorio, usamos lg:flex y hidden para controlar visibilidad
+    // Si tiene 'hidden', está oculto. Si se lo quitamos y tiene 'lg:flex', se muestra.
 
-    // Logic for mobile vs desktop override
-    if (window.innerWidth >= 1024) {
-        // Desktop: Toggle visibility class for sidebar
-        sidebar.classList.toggle('hidden');
-        if (sidebar.classList.contains('hidden')) {
-            // If hidden, main content takes full width
-            document.querySelector('main').classList.remove('lg:w-auto');
-        } else {
-            // If shown, restore layout
-        }
+    if (sidebar.classList.contains('hidden')) {
+        // Mostrar
+        sidebar.classList.remove('hidden');
+        sidebar.classList.add('lg:flex');
     } else {
-        // Mobile: Use standard openMobileTab logic
-        app.openMobileTab('leagues');
+        // Ocultar
+        sidebar.classList.add('hidden');
+        sidebar.classList.remove('lg:flex');
     }
 };
 
@@ -244,6 +351,10 @@ export const showStandings = async (idOrParams, name) => {
     }
 
     state.selectedLeague = { id, name: leagueName };
+    // Determinar temporada automática si no se ha seteado explícitamente en el state (o siempre al abrir)
+    // Para simplificar, recalculamos al abrir
+    const calculatedSeason = determineCurrentSeason(id);
+    state.season = calculatedSeason;
 
     // Validar si estamos en la vista correcta, si no, resetear containers
     const viewStandings = document.getElementById('view-standings');
@@ -256,23 +367,53 @@ export const showStandings = async (idOrParams, name) => {
 
     // START: Layout Modification
     // Ocultar sidebars globales
-    document.getElementById('sidebar').classList.add('hidden'); // Force hide sidebar on desktop
-    document.getElementById('right-sidebar').classList.add('hidden'); // Force hide right sidebar
-    document.querySelector('main').classList.remove('lg:w-auto'); // Allow main to expanded
+    const sidebar = document.getElementById('sidebar');
+    const rightSidebar = document.getElementById('right-sidebar');
+
+    // Hide Left Sidebar (Leagues)
+    sidebar.classList.add('hidden');
+    sidebar.classList.remove('lg:flex'); // Ensure it's hidden on desktop too
+
+    // Hide Right Sidebar (Community)
+    rightSidebar.classList.add('hidden');
+    rightSidebar.classList.remove('lg:flex'); // Ensure it's hidden on desktop too
+
+    // Allow main to expand
+    document.querySelector('main').classList.remove('lg:w-auto');
+
+    // Season Select Options
+    const seasonLabel = formatSeasonLabel(state.season, id);
+    const prevSeasonLabel = formatSeasonLabel(state.season - 1, id);
 
     // Update Header
     document.getElementById('standings-title').innerHTML = `
         <div class="flex items-center gap-3">
-            <button onclick="app.toggleSidebarInLeague()" class="bg-[#111] p-2 rounded hover:bg-[#222] border border-[#333] transition-colors" title="Ver Ligas">
-                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button onclick="app.toggleSidebarInLeague()" class="bg-[#111] p-2 rounded hover:bg-[#222] border border-[#333] transition-colors group" title="Ver Ligas">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
             </button>
-            <span class="text-xl font-bold text-white uppercase tracking-wider font-sport">${leagueName}</span>
+            <div class="flex flex-col">
+                <span class="text-xl font-bold text-white uppercase tracking-wider font-sport leading-none">${leagueName}</span>
+            </div>
         </div>
     `;
 
-    document.getElementById('standings-tabs').classList.add('hidden');
+    // Inject season selector (replacement logic for existing selector in view-standings header if it exists)
+    const headerDiv = document.querySelector('#view-standings > div.sticky > div.flex');
+    if (headerDiv) {
+        const oldSelector = document.getElementById('season-selector');
+        if (oldSelector) {
+            oldSelector.innerHTML = `
+                <option value="${state.season}" selected>${seasonLabel}</option>
+                <option value="${state.season - 1}">${prevSeasonLabel}</option>
+            `;
+        }
+    }
+
+    // Hide old tabs container if visible
+    const oldTabs = document.getElementById('standings-tabs');
+    if (oldTabs) oldTabs.classList.add('hidden');
 
     // Setup Split Views Layout
     container.innerHTML = `
@@ -280,8 +421,8 @@ export const showStandings = async (idOrParams, name) => {
             <!-- Left: Table (Scrollable) -->
             <div class="flex-1 flex flex-col min-h-0 bg-[#050505] rounded-xl border border-[#222] overflow-hidden">
                  <div class="p-4 bg-black border-b border-[#222] flex justify-between items-center shrink-0">
-                    <h3 class="font-bold text-gray-400 uppercase tracking-widest text-xs">Posiciones</h3>
-                    <div id="standings-tabs-container"></div>
+                    <h3 class="font-bold text-gray-400 uppercase tracking-widest text-xs">Posiciones ${seasonLabel}</h3>
+                    <div id="standings-tabs-container" class="flex"></div>
                 </div>
                 <div id="standings-table-container" class="flex-1 overflow-y-auto p-0">
                     <div class="flex justify-center py-20"><div class="loader"></div></div>
@@ -290,14 +431,34 @@ export const showStandings = async (idOrParams, name) => {
 
             <!-- Right: Fixtures (Fixed width) -->
             <div class="w-full lg:w-96 shrink-0 flex flex-col bg-[#050505] rounded-xl border border-[#222] overflow-hidden h-full">
-                <!-- Round Selector -->
-                <div class="p-4 border-b border-[#222] shrink-0 bg-black">
+                <!-- Round Selector (Custom Nav) -->
+                <div class="p-4 border-b border-[#222] shrink-0 bg-black relative">
                     <div class="flex items-center justify-between mb-2">
                         <h3 class="font-bold text-gray-400 uppercase tracking-widest text-xs">Calendario</h3>
                     </div>
-                    <select id="round-selector" onchange="app.changeRound(this.value)" class="w-full bg-[#111] border border-[#333] text-white text-xs p-2 rounded focus:outline-none uppercase font-bold">
-                        <option>Cargando fechas...</option>
-                    </select>
+                    
+                    <div class="flex items-center justify-between bg-[#111] border border-[#333] rounded p-1">
+                        <button onclick="app.changeRound('prev')" class="p-2 hover:bg-[#222] text-gray-400 hover:text-white rounded transition-colors" title="Fecha anterior">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        
+                        <div class="flex-1 text-center cursor-pointer hover:text-gray-300 relative group" onclick="app.openRoundSelector()">
+                            <span id="round-selector-text" class="text-xs font-bold text-white uppercase tracking-widest select-none">CARGANDO...</span>
+                            <!-- Hidden Select Overlay -->
+                            <select id="hidden-round-select" onchange="app.changeRound(this.value)" 
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs">
+                                <!-- Options populated later -->
+                            </select>
+                        </div>
+
+                        <button onclick="app.changeRound('next')" class="p-2 hover:bg-[#222] text-gray-400 hover:text-white rounded transition-colors" title="Siguiente fecha">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <!-- Fixtures List -->
                 <div id="fixtures-list" class="flex-1 overflow-y-auto p-3 space-y-2">
@@ -323,18 +484,23 @@ export const showStandings = async (idOrParams, name) => {
         }
 
         // Process Rounds
-        const roundSelector = document.getElementById('round-selector');
+        const hiddenSelect = document.getElementById('hidden-round-select');
+
         if (roundsData && roundsData.length > 0) {
-            roundSelector.innerHTML = roundsData.map(r => `
-                <option value="${r}" ${r === state.currentRound ? 'selected' : ''}>${r.replace(/Regular Season - /g, 'Fecha ').replace(/_/g, ' ')}</option>
+            hiddenSelect.innerHTML = roundsData.map(r => `
+                <option value="${r}" ${r === state.currentRound ? 'selected' : ''}>${r.replace(/Regular Season - /g, 'FECHA ').replace(/_/g, ' ').toUpperCase()}</option>
             `).join('');
+
+            updateRoundSelectorUI();
 
             // Cargar fixtures de la ronda actual
             if (state.currentRound) {
                 fetchFixturesByRound(id, state.season, state.currentRound);
             }
         } else {
-            roundSelector.innerHTML = `<option>No hay fechas disponibles</option>`;
+            const selectorText = document.getElementById('round-selector-text');
+            if (selectorText) selectorText.innerText = 'NO HAY DATOS';
+            if (hiddenSelect) hiddenSelect.disabled = true;
         }
 
     } catch (e) {
@@ -342,22 +508,5 @@ export const showStandings = async (idOrParams, name) => {
         container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs uppercase tracking-widest">Error al cargar datos.</div>`;
     }
 };
-
-export const toggleSidebarInLeague = () => {
-    const sidebar = document.getElementById('sidebar');
-    // Forzamos "flex" porque usamos "hidden lg:flex" originalmente
-    if (sidebar.classList.contains('hidden')) {
-        sidebar.classList.remove('hidden');
-        sidebar.classList.add('lg:flex'); // Restore desktop flex
-        // Adjust main content width if needed, but absolute positioning or overlay might be better for temporary menu
-        // For this specific request: "un boton que lo tocas y vuelve las ligas" -> likely as an overlay or pushing content
-
-        // Let's use the mobile drawer logic/style for consistency or just toggle the class we removed
-    } else {
-        sidebar.classList.add('hidden');
-        sidebar.classList.remove('lg:flex');
-    }
-};
-
 
 export const getStandingsState = () => state;
