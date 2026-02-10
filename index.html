@@ -1316,30 +1316,72 @@
         </div>
     </div>
 
-    <!-- Username Modal -->
+    <!-- Username + Team Registration Modal -->
     <div id="username-modal"
-        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
-            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
-                <h3 class="font-bold text-white text-lg font-sport uppercase">Establece tu Usuario</h3>
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-[#111] border border-[#333] rounded-lg w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222] flex-shrink-0">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Crea tu cuenta</h3>
             </div>
-            <div class="p-6 space-y-4">
-                <p class="text-gray-400 text-xs text-center mb-4 leading-relaxed">Este será tu nombre de usuario
-                    permanente vinculado a tu cuenta de Google.</p>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <!-- Step 1: Username -->
+                <div id="registration-step-1">
+                    <p class="text-gray-400 text-xs text-center mb-4 leading-relaxed">Paso 1: Elegí tu nombre de usuario
+                        permanente</p>
 
-                <div>
-                    <input type="text" id="username-input" placeholder="Tu nombre de usuario"
-                        class="w-full bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-white"
-                        maxlength="20">
-                    <div id="username-error" class="hidden text-red-500 text-xs mt-2 font-medium"></div>
+                    <div>
+                        <input type="text" id="username-input" placeholder="Tu nombre de usuario"
+                            class="w-full bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-white"
+                            maxlength="20">
+                        <div id="username-error" class="hidden text-red-500 text-xs mt-2 font-medium"></div>
+                    </div>
+
+                    <button onclick="app.goToTeamSelection()"
+                        class="w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors mt-4">
+                        Siguiente →
+                    </button>
+
+                    <p class="text-gray-600 text-[10px] text-center mt-2">Podrás usar este nombre en todos los foros</p>
                 </div>
 
-                <button onclick="app.saveUsername()"
-                    class="w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors">
-                    Guardar
-                </button>
+                <!-- Step 2: Team Selection -->
+                <div id="registration-step-2" class="hidden">
+                    <p class="text-gray-400 text-xs text-center mb-3 leading-relaxed">Paso 2: Elegí tu equipo de fútbol
+                        <span class="text-yellow-500 font-bold">(para siempre)</span></p>
 
-                <p class="text-gray-600 text-[10px] text-center">Podrás usar este nombre en todos los foros</p>
+                    <!-- Search -->
+                    <input type="text" id="team-search-input" placeholder="Buscar equipo..."
+                        class="w-full bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-white mb-3"
+                        oninput="app.filterTeams()">
+
+                    <!-- Selected team indicator -->
+                    <div id="selected-team-indicator"
+                        class="hidden mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded flex items-center gap-2">
+                        <img id="selected-team-logo" src="" class="w-6 h-6 object-contain">
+                        <span id="selected-team-name" class="text-yellow-400 text-xs font-bold"></span>
+                        <span class="text-gray-500 text-[10px] ml-auto">✓ Seleccionado</span>
+                    </div>
+
+                    <!-- Team Grid -->
+                    <div id="team-grid" class="grid grid-cols-4 gap-2 max-h-[40vh] overflow-y-auto pr-1">
+                        <!-- Populated dynamically -->
+                    </div>
+
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="app.goBackToUsername()"
+                            class="flex-1 py-3 px-4 text-center text-sm font-bold uppercase tracking-widest bg-[#222] text-white rounded hover:bg-[#333] transition-colors">
+                            ← Volver
+                        </button>
+                        <button onclick="app.saveUsername()"
+                            class="flex-1 btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors">
+                            Guardar
+                        </button>
+                    </div>
+
+                    <p class="text-gray-600 text-[10px] text-center mt-2">El escudo será tu foto de perfil en el foro
+                    </p>
+                </div>
             </div>
         </div>
     </div>
