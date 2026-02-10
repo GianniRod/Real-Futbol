@@ -23,6 +23,7 @@ import { getMatches } from './matches.js';
  */
 export const setFeaturedMatch = async (fixtureId, matchData) => {
     try {
+        console.log('setFeaturedMatch called with:', fixtureId, matchData?.teams?.home?.name);
         const docRef = doc(db, "app_config", "featured_match");
         await setDoc(docRef, {
             fixtureId: fixtureId,
@@ -44,6 +45,7 @@ export const setFeaturedMatch = async (fixtureId, matchData) => {
         await loadFeaturedMatchPicker();
     } catch (error) {
         console.error('Error setting featured match:', error);
+        alert('Error al destacar partido: ' + error.message);
     }
 };
 
