@@ -179,11 +179,16 @@ export const renderMatches = () => {
     groupsList.forEach(g => {
         html += `
             <div class="mb-6">
-                <div class="px-2 py-2 flex items-center gap-3 mb-1 cursor-pointer hover:bg-[#111] rounded transition-colors group" onclick="app.showStandings({id: ${g.id}, name: '${g.name}'})">
-                    <img src="${g.logo}" class="w-5 h-5 object-contain group-hover:scale-110 transition-transform">
-                    <h3 class="text-xs font-black text-white uppercase tracking-widest group-hover:text-yellow-500 transition-colors">${g.name}</h3>
-                </div>
-                <div class="bg-[#0a0a0a] border border-[#222] rounded-lg overflow-hidden flex flex-col">`;
+                <div class="bg-[#0a0a0a] border border-[#222] rounded-lg overflow-hidden flex flex-col">
+                    <div class="px-4 py-3 flex items-center justify-between border-b border-[#222] cursor-pointer hover:bg-[#111] transition-colors group" onclick="app.showStandings({id: ${g.id}, name: '${g.name}'})">
+                        <div class="flex items-center gap-3">
+                            <img src="${g.logo}" class="w-5 h-5 object-contain group-hover:scale-110 transition-transform">
+                            <h3 class="text-xs font-black text-white uppercase tracking-widest group-hover:text-gray-200 transition-colors">${g.name}</h3>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>`;
 
         g.matches.forEach((m, index) => {
             const s = m.fixture.status;
@@ -221,19 +226,19 @@ export const renderMatches = () => {
             const borderClass = isLast ? '' : 'border-b border-[#222]';
 
             html += `
-                <div class="p-4 match-card ${clickableClass} relative hover:bg-[#111] transition-colors ${borderClass}" ${clickAttr}>
-                    ${isLive ? '<div class="absolute top-3 right-3 flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div><span class="text-[9px] font-bold text-red-500 uppercase tracking-widest">EN VIVO</span></div>' : ''}
-                    
-                    <div class="flex items-center justify-between">
-                        <!-- HOME TEAM -->
-                        <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 transition-opacity duration-300 text-right min-w-0">
-                            <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-right">${m.teams.home.name}</span>
-                            <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain shrink-0">
-                        </div>
+        <div class="p-4 match-card ${clickableClass} relative hover:bg-[#111] transition-colors ${borderClass}" ${clickAttr}>
+            ${isLive ? '<div class="absolute top-3 right-3 flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div><span class="text-[9px] font-bold text-red-500 uppercase tracking-widest">EN VIVO</span></div>' : ''}
 
-                        <!-- SCORE / TIME -->
-                        <div class="px-2 md:px-3 flex flex-col items-center w-auto min-w-[80px] shrink-0">
-                            ${notStarted
+            <div class="flex items-center justify-between">
+                <!-- HOME TEAM -->
+                <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 transition-opacity duration-300 text-right min-w-0">
+                    <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-right">${m.teams.home.name}</span>
+                    <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain shrink-0">
+                </div>
+
+                <!-- SCORE / TIME -->
+                <div class="px-2 md:px-3 flex flex-col items-center w-auto min-w-[80px] shrink-0">
+                    ${notStarted
                     ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
                     : `<div class="flex items-center gap-2 justify-center">
                                     ${(m.score?.penalty?.home != null) ? `<span class="text-xs text-gray-400 font-bold mt-1">(${m.score.penalty.home})</span>` : ''}
@@ -251,23 +256,23 @@ export const renderMatches = () => {
                                    ${(m.score?.penalty?.away != null) ? `<span class="text-xs text-gray-400 font-bold mt-1">(${m.score.penalty.away})</span>` : ''}
                                    </div>`
                 }
-                            <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap">${isLive || isHT || isFin ? timeDisplay : ''}</span>
-                            <div class="mt-1 px-1.5 py-0.5 bg-[#111] hover:bg-[#222] border border-[#222] rounded flex items-center gap-1 transition-colors cursor-pointer" onclick="app.openDetailWithTab(${m.fixture.id}, 'forum'); event.stopPropagation(); event.preventDefault();">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                                <span id="msg-count-${m.fixture.id}" class="text-[8px] font-bold text-gray-500 font-mono">...</span>
-                            </div>
-                        </div>
-
-                        <!-- AWAY TEAM -->
-                        <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 transition-opacity duration-300 text-left min-w-0">
-                            <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain shrink-0">
-                            <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-left">${m.teams.away.name}</span>
-                        </div>
+                    <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap">${isLive || isHT || isFin ? timeDisplay : ''}</span>
+                    <div class="mt-1 px-1.5 py-0.5 bg-[#111] hover:bg-[#222] border border-[#222] rounded flex items-center gap-1 transition-colors cursor-pointer" onclick="app.openDetailWithTab(${m.fixture.id}, 'forum'); event.stopPropagation(); event.preventDefault();">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <span id="msg-count-${m.fixture.id}" class="text-[8px] font-bold text-gray-500 font-mono">...</span>
                     </div>
-                </div>`;
+                </div>
+
+                <!-- AWAY TEAM -->
+                <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 transition-opacity duration-300 text-left min-w-0">
+                    <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain shrink-0">
+                        <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-left">${m.teams.away.name}</span>
+                </div>
+            </div>
+        </div>`;
         });
 
-        html += `</div></div>`;
+        html += `</div></div > `;
     });
 
     container.innerHTML = html;
@@ -281,10 +286,10 @@ export const loadMessageCounts = async () => {
     const matches = state.matches;
     matches.forEach(async m => {
         try {
-            const q = query(collection(db, "forum_messages"), where("context", "==", `match_${m.fixture.id}`));
+            const q = query(collection(db, "forum_messages"), where("context", "==", `match_${m.fixture.id} `));
             const snapshot = await getCountFromServer(q);
             const count = snapshot.data().count;
-            const el = document.getElementById(`msg-count-${m.fixture.id}`);
+            const el = document.getElementById(`msg - count - ${m.fixture.id} `);
             if (el) el.innerText = count > 0 ? count : '';
         } catch (e) {
             console.error(e);
@@ -343,7 +348,7 @@ const renderFullCalendar = () => {
 
     // Texto Mes Año
     const months = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
-    monthLabel.innerText = `${months[calendarDate.getMonth()]} ${calendarDate.getFullYear()}`;
+    monthLabel.innerText = `${months[calendarDate.getMonth()]} ${calendarDate.getFullYear()} `;
 
     grid.innerHTML = '';
 
@@ -367,9 +372,10 @@ const renderFullCalendar = () => {
         const isToday = currentDate.toDateString() === new Date().toDateString();
 
         const btn = document.createElement('button');
-        btn.className = `p-2 rounded text-sm font-bold transition-colors ${isSelected
-            ? 'bg-white text-black'
-            : (isToday ? 'text-yellow-500 hover:bg-[#222]' : 'text-gray-300 hover:bg-[#222]')}`;
+        btn.className = `p - 2 rounded text - sm font - bold transition - colors ${isSelected
+                ? 'bg-white text-black'
+                : (isToday ? 'text-yellow-500 hover:bg-[#222]' : 'text-gray-300 hover:bg-[#222]')
+            } `;
         btn.innerText = i;
         btn.onclick = () => {
             state.date = currentDate;
