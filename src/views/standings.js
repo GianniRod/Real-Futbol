@@ -423,9 +423,9 @@ export const showStandings = async (idOrParams, name) => {
     const sidebar = document.getElementById('sidebar');
     const rightSidebar = document.getElementById('right-sidebar');
 
-    // Hide Left Sidebar (Leagues)
-    sidebar.classList.add('hidden');
-    sidebar.classList.remove('lg:flex'); // Ensure it's hidden on desktop too
+    // Keep Left Sidebar (Leagues) visible
+    sidebar.classList.remove('hidden');
+    sidebar.classList.add('lg:flex');
 
     // Hide Right Sidebar (Community)
     rightSidebar.classList.add('hidden');
