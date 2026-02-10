@@ -110,6 +110,12 @@ export const initForum = (context, containerId, usernameInputId) => {
                      data-message-user="${msg.user.replace(/"/g, '&quot;')}"
                      data-message-text="${msg.text.substring(0, 100).replace(/"/g, '&quot;').replace(/\n/g, ' ')}">
                     <div class="flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : ''}">
+                        <!-- Team Logo / Avatar -->
+                        <div class="w-5 h-5 flex items-center justify-center rounded-full overflow-hidden bg-[#1a1a1a] border border-[#333]">
+                            ${msg.userTeamLogo
+                    ? `<img src="${msg.userTeamLogo}" class="w-full h-full object-contain" alt="Team">`
+                    : '<span class="text-[8px]">⚽</span>'}
+                        </div>
                         <span class="text-[10px] text-gray-500 font-bold uppercase px-1">${msg.user}</span>
                         ${badge}
                         <span class="font-normal text-[#444] text-[10px]">${date}</span>
@@ -317,7 +323,8 @@ export const sendMessage = async (userFieldId, textFieldId) => {
             userRole: userRole,
             text: text,
             timestamp: Date.now(),
-            userEmail: user.email
+            userEmail: user.email,
+            userTeamLogo: profile.teamLogo || null // Store team logo in message
         };
 
         // Agregar replyTo si está respondiendo
