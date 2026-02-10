@@ -1111,6 +1111,18 @@
                     </svg>
                     <span class="text-sm font-bold uppercase tracking-wider">Apoyar el proyecto</span>
                 </button>
+
+                <button
+                    onclick="document.getElementById('about-us-modal').classList.remove('hidden');document.getElementById('mobile-menu-drawer').classList.add('hidden');document.getElementById('mobile-menu-drawer').classList.remove('flex')"
+                    class="w-full flex items-center gap-4 px-5 py-3.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <span class="text-sm font-bold uppercase tracking-wider">Sobre Nosotros</span>
+                </button>
                 <div class="my-1 border-t border-[#222] mx-5"></div>
                 <a href="/politica-de-privacidad.html"
                     class="flex items-center gap-4 px-5 py-3.5 text-gray-500 hover:bg-[#1a1a1a] hover:text-gray-300 transition-all">
@@ -1989,6 +2001,50 @@
                     class="w-full text-gray-500 hover:text-white text-xs uppercase tracking-wider transition-colors">
                     ← Cambiar número
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Us Modal -->
+    <div id="about-us-modal"
+        class="fixed inset-0 bg-black/90 z-[90] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Sobre Nosotros</h3>
+                <button onclick="document.getElementById('about-us-modal').classList.add('hidden')"
+                    class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 text-center">
+                <img src="https://i.postimg.cc/W1r2HSKQ/YLOYlu4H-400x400.jpg" alt="RealFutbol Logo"
+                    class="w-20 h-20 rounded-full mx-auto border-2 border-[#333]">
+
+                <h4 class="font-bold text-white text-xl font-sport">REAL FUTBOL</h4>
+                <p class="text-gray-400 text-sm leading-relaxed">
+                    Resultados en vivo, estadísticas detalladas y la comunidad más apasionada de hinchas en Argentina y
+                    el mundo.
+                </p>
+
+                <div class="border-t border-[#222] pt-4 mt-4">
+                    <p class="text-gray-500 text-xs uppercase tracking-widest font-bold">Versión 2.0.0</p>
+                    <p class="text-gray-600 text-[10px] mt-1">Desarrollado con ❤️ por Giancarlo Rodriguez Bollati</p>
+                </div>
+
+                <div class="flex justify-center gap-4 mt-4">
+                    <a href="https://x.com/RealFutbolApp" target="_blank"
+                        class="p-2 bg-[#1a1a1a] rounded-full text-white hover:bg-[#333] transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z">
+                            </path>
+                        </svg>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
