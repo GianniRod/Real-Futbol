@@ -281,7 +281,7 @@ export const renderTable = (groupIndex) => {
                                 <td class="px-1 py-2 md:px-2 md:py-3 text-center font-mono text-[10px] md:text-xs ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff > 0 ? '+' : ''}${t.goalsDiff}</td>
                                 <td class="px-2 py-3 text-center hidden md:table-cell">
                                     <div class="flex justify-center gap-0.5">
-                                        ${t.form ? t.form.split('').slice(-5).map(f => `<div class="w-1.5 h-1.5 rounded-full ${f === 'W' ? 'bg-white' : (f === 'D' ? 'bg-gray-500' : 'bg-[#333]')}"></div>`).join('') : '-'}
+                                        ${t.form ? t.form.split('').slice(-5).map(f => `<div class="w-1.5 h-1.5 rounded-full ${f === 'W' ? 'bg-green-500' : (f === 'D' ? 'bg-gray-500' : 'bg-red-500')}"></div>`).join('') : '-'}
                                     </div>
                                 </td>
                             </tr>
