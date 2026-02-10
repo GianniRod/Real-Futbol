@@ -575,14 +575,12 @@ export const showStandings = async (idOrParams, name) => {
 export const getStandingsState = () => state;
 
 /**
- * Renderiza la vista de Bracket para Copas (Versión Refinada con Agrupación de Ida y Vuelta)
+ * Renderiza la vista de Bracket para Copas (Versión Refinada: Ordenamiento Árbol y Estilos)
  */
 const renderCupView = async (leagueId, season, container) => {
-
     container.innerHTML = `<div class="flex justify-center items-center h-96"><div class="loader"></div></div>`;
 
     try {
-        // Fetch all fixtures for the cup season
         const data = await fetchAPI(`/fixtures?league=${leagueId}&season=${season}&timezone=America/Argentina/Buenos_Aires`);
         const fixtures = data.response;
 
@@ -592,15 +590,10 @@ const renderCupView = async (leagueId, season, container) => {
         }
 
         const roundOrder = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'];
-        const displayRounds = {
-            'Round of 16': 'Octavos',
-            'Quarter-finals': 'Cuartos',
-            'Semi-finals': 'Semifinal',
-            'Final': 'Final'
-        };
+        const displayRounds = { 'Round of 16': 'Octavos', 'Quarter-finals': 'Cuartos', 'Semi-finals': 'Semifinal', 'Final': 'Final' };
 
+        // 1. Group by Round & Deduplicate Ties
         const grouped = {};
-
         fixtures.forEach(f => {
             const r = f.league.round;
             const bucket = roundOrder.find(ro => r.includes(ro));
@@ -611,91 +604,169 @@ const renderCupView = async (leagueId, season, container) => {
         });
 
         Object.keys(grouped).forEach(k => {
-            grouped[k].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp);
+            const matches = grouped[k];
+            const uniqueTies = {};
+            matches.forEach(m => {
+                const teamIds = [m.teams.home.id, m.teams.away.id].sort().join('-');
+                if (!uniqueTies[teamIds] || new Date(m.fixture.date) > new Date(uniqueTies[teamIds].fixture.date)) {
+                    uniqueTies[teamIds] = m;
+                }
+            });
+            grouped[k] = Object.values(uniqueTies); // Temporary, will sort next
         });
 
-        // Build HTML with reduced sizing and connector lines
-        let html = `<div class="flex flex-nowrap overflow-x-auto p-6 items-stretch min-h-[600px] lg:justify-center bg-[#050505] rounded-xl border border-[#222]">`;
+        // 2. Tree Sort (From Final Backwards)
+        const sortedGrouped = {};
+        // Final is root
+        if (grouped['Final']) sortedGrouped['Final'] = grouped['Final'];
+
+        // Recursively sort previous rounds based on next round
+        const orderBackwards = [...roundOrder].reverse(); // Final, SF, QF, R16
+
+        for (let i = 0; i < orderBackwards.length - 1; i++) {
+            const currentRound = orderBackwards[i]; // e.g. Final
+            const previousRound = orderBackwards[i + 1]; // e.g. Semi-finals
+
+            if (!grouped[previousRound] || !sortedGrouped[currentRound]) continue;
+
+            const nextMatches = sortedGrouped[currentRound];
+            const pool = [...grouped[previousRound]]; // Matches to pick from
+            const ordered = [];
+
+            nextMatches.forEach(parentMatch => {
+                // Find match that yielded Home team
+                const homeSource = pool.find(m =>
+                    (m.teams.home.id === parentMatch.teams.home.id || m.teams.away.id === parentMatch.teams.home.id) ||
+                    (m.teams.home.id === parentMatch.teams.away.id || m.teams.away.id === parentMatch.teams.away.id) // Fallback logic? No.
+                    // Strict logic: Winner of previous moves to current.
+                    // But we don't always know winner. Just check if team is present.
+                );
+
+                // We need 2 sources: One for Home, One for Away of parent match.
+                const source1 = pool.find(m => m.teams.home.id === parentMatch.teams.home.id || m.teams.away.id === parentMatch.teams.home.id);
+                const source2 = pool.find(m => m.teams.home.id === parentMatch.teams.away.id || m.teams.away.id === parentMatch.teams.away.id);
+
+                if (source1) {
+                    ordered.push(source1);
+                    pool.splice(pool.indexOf(source1), 1);
+                }
+                if (source2) {
+                    ordered.push(source2);
+                    pool.splice(pool.indexOf(source2), 1);
+                }
+            });
+
+            // Add any remaining matches (orphans or if logic failed)
+            sortedGrouped[previousRound] = [...ordered, ...pool];
+        }
+
+        // Fallback for rounds that couldn't be sorted (e.g. if Final is missing)
+        roundOrder.forEach(r => {
+            if (!sortedGrouped[r] && grouped[r]) {
+                sortedGrouped[r] = grouped[r].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp);
+            }
+        });
+
+
+        // 3. Render
+        let html = `<div class="flex flex-nowrap overflow-x-auto p-6 items-center min-h-[600px] lg:justify-center bg-[#050505] rounded-xl border border-[#222]">`;
 
         roundOrder.forEach((roundKey, idx) => {
-            const matches = grouped[roundKey];
+            const matches = sortedGrouped[roundKey];
             if (!matches || matches.length === 0) return;
 
-            // Determine if first or last column for connector logic
-            const isFirst = idx === 0;
             const isLast = idx === roundOrder.length - 1;
 
             html += `
-                <div class="flex flex-col w-56 shrink-0 relative">
-                    <h3 class="text-center font-bold text-gray-500 uppercase tracking-widest text-[10px] mb-6 border-b border-[#222] pb-2 mx-4">
+                <div class="flex flex-col w-64 shrink-0 relative h-full justify-center">
+                    <h3 class="text-center font-bold text-gray-500 uppercase tracking-widest text-[10px] mb-8 border-b border-[#222] pb-2 mx-4 absolute top-0 w-full left-0">
                         ${displayRounds[roundKey] || roundKey}
                     </h3>
-                    <div class="flex flex-col justify-around flex-1 gap-4 relative px-2">
+                    <div class="flex flex-col justify-around flex-1 gap-8 py-12 px-2"> 
             `;
+            // Gap 8 is 2rem. 
 
-            matches.forEach((m, mIdx) => {
-                const isFin = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
-                const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(m.fixture.status.short);
+            // Loop in pairs if not Final
+            if (!isLast) {
+                for (let i = 0; i < matches.length; i += 2) {
+                    const m1 = matches[i];
+                    const m2 = matches[i + 1];
 
-                const homeWin = isFin && ((m.goals.home > m.goals.away) || (m.score.penalty.home > m.score.penalty.away));
-                const awayWin = isFin && ((m.goals.away > m.goals.home) || (m.score.penalty.away > m.score.penalty.home));
+                    // Render Pair Container
+                    html += `<div class="flex flex-col gap-4 relative justify-center">`;
 
-                const homeClass = homeWin ? 'text-white' : 'text-gray-500';
-                const awayClass = awayWin ? 'text-white' : 'text-gray-500';
-                const scoreClass = 'font-bold text-white text-[10px]';
+                    // Connector Bracket
+                    if (m2) { // Only if it's a pair
+                        html += `
+                            <div class="absolute -right-4 top-1/2 -translate-y-1/2 w-4 h-[calc(100%-3rem)] max-h-[120px] border-r border-[#444] rounded-r-sm"></div>
+                            <div class="absolute -right-8 top-1/2 -translate-y-1/2 w-4 h-[1px] bg-[#444]"></div>
+                        `;
+                    } else {
+                        // Single orphan match connector (horizontal only)
+                        html += `<div class="absolute -right-4 top-1/2 -translate-y-1/2 w-4 h-[1px] bg-[#444]"></div>`;
+                    }
 
-                // Connectors
-                let connectors = '';
-                // Line to right (next round)
-                if (!isLast) {
-                    connectors += `<div class="absolute top-1/2 -right-4 w-4 h-[1px] bg-[#333]"></div>`;
+                    [m1, m2].forEach(m => {
+                        if (!m) return;
+                        const isFin = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
+                        const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(m.fixture.status.short);
+                        const homeWin = isFin && ((m.goals.home > m.goals.away) || (m.score.penalty.home > m.score.penalty.away));
+                        const awayWin = isFin && ((m.goals.away > m.goals.home) || (m.score.penalty.away > m.score.penalty.home));
+                        const homeClass = homeWin ? 'text-white' : 'text-gray-500';
+                        const awayClass = awayWin ? 'text-white' : 'text-gray-500';
+                        const scoreClass = 'font-bold text-white text-[10px]';
+
+                        html += `
+                            <div class="bg-[#111] border border-[#222] rounded p-2 flex flex-col gap-1 relative hover:border-gray-600 transition-colors cursor-pointer shadow-lg z-10 h-[70px] justify-center" onclick="app.navigate('/partido/${m.fixture.id}')">
+                                ${isLive ? '<div class="absolute -top-1 -right-1 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>' : ''}
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-2 min-w-0"><img src="${m.teams.home.logo}" class="w-4 h-4 object-contain shrink-0"><span class="text-[10px] ${homeClass} font-bold uppercase truncate">${m.teams.home.name}</span></div>
+                                    <div class="flex items-center gap-1 shrink-0"><span class="${scoreClass}">${m.goals.home ?? '-'}</span>${m.score.penalty.home ? `<span class="text-[9px] text-gray-600">(${m.score.penalty.home})</span>` : ''}</div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                     <div class="flex items-center gap-2 min-w-0"><img src="${m.teams.away.logo}" class="w-4 h-4 object-contain shrink-0"><span class="text-[10px] ${awayClass} font-bold uppercase truncate">${m.teams.away.name}</span></div>
+                                    <div class="flex items-center gap-1 shrink-0"><span class="${scoreClass}">${m.goals.away ?? '-'}</span>${m.score.penalty.away ? `<span class="text-[9px] text-gray-600">(${m.score.penalty.away})</span>` : ''}</div>
+                                </div>
+                                <div class="text-[8px] text-gray-700 text-center mt-0.5 uppercase font-mono tracking-wider">${isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleDateString()}</div>
+                            </div>
+                         `;
+                    });
+
+                    html += `</div>`; // End Pair Container
                 }
-                // Line to left (prev round)
-                if (!isFirst) {
-                    connectors += `<div class="absolute top-1/2 -left-2 w-2 h-[1px] bg-[#333]"></div>`;
-                }
-
-                html += `
-                    <div class="bg-[#111] border border-[#222] rounded p-2 flex flex-col gap-1 relative hover:border-gray-600 transition-colors cursor-pointer shadow-lg z-10" onclick="app.navigate('/partido/${m.fixture.id}')">
-                        ${connectors}
-                        ${isLive ? '<div class="absolute -top-1 -right-1 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>' : ''}
-                        
-                        <!-- Home -->
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <img src="${m.teams.home.logo}" class="w-4 h-4 object-contain shrink-0">
-                                <span class="text-[10px] ${homeClass} font-bold uppercase truncate">${m.teams.home.name}</span>
+            } else {
+                // Final Round (Single matches, usually just 1)
+                matches.forEach(m => {
+                    // Start Copy Paste Render Logic (Simplified)
+                    const isFin = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
+                    const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(m.fixture.status.short);
+                    const homeWin = isFin && ((m.goals.home > m.goals.away) || (m.score.penalty.home > m.score.penalty.away));
+                    const awayWin = isFin && ((m.goals.away > m.goals.home) || (m.score.penalty.away > m.score.penalty.home));
+                    const homeClass = homeWin ? 'text-white' : 'text-gray-500';
+                    const awayClass = awayWin ? 'text-white' : 'text-gray-500';
+                    const scoreClass = 'font-bold text-white text-[10px]';
+                    html += `
+                        <div class="bg-[#111] border border-[#222] rounded p-2 flex flex-col gap-1 relative hover:border-gray-600 transition-colors cursor-pointer shadow-lg z-10 h-[70px] justify-center my-auto" onclick="app.navigate('/partido/${m.fixture.id}')">
+                            ${isLive ? '<div class="absolute -top-1 -right-1 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>' : ''}
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-2 min-w-0"><img src="${m.teams.home.logo}" class="w-4 h-4 object-contain shrink-0"><span class="text-[10px] ${homeClass} font-bold uppercase truncate">${m.teams.home.name}</span></div>
+                                <div class="flex items-center gap-1 shrink-0"><span class="${scoreClass}">${m.goals.home ?? '-'}</span>${m.score.penalty.home ? `<span class="text-[9px] text-gray-600">(${m.score.penalty.home})</span>` : ''}</div>
                             </div>
-                            <div class="flex items-center gap-1 shrink-0">
-                                <span class="${scoreClass}">${m.goals.home ?? '-'}</span>
-                                ${m.score.penalty.home ? `<span class="text-[9px] text-gray-600">(${m.score.penalty.home})</span>` : ''}
+                            <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-2 min-w-0"><img src="${m.teams.away.logo}" class="w-4 h-4 object-contain shrink-0"><span class="text-[10px] ${awayClass} font-bold uppercase truncate">${m.teams.away.name}</span></div>
+                                <div class="flex items-center gap-1 shrink-0"><span class="${scoreClass}">${m.goals.away ?? '-'}</span>${m.score.penalty.away ? `<span class="text-[9px] text-gray-600">(${m.score.penalty.away})</span>` : ''}</div>
                             </div>
+                            <div class="text-[8px] text-gray-700 text-center mt-0.5 uppercase font-mono tracking-wider">${isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleDateString()}</div>
                         </div>
-
-                        <!-- Away -->
-                        <div class="flex justify-between items-center">
-                             <div class="flex items-center gap-2 min-w-0">
-                                <img src="${m.teams.away.logo}" class="w-4 h-4 object-contain shrink-0">
-                                <span class="text-[10px] ${awayClass} font-bold uppercase truncate">${m.teams.away.name}</span>
-                            </div>
-                            <div class="flex items-center gap-1 shrink-0">
-                                <span class="${scoreClass}">${m.goals.away ?? '-'}</span>
-                                ${m.score.penalty.away ? `<span class="text-[9px] text-gray-600">(${m.score.penalty.away})</span>` : ''}
-                            </div>
-                        </div>
-                        
-                        <div class="text-[8px] text-gray-700 text-center mt-0.5 uppercase font-mono tracking-wider">
-                            ${isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleDateString()}
-                        </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
+            }
 
             html += `</div></div>`;
 
-            // Spacer between columns for visual line continuity (handled by absolute lines now, but can keep small gap)
+            // Spacer between columns? Handled by flex gap
             if (idx < roundOrder.length - 1) {
-                html += `<div class="w-8 shrink-0 relative"></div>`;
+                html += `<div class="w-12 shrink-0 relative"></div>`;
             }
         });
 
@@ -707,4 +778,6 @@ const renderCupView = async (leagueId, season, container) => {
         container.innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar el cuadro.</div>`;
     }
 };
+
+
 
