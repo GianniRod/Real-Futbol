@@ -1109,10 +1109,8 @@ export const showProfileModal = async () => {
             if (profileTeamName) profileTeamName.textContent = 'Seleccionar Equipo';
         }
 
-        profileTeamContainer.onclick = () => {
-            closeProfileModal();
-            showTeamSelectionOnly(currentUser, currentUserProfile);
-        };
+        // Read-only view
+        profileTeamContainer.onclick = null;
     }
 
     // Mostrar/ocultar sección de vincular teléfono según el proveedor
