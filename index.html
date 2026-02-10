@@ -482,16 +482,7 @@
                     <span class="text-sm font-medium">Copa Italia</span>
                 </button>
 
-                <div class="mt-8 px-2 space-y-3 hidden lg:block">
-                    <button onclick="app.navigateToForum()"
-                        class="w-full btn-primary py-3 px-4 text-xs uppercase tracking-widest shadow-lg flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                        Foro Global
-                    </button>
-                </div>
+
             </div>
         </aside>
 
@@ -897,6 +888,33 @@
                         Seguinos en X
                     </div>
                 </a>
+
+                <!-- Foro Global Card -->
+                <button onclick="app.navigateToForum()"
+                    class="w-full block rounded-xl border border-[#222] bg-gradient-to-br from-[#0a0a0a] to-[#111] p-4 hover:border-[#555] hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-300 group mt-3 text-left">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div
+                            class="w-11 h-11 rounded-full bg-[#1a1a1a] border-2 border-[#333] group-hover:border-white transition-colors duration-300 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-white font-bold text-sm leading-tight">Foro Global</div>
+                            <div class="text-gray-500 text-xs">Comentá con la comunidad</div>
+                        </div>
+                    </div>
+                    <div
+                        class="flex items-center justify-center gap-2 bg-white text-black font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-lg group-hover:bg-gray-200 transition-colors duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        Entrar al Foro
+                    </div>
+                </button>
 
                 <!-- Donate -->
                 <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
