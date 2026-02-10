@@ -740,6 +740,33 @@ window.app = {
         alert('Debug disabled to save API usage.');
     },
 
+    showLogoDebug: () => {
+        const div = document.createElement('div');
+        div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;overflow:auto;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;';
+
+        const ids = [];
+        for (let i = 430; i <= 500; i++) ids.push(i);
+        ids.push(1064, 1065, 2432, 2434, 15964);
+
+        ids.forEach(id => {
+            const item = document.createElement('div');
+            item.className = 'flex flex-col items-center bg-gray-800 p-2 rounded';
+            item.innerHTML = `
+                <img src="https://media.api-sports.io/football/teams/${id}.png" class="w-12 h-12 mb-2" onerror="this.parentElement.style.display='none'">
+                <span class="text-white text-xs font-bold">${id}</span>
+            `;
+            div.appendChild(item);
+        });
+
+        const close = document.createElement('button');
+        close.innerText = 'CERRAR';
+        close.style.cssText = 'position:fixed;top:10px;right:10px;background:red;color:white;padding:10px;z-index:10000;';
+        close.onclick = () => div.remove();
+        div.appendChild(close);
+
+        document.body.appendChild(div);
+    },
+
     // Moderation
     openModerationPanel,
     closeModerationPanel,
