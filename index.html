@@ -422,67 +422,68 @@
         <aside id="sidebar"
             class="fixed inset-y-0 left-0 w-full lg:w-72 bg-black border-r border-[#222] flex flex-col transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 z-40 h-[calc(100%-48px)] lg:h-full top-12 lg:top-0">
 
-            <div class="overflow-y-auto flex-1 p-3 space-y-1 pb-24">
-                <div class="px-3 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Competiciones</div>
+            <div class="overflow-y-auto flex-1 p-3 pb-24">
 
-                <!-- Botones de Ligas (IDs Correctos API-Sports) -->
-                <button onclick="app.navigate('/liga/128/liga-profesional'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/128.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Liga Argentina</span>
-                </button>
+                <div class="bg-[#0a0a0a] border border-[#222] rounded-lg overflow-hidden flex flex-col">
+                    <div
+                        class="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-[#222] bg-[#111]">
+                        Competiciones</div>
 
-                <button onclick="app.navigate('/liga/1032/copa-de-la-liga'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/1032.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Copa de la Liga</span>
-                </button>
+                    <!-- Botones de Ligas (IDs Correctos API-Sports) -->
+                    <button onclick="app.navigate('/liga/128/liga-profesional'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/128.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Liga Argentina</span>
+                    </button>
 
-                <button onclick="app.navigate('/liga/129/primera-nacional'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/129.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Primera Nacional</span>
-                </button>
+                    <button onclick="app.navigate('/liga/1032/copa-de-la-liga'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/1032.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Copa de la Liga</span>
+                    </button>
 
-                <button onclick="app.navigate('/liga/71/brasileirao'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/71.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Brasileirão A</span>
-                </button>
+                    <button onclick="app.navigate('/liga/129/primera-nacional'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/129.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Primera Nacional</span>
+                    </button>
 
-                <div class="my-2 border-t border-[#222]"></div>
+                    <button onclick="app.navigate('/liga/71/brasileirao'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/71.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Brasileirão A</span>
+                    </button>
 
-                <button onclick="app.navigate('/liga/39/premier-league'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/39.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Premier League</span>
-                </button>
+                    <button onclick="app.navigate('/liga/39/premier-league'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/39.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Premier League</span>
+                    </button>
 
-                <button onclick="app.navigate('/liga/140/la-liga'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/140.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">La Liga</span>
-                </button>
+                    <button onclick="app.navigate('/liga/140/la-liga'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/140.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">La Liga</span>
+                    </button>
 
-                <button onclick="app.navigate('/liga/143/copa-del-rey'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/143.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Copa del Rey</span>
-                </button>
+                    <button onclick="app.navigate('/liga/143/copa-del-rey'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/143.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Copa del Rey</span>
+                    </button>
 
-                <button onclick="app.navigate('/liga/78/bundesliga'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/78.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Bundesliga</span>
-                </button>
+                    <button onclick="app.navigate('/liga/78/bundesliga'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/78.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Bundesliga</span>
+                    </button>
 
-                <button onclick="app.navigate('/liga/137/coppa-italia'); app.openMobileTab('results')"
-                    class="league-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <img src="https://media.api-sports.io/football/leagues/137.png" class="w-5 h-5 object-contain">
-                    <span class="text-sm font-medium">Copa Italia</span>
-                </button>
-
-
+                    <button onclick="app.navigate('/liga/137/coppa-italia'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                        <img src="https://media.api-sports.io/football/leagues/137.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Copa Italia</span>
+                    </button>
+                </div>
             </div>
         </aside>
 
