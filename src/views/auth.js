@@ -264,9 +264,12 @@ const showUsernameModal = (user) => {
         document.getElementById('registration-step-1').classList.remove('hidden');
         document.getElementById('registration-step-2').classList.add('hidden');
 
-        // Ensure back button is visible (might have been hidden by showTeamSelectionOnly)
+        // Ensure back button is visible
         const backBtn = document.getElementById('team-selection-back-btn');
-        if (backBtn) backBtn.classList.remove('hidden');
+        if (backBtn) {
+            backBtn.classList.remove('hidden');
+            backBtn.style.display = '';
+        }
 
         // Focus en el input
         const input = document.getElementById('username-input');
@@ -294,6 +297,12 @@ const showTeamSelectionOnly = (user, profile) => {
         const title = modal.querySelector('h3');
         if (title) title.textContent = 'Elige tu equipo';
 
+        // Pre-fill username so validation passes
+        const input = document.getElementById('username-input');
+        if (input && profile && profile.username) {
+            input.value = profile.username;
+        }
+
         // Go directly to step 2
         document.getElementById('registration-step-1').classList.add('hidden');
         document.getElementById('registration-step-2').classList.remove('hidden');
@@ -303,7 +312,10 @@ const showTeamSelectionOnly = (user, profile) => {
 
         // Hide back button since they already have username
         const backBtn = document.getElementById('team-selection-back-btn');
-        if (backBtn) backBtn.classList.add('hidden');
+        if (backBtn) {
+            backBtn.classList.add('hidden');
+            backBtn.style.display = 'none';
+        }
     }
 };
 
