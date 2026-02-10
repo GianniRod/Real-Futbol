@@ -182,11 +182,22 @@ const openDetailWithTab = (id, tab) => {
  * @param {number} fixtureId - ID del partido
  */
 const selectFeaturedMatch = async (fixtureId) => {
-    const { getMatches } = await import('./views/matches.js');
-    const matches = getMatches();
-    const match = matches.find(m => m.fixture.id === fixtureId);
-    if (match) {
-        await setFeaturedMatch(fixtureId, match);
+    console.log('selectFeaturedMatch called with:', fixtureId);
+    try {
+        const { getMatches } = await import('./views/matches.js');
+        const matches = getMatches();
+        console.log('Total matches available:', matches.length);
+        const match = matches.find(m => m.fixture.id === fixtureId);
+        if (match) {
+            console.log('Match found:', match.teams.home.name, 'vs', match.teams.away.name);
+            await setFeaturedMatch(fixtureId, match);
+        } else {
+            console.error('Match not found for fixtureId:', fixtureId);
+            alert('No se encontró el partido con ID: ' + fixtureId);
+        }
+    } catch (error) {
+        console.error('Error in selectFeaturedMatch:', error);
+        alert('Error: ' + error.message);
     }
 };
 
