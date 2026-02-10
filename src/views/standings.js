@@ -1,815 +1,363 @@
 /**
- * Main Entry Point
+ * Standings View Module
  * 
- * Propósito: Inicializar la aplicación y exportar window.app
+ * Propósito: Manejar vista de tabla de posiciones
  * 
- * Este archivo orquesta todos los módulos y expone las funciones
- * necesarias a través de window.app para compatibilidad con onclick.
+ * Exports:
+ * - showStandings(id, name): Muestra tabla de una liga
+ * - changeSeason(year): Cambia la temporada
+ * - processStandings(data): Procesa datos de standings
+ * - renderTable(groupIndex): Renderiza tabla específica
  */
 
-// Core imports
-import { initRouter, navigate, createSlug } from './core/router.js';
-import { showOnly, hideView } from './core/dom.js';
+import { fetchAPI } from '../core/api.js';
+import { showOnly, hideView } from '../core/dom.js';
 
-// View imports
-import {
-    initMatches,
-    loadMatches,
-    renderMatches,
-    changeDate,
-    resetDate,
-    renderCalendar,
-    toggleLiveFilter,
-    loadMessageCounts,
-    toggleCalendar,
-    changeMonth
-} from './views/matches.js';
-
-import {
-    showStandings,
-    changeSeason,
-    renderTable,
-    changeRound,
-    toggleSidebarInLeague
-} from './views/standings.js';
-
-import {
-    navigateToForum,
-    initForum,
-    sendMessage,
-    deleteMessage,
-    startReply,
-    cancelReply
-} from './views/forum.js';
-
-import {
-    openDetail,
-    closeDetail,
-    switchTab
-} from './views/matchDetail.js';
-
-import {
-    initAuth,
-    loginWithGoogle,
-    logout,
-    confirmLogout,
-    cancelLogout,
-    saveUsername,
-    getCurrentUser,
-    getCurrentUserProfile,
-    getCurrentUserRole,
-    showProfileModal,
-    closeProfileModal,
-    goToTeamSelection,
-    goBackToUsername,
-    filterTeams,
-    selectTeam,
-    loginWithPhone,
-    verifyPhoneCode,
-    resendPhoneCode,
-    initRecaptcha,
-    startPhoneLinking,
-    confirmPhoneLinking,
-    hasLinkedPhone,
-    getAuthProvider,
-    getLinkedPhone,
-    openRankingModal,
-    closeRankingModal
-} from './views/auth.js';
-
-import {
-    DEVELOPER_UID,
-    openModerationPanel,
-    closeModerationPanel,
-    addModerator,
-    removeModerator,
-    handleAddModeratorForm,
-    addFirstUser,
-    removeFirstUser,
-    handleAddFirstUserForm,
-    loadFirstUsers,
-    muteUser,
-    unmuteUser,
-    banUser,
-    unbanUser,
-    handleMuteForm,
-    handleBanForm,
-    loadMutedUsers,
-    loadBannedUsers,
-    openModPanel,
-    closeModPanel,
-    handleModMuteForm,
-    handleModBanForm
-} from './views/moderation.js';
-
-import {
-    openSuggestionModal,
-    closeSuggestionModal,
-    sendSuggestion
-} from './views/suggestions.js';
-
-import {
-    setFeaturedMatch,
-    clearFeaturedMatch,
-    loadFeaturedMatch,
-    loadFeaturedMatchPicker,
-    getFeaturedMatchId
-} from './views/featured_match.js';
+// State
+// State extended for fixtures
+const state = {
+    selectedLeague: null,
+    season: 2024,
+    standingsData: null,
+    rounds: [],
+    currentRound: null,
+    fixtures: []
+};
 
 /**
- * Navega a la vista de partidos
+ * Cambia la temporada
+ * @param {number|string} year - Año de la temporada
  */
-const navigateToMatches = () => {
-    // Si no estamos en la ruta raíz, navegar allí
-    if (window.location.pathname !== '/') {
-        navigate('/');
-        return;
+export const changeSeason = (year) => {
+    state.season = parseInt(year);
+    if (state.selectedLeague) {
+        showStandings(state.selectedLeague.id, state.selectedLeague.name);
     }
-
-    // Cambiar vistas
-    document.getElementById('view-standings').classList.add('hidden');
-    document.getElementById('view-forum').classList.add('hidden');
-    document.getElementById('view-match-detail').classList.add('hidden');
-    document.getElementById('view-match-list').classList.remove('hidden');
-    document.getElementById('date-nav').classList.remove('hidden');
-    document.getElementById('sidebar').classList.remove('hidden'); // Restore if it was hidden by league view
-    document.getElementById('sidebar').classList.add('-translate-x-full'); // Default mobile state
-    document.getElementById('right-sidebar').classList.remove('hidden'); // Restore right sidebar
-    document.querySelector('main').classList.add('lg:w-auto'); // Restore main width constraint
-    document.getElementById('mobile-backdrop').classList.add('hidden');
-
-    // Desactivar filtro EN VIVO si estaba activo
-    const toggle = document.getElementById('live-toggle');
-    if (toggle && toggle.checked) {
-        toggle.checked = false;
-        toggleLiveFilter();
-    }
-
-    // Resetear color del botón EN VIVO a gris
-    const liveBtn = document.getElementById('btn-nav-live');
-    if (liveBtn) {
-        liveBtn.classList.remove('text-red-500');
-        liveBtn.classList.add('text-gray-400');
-    }
-
-    updateMobileNav('btn-nav-results');
 };
 
 /**
- * Handler para mostrar standings desde router (con params)
+ * Obtiene las rondas (fechas) disponibles para una liga y temporada
  */
-const showStandingsById = (params) => {
-    showStandings(params);
-};
-
-/**
- * Handler para mostrar standings desde router (con params y name)
- */
-const showStandingsByIdAndName = (params) => {
-    showStandings(params);
-};
-
-/**
- * Handler para abrir match detail desde router
- */
-const openMatchDetail = (params) => {
-    openDetail(params);
-};
-
-/**
- * Abre match detail con un tab específico sin modificar URL
- * @param {number} id - ID del partido
- * @param {string} tab - Tab a abrir
- */
-const openDetailWithTab = (id, tab) => {
-    // Navegar a la URL limpia sin tab
-    navigate(`/partido/${id}`);
-    // Abrir con el tab específico (lo maneja openDetail internamente)
-    openDetail({ id, tab });
-};
-
-/**
- * Selecciona un partido como destacado desde el panel de moderación
- * @param {number} fixtureId - ID del partido
- */
-const selectFeaturedMatch = async (fixtureId) => {
-    console.log('selectFeaturedMatch called with:', fixtureId);
+const fetchRounds = async (leagueId, season) => {
     try {
-        const { getMatches } = await import('./views/matches.js');
-        const matches = getMatches();
-        console.log('Total matches available:', matches.length);
-        const match = matches.find(m => m.fixture.id === fixtureId);
-        if (match) {
-            console.log('Match found:', match.teams.home.name, 'vs', match.teams.away.name);
-            await setFeaturedMatch(fixtureId, match);
-        } else {
-            console.error('Match not found for fixtureId:', fixtureId);
-            alert('No se encontró el partido con ID: ' + fixtureId);
-        }
-    } catch (error) {
-        console.error('Error in selectFeaturedMatch:', error);
-        alert('Error: ' + error.message);
+        const data = await fetchAPI(`/fixtures/rounds?league=${leagueId}&season=${season}`);
+        state.rounds = data.response;
+        // Seleccionar la última ronda por defecto o la actual
+        state.currentRound = state.rounds[state.rounds.length - 1]; // Default to last for now, or logic to find current
+        return state.rounds;
+    } catch (e) {
+        console.error("Error fetching rounds:", e);
+        return [];
     }
 };
 
 /**
- * Navega al foro global (Wrapper para manejar estado de navegación)
+ * Obtiene los partidos de una ronda específica
  */
-const navigateToForumWrapper = () => {
-    // Si no estamos en la ruta del foro, navegar allí
-    if (window.location.pathname !== '/foro') {
-        navigate('/foro');
+const fetchFixturesByRound = async (leagueId, season, round) => {
+    try {
+        const data = await fetchAPI(`/fixtures?league=${leagueId}&season=${season}&round=${round}&timezone=America/Argentina/Buenos_Aires`);
+        state.fixtures = data.response;
+        renderFixtures();
+    } catch (e) {
+        console.error("Error fetching fixtures:", e);
+        document.getElementById('fixtures-list').innerHTML = `<div class="text-center text-gray-500 py-4 text-xs">Error al cargar partidos.</div>`;
+    }
+};
+
+/**
+ * Cambia la ronda seleccionada
+ */
+export const changeRound = (round) => {
+    state.currentRound = round;
+    // Mostrar loader en lista de partidos
+    document.getElementById('fixtures-list').innerHTML = `<div class="flex justify-center py-10"><div class="loader"></div></div>`;
+    fetchFixturesByRound(state.selectedLeague.id, state.season, round);
+};
+
+/**
+ * Renderiza la lista de partidos en el sidebar derecho
+ */
+const renderFixtures = () => {
+    const container = document.getElementById('fixtures-list');
+    if (!state.fixtures || state.fixtures.length === 0) {
+        container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs uppercase tracking-widest">No hay partidos en esta fecha.</div>`;
         return;
     }
 
-    // Desactivar filtro EN VIVO si estaba activo
-    const toggle = document.getElementById('live-toggle');
-    if (toggle && toggle.checked) {
-        toggle.checked = false;
-        toggleLiveFilter();
-    }
+    // Agrupar por día
+    const matches = state.fixtures;
+    matches.sort((a, b) => a.fixture.timestamp - b.fixture.timestamp);
 
-    // Renderizar foro
-    navigateToForum();
+    container.innerHTML = matches.map(m => {
+        const date = new Date(m.fixture.date);
+        const dayName = date.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+        const time = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        const status = m.fixture.status.short;
+        const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(status);
+        const isFin = ['FT', 'AET', 'PEN'].includes(status);
 
-    // Restaurar layout (si venimos de League View)
-    document.getElementById('sidebar').classList.remove('hidden');
-    document.getElementById('right-sidebar').classList.remove('hidden');
-    document.querySelector('main').classList.add('lg:w-auto');
+        // Score display
+        const scoreHome = m.goals.home ?? '-';
+        const scoreAway = m.goals.away ?? '-';
 
-    // Asegurar estado visual de los botones
-    updateMobileNav('btn-nav-forum');
+        return `
+            <div class="bg-[#1a1a1a] border border-[#333] rounded p-3 hover:bg-[#222] transition-colors cursor-pointer" onclick="app.openDetailWithTab(${m.fixture.id}, 'forum')">
+                <div class="flex justify-between items-center mb-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                    <span>${dayName}</span>
+                    <span class="${isLive ? 'text-red-500 animate-pulse' : ''}">${isLive ? `${m.fixture.status.elapsed}'` : (isFin ? 'FINAL' : time)}</span>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <img src="${m.teams.home.logo}" class="w-5 h-5 object-contain">
+                            <span class="text-xs font-bold text-gray-200 truncate max-w-[100px]">${m.teams.home.name}</span>
+                        </div>
+                        <span class="text-sm font-bold text-white font-mono">${scoreHome}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <img src="${m.teams.away.logo}" class="w-5 h-5 object-contain">
+                            <span class="text-xs font-bold text-gray-200 truncate max-w-[100px]">${m.teams.away.name}</span>
+                        </div>
+                        <span class="text-sm font-bold text-white font-mono">${scoreAway}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
 };
 
 /**
- * Abre/cierra el sidebar mobile
- * @param {string} tabName - Nombre del tab ('leagues', 'results', etc)
+ * Renderiza una tabla específica (para ligas con grupos)
+ * @param {number} groupIndex - Índice del grupo a renderizar
  */
-const openMobileTab = (tabName) => {
-    const sidebar = document.getElementById('sidebar');
-    if (tabName === 'leagues') {
-        sidebar.classList.remove('-translate-x-full');
-        document.getElementById('mobile-backdrop').classList.remove('hidden');
+export const renderTable = (groupIndex) => {
+    const table = state.standingsData[groupIndex];
+    const container = document.getElementById('standings-table-container'); // Changed target ID
 
-        // Desactivar filtro EN VIVO si estaba activo
-        const toggle = document.getElementById('live-toggle');
-        if (toggle && toggle.checked) {
-            toggle.checked = false;
-            toggleLiveFilter();
-        }
+    container.innerHTML = `
+        <div class="bg-[#0a0a0a] border border-[#222] overflow-hidden rounded-lg">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-400">
+                    <thead class="text-[10px] text-gray-500 uppercase bg-[#111] border-b border-[#222] tracking-widest">
+                        <tr>
+                            <th class="px-3 py-3 text-center w-8">#</th>
+                            <th class="px-3 py-3">Equipo</th>
+                            <th class="px-2 py-3 text-center text-white">Pts</th>
+                            <th class="px-2 py-3 text-center">PJ</th>
+                            <th class="px-2 py-3 text-center font-mono">DG</th>
+                            <th class="px-2 py-3 text-center hidden md:table-cell">Forma</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#1a1a1a]">
+                        ${table.map(t => `
+                            <tr class="hover:bg-[#111] transition-colors">
+                                <td class="px-3 py-3 text-center font-bold ${t.rank <= 4 ? 'text-white' : 'text-gray-600'} border-r border-[#222] text-xs">${t.rank}</td>
+                                <td class="px-3 py-3 font-bold text-gray-300 flex items-center gap-3 whitespace-nowrap uppercase text-xs">
+                                    <img src="${t.team.logo}" class="w-6 h-6 object-contain">
+                                    ${t.team.name}
+                                </td>
+                                <td class="px-2 py-3 text-center font-bold text-white bg-[#111]/50">${t.points}</td>
+                                <td class="px-2 py-3 text-center font-mono text-xs">${t.all.played}</td>
+                                <td class="px-2 py-3 text-center font-mono text-xs ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff > 0 ? '+' : ''}${t.goalsDiff}</td>
+                                <td class="px-2 py-3 text-center hidden md:table-cell">
+                                    <div class="flex justify-center gap-0.5">
+                                        ${t.form ? t.form.split('').slice(-5).map(f => `<div class="w-1.5 h-1.5 rounded-full ${f === 'W' ? 'bg-white' : (f === 'D' ? 'bg-gray-500' : 'bg-[#333]')}"></div>`).join('') : '-'}
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+};
 
-        updateMobileNav('btn-nav-leagues');
+/**
+ * Procesa los datos de standings (maneja grupos si existen)
+ * @param {Array} standingsData - Datos de standings de la API
+ */
+export const processStandings = (standingsData) => {
+    const tabs = document.getElementById('standings-tabs');
+    // Ensure table container exists inside the new layout
+    const tableContainer = document.getElementById('standings-table-container');
+
+    if (standingsData.length > 1) {
+        // Múltiples grupos
+        tabs.classList.remove('hidden');
+        tabs.innerHTML = standingsData.map((g, i) => `
+            <button onclick="app.renderTable(${i})" class="px-4 py-2 bg-[#111] text-xs font-bold uppercase border border-[#333] text-gray-400 hover:text-white hover:border-white transition-all whitespace-nowrap">
+                ${g.group}
+            </button>
+        `).join('');
+        state.standingsData = standingsData;
+        renderTable(0);
     } else {
-        sidebar.classList.add('-translate-x-full');
-        document.getElementById('mobile-backdrop').classList.add('hidden');
+        // Un solo grupo
+        tabs.classList.add('hidden');
+        state.standingsData = standingsData;
+        renderTable(0);
     }
 };
 
 /**
- * Actualiza el estado visual de la navegación mobile
- * @param {string} activeId - ID del botón activo
+ * Toggle del menú lateral
  */
-const updateMobileNav = (activeId) => {
-    ['btn-nav-results', 'btn-nav-live', 'btn-nav-leagues', 'btn-nav-forum'].forEach(id => {
-        const btn = document.getElementById(id);
-        if (!btn) return;
-
-        // Reset completo de clases
-        btn.classList.remove('text-white', 'text-red-500');
-        btn.classList.add('text-gray-400');
-
-        if (id === activeId) {
-            btn.classList.remove('text-gray-400');
-            btn.classList.add('text-white');
-        }
-    });
-};
-
-/**
- * Activa/desactiva el filtro de partidos en vivo desde mobile
- */
-const toggleLiveFromMobile = () => {
-    const toggle = document.getElementById('live-toggle');
-    const liveBtn = document.getElementById('btn-nav-live');
-
-    // Cerrar sidebar si está abierto
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
-        sidebar.classList.add('-translate-x-full');
-        document.getElementById('mobile-backdrop').classList.add('hidden');
-    }
-
-    // Si estamos en otra vista (Foro, etc), volver a matches
-    if (!document.getElementById('view-match-list').classList.contains('hidden') === false) {
-        // Estamos en otra vista, navegar a matches primero
-        navigateToMatches();
-        // navigateToMatches resetea el toggle, así que lo activamos después
-    }
-
-    // Si ya está activo EN VIVO, no hacer nada (o podríamos togglear off?)
-    // Como es un tab, clickearlo debería mantenerlo activo.
-    if (toggle && toggle.checked) {
-        return;
-    }
-
-    if (toggle) {
-        toggle.checked = true;
-        toggleLiveFilter();
-    }
-
-    // Apagar todos los botones de navegación
-    ['btn-nav-results', 'btn-nav-live', 'btn-nav-leagues', 'btn-nav-forum'].forEach(id => {
-        const btn = document.getElementById(id);
-        if (!btn) return;
-        btn.classList.add('text-gray-400');
-        btn.classList.remove('text-white', 'text-red-500');
-    });
-
-    // Activar solo el botón EN VIVO en rojo
-    if (liveBtn) {
-        liveBtn.classList.remove('text-gray-400');
-        liveBtn.classList.add('text-red-500');
-    }
-};
-
-// Phone Auth State
-let currentPhoneNumber = '';
-let resendTimer = null;
-let resendCountdown = 40;
-
-/**
- * Handler para iniciar login con teléfono
- */
-const handlePhoneLogin = async () => {
-    const countryCode = document.getElementById('phone-country-code').value;
-    const phoneInput = document.getElementById('phone-number-input').value.replace(/\s/g, '');
-    const errorDiv = document.getElementById('phone-login-error');
-
-    // Validaciones
-    if (!phoneInput) {
-        errorDiv.textContent = 'Por favor ingresa tu número de teléfono';
-        errorDiv.classList.remove('hidden');
-        return;
-    }
-
-    currentPhoneNumber = countryCode + phoneInput;
-
-    try {
-        errorDiv.classList.add('hidden');
-
-        // Enviar SMS
-        await loginWithPhone(currentPhoneNumber);
-
-        // Mostrar modal de verificación
-        document.getElementById('phone-login-modal').classList.add('hidden');
-        document.getElementById('phone-verification-modal').classList.remove('hidden');
-
-        // Mostrar número en el modal
-        document.getElementById('phone-display').textContent = currentPhoneNumber;
-
-        // Iniciar timer de reenvío
-        startResendTimer();
-
-    } catch (error) {
-        console.error('Error:', error);
-        errorDiv.textContent = error.message || 'Error al enviar código. Intenta de nuevo.';
-        errorDiv.classList.remove('hidden');
-    }
-};
-
-/**
- * Handler para verificar código SMS
- */
-const handleSMSVerification = async () => {
-    const code = document.getElementById('sms-code-input').value;
-    const errorDiv = document.getElementById('phone-verification-error');
-
-    if (!code || code.length !== 6) {
-        errorDiv.textContent = 'Por favor ingresa el código de 6 dígitos';
-        errorDiv.classList.remove('hidden');
-        return;
-    }
-
-    try {
-        errorDiv.classList.add('hidden');
-
-        // Verificar código
-        await verifyPhoneCode(code);
-
-        // Cerrar modal y limpiar
-        closePhoneVerification();
-
-    } catch (error) {
-        console.error('Error:', error);
-        errorDiv.textContent = 'Código incorrecto. Intenta de nuevo.';
-        errorDiv.classList.remove('hidden');
-    }
-};
-
-/**
- * Handler para reenviar código SMS
- */
-const handleResendSMS = async () => {
-    const errorDiv = document.getElementById('phone-verification-error');
-
-    try {
-        errorDiv.classList.add('hidden');
-
-        // Reenviar SMS
-        await resendPhoneCode(currentPhoneNumber);
-
-        // Reiniciar timer
-        startResendTimer();
-
-    } catch (error) {
-        console.error('Error:', error);
-        errorDiv.textContent = 'Error al reenviar código. Intenta de nuevo.';
-        errorDiv.classList.remove('hidden');
-    }
-};
-
-/**
- * Inicia el timer de reenvío (40 segundos)
- */
-const startResendTimer = () => {
-    const btn = document.getElementById('resend-sms-btn');
-    const countdownEl = document.getElementById('resend-countdown');
-
-    // Deshabilitar botón
-    btn.disabled = true;
-    btn.classList.add('text-gray-500');
-    btn.classList.remove('text-white', 'hover:bg-[#111]');
-
-    // Reset countdown
-    resendCountdown = 40;
-    countdownEl.textContent = resendCountdown;
-
-    // Limpiar timer anterior si existe
-    if (resendTimer) {
-        clearInterval(resendTimer);
-    }
-
-    // Iniciar timer
-    resendTimer = setInterval(() => {
-        resendCountdown--;
-        countdownEl.textContent = resendCountdown;
-
-        if (resendCountdown <= 0) {
-            clearInterval(resendTimer);
-            resendTimer = null;
-
-            // Habilitar botón
-            btn.disabled = false;
-            btn.classList.remove('text-gray-500');
-            btn.classList.add('text-white', 'hover:bg-[#111]');
-            document.getElementById('resend-text').innerHTML = 'Reenviar Código';
-        }
-    }, 1000);
-};
-
-/**
- * Cierra el modal de verificación y limpia estado
- */
-const closePhoneVerification = () => {
-    document.getElementById('phone-verification-modal').classList.add('hidden');
-    document.getElementById('sms-code-input').value = '';
-    document.getElementById('phone-number-input').value = '';
-    currentPhoneNumber = '';
-
-    // Limpiar timer
-    if (resendTimer) {
-        clearInterval(resendTimer);
-        resendTimer = null;
-    }
-
-    // Reset resend button
-    const btn = document.getElementById('resend-sms-btn');
-    btn.disabled = true;
-    document.getElementById('resend-countdown').textContent = '40';
-    document.getElementById('resend-text').innerHTML = 'Reenviar en <span id="resend-countdown">40</span>s';
-};
-
-// Phone Linking State
-let linkingPhoneNumber = '';
-
-/**
- * Abre el modal de vinculación de teléfono
- */
-const openPhoneLinkingModal = () => {
-    document.getElementById('profile-modal').classList.add('hidden');
-    document.getElementById('phone-linking-modal').classList.remove('hidden');
-    document.getElementById('link-phone-error').classList.add('hidden');
-    document.getElementById('link-phone-number-input').value = '';
-};
-
-/**
- * Cierra el modal de vinculación de teléfono
- */
-const closePhoneLinkingModal = () => {
-    document.getElementById('phone-linking-modal').classList.add('hidden');
-    document.getElementById('link-phone-number-input').value = '';
-    linkingPhoneNumber = '';
-};
-
-/**
- * Handler para iniciar vinculación de teléfono
- */
-const handlePhoneLinking = async () => {
-    const countryCode = document.getElementById('link-phone-country-code').value;
-    const phoneInput = document.getElementById('link-phone-number-input').value.replace(/\s/g, '');
-    const errorDiv = document.getElementById('link-phone-error');
-
-    // Validaciones
-    if (!phoneInput) {
-        errorDiv.textContent = 'Por favor ingresa tu número de teléfono';
-        errorDiv.classList.remove('hidden');
-        return;
-    }
-
-    linkingPhoneNumber = countryCode + phoneInput;
-
-    try {
-        errorDiv.classList.add('hidden');
-
-        // Enviar SMS para vinculación
-        await startPhoneLinking(linkingPhoneNumber);
-
-        // Mostrar modal de verificación
-        document.getElementById('phone-linking-modal').classList.add('hidden');
-        document.getElementById('phone-linking-verification-modal').classList.remove('hidden');
-
-        // Mostrar número en el modal
-        document.getElementById('link-phone-display').textContent = linkingPhoneNumber;
-
-    } catch (error) {
-        console.error('Error:', error);
-        errorDiv.textContent = error.message || 'Error al enviar código. Intenta de nuevo.';
-        errorDiv.classList.remove('hidden');
-    }
-};
-
-/**
- * Handler para verificar código de vinculación de teléfono
- */
-const handlePhoneLinkingVerification = async () => {
-    const code = document.getElementById('link-sms-code-input').value;
-    const errorDiv = document.getElementById('link-verification-error');
-
-    if (!code || code.length !== 6) {
-        errorDiv.textContent = 'Por favor ingresa el código de 6 dígitos';
-        errorDiv.classList.remove('hidden');
-        return;
-    }
-
-    try {
-        errorDiv.classList.add('hidden');
-
-        // Verificar código y vincular
-        await confirmPhoneLinking(code);
-
-        // Cerrar modal y limpiar
-        closePhoneLinkingVerification();
-
-        // Mostrar mensaje de éxito
-        alert('¡Teléfono vinculado exitosamente!');
-
-        // Recargar modal de perfil para mostrar el teléfono vinculado
-        showProfileModal();
-
-    } catch (error) {
-        console.error('Error:', error);
-
-        // Si el número ya está vinculado a otra cuenta, mostrar mensaje especial
-        if (error.message && error.message.includes('ya está vinculado')) {
-            // Cerrar modal de verificación
-            closePhoneLinkingVerification();
-
-            // Volver al modal de perfil con un mensaje de error
-            document.getElementById('profile-modal').classList.remove('hidden');
-
-            // Mostrar alerta estética
-            alert('⚠️ Este número ya está vinculado a otra cuenta.\n\nNo es posible vincular este número porque ya pertenece a otro usuario.');
-        } else {
-            errorDiv.textContent = error.message || 'Código incorrecto. Intenta de nuevo.';
-            errorDiv.classList.remove('hidden');
-        }
-    }
-};
-
-/**
- * Cierra el modal de verificación de vinculación
- */
-const closePhoneLinkingVerification = () => {
-    document.getElementById('phone-linking-verification-modal').classList.add('hidden');
-    document.getElementById('link-sms-code-input').value = '';
-    document.getElementById('link-phone-number-input').value = '';
-    linkingPhoneNumber = '';
-};
-
-/**
- * Cambia entre tabs del panel de moderación
- * @param {string} tabName - 'team', 'sanctions', o 'badges'
- */
-const switchModTab = (tabName) => {
-    // Ocultar todos los contenidos
-    const contents = ['team', 'sanctions', 'badges', 'featured'];
-    contents.forEach(name => {
-        const content = document.getElementById(`mod-content-${name}`);
-        const tab = document.getElementById(`mod-tab-${name}`);
-        if (content) content.classList.add('hidden');
-        if (tab) {
-            tab.classList.remove('text-white', 'bg-[#1a1a1a]', 'border-orange-500');
-            tab.classList.add('text-gray-500', 'border-transparent');
-        }
-    });
-
-    // Mostrar el tab seleccionado
-    const selectedContent = document.getElementById(`mod-content-${tabName}`);
-    const selectedTab = document.getElementById(`mod-tab-${tabName}`);
-    if (selectedContent) selectedContent.classList.remove('hidden');
-    if (selectedTab) {
-        selectedTab.classList.remove('text-gray-500', 'border-transparent');
-        selectedTab.classList.add('text-white', 'bg-[#1a1a1a]', 'border-orange-500');
-    }
-
-    // Si es el tab de destacado, cargar la lista de partidos
-    if (tabName === 'featured') {
-        loadFeaturedMatchPicker();
-    }
-};
-
-/**
- * Inicializa la aplicación
- */
-const init = () => {
-    // Inicializar autenticación
-    initAuth();
-
-    // Inicializar matches (carga calendario y partidos)
-    initMatches();
-
-    // Cargar partido destacado en sidebar
-    loadFeaturedMatch();
-
-    // Setup del sidebar mobile
+export const toggleSidebar = () => {
     const sidebar = document.getElementById('sidebar');
     const backdrop = document.getElementById('mobile-backdrop');
 
-    const closeMenu = () => {
-        sidebar.classList.add('-translate-x-full');
-        backdrop.classList.add('hidden');
-    };
-
-    if (backdrop) {
-        backdrop.onclick = closeMenu;
+    // Logic for mobile vs desktop override
+    if (window.innerWidth >= 1024) {
+        // Desktop: Toggle visibility class for sidebar
+        sidebar.classList.toggle('hidden');
+        if (sidebar.classList.contains('hidden')) {
+            // If hidden, main content takes full width
+            document.querySelector('main').classList.remove('lg:w-auto');
+        } else {
+            // If shown, restore layout
+        }
+    } else {
+        // Mobile: Use standard openMobileTab logic
+        app.openMobileTab('leagues');
     }
-
-    // Setup del toggle de live
-    const liveToggle = document.getElementById('live-toggle');
-    if (liveToggle) {
-        liveToggle.onchange = toggleLiveFilter;
-    }
-
-    // Inicializar router con todos los handlers
-    initRouter({
-        navigateToMatches,
-        navigateToForum: navigateToForumWrapper,
-        openMatchDetail,
-        showStandingsById,
-        showStandingsByIdAndName
-    });
 };
 
-// Exportar todo a window.app para compatibilidad con onclick
-window.app = {
-    // Matches
-    loadMatches,
-    renderMatches,
-    changeDate,
-    resetDate,
-    renderCalendar,
-    toggleLiveFilter,
-    loadMessageCounts,
-    toggleCalendar,
-    changeMonth,
+/**
+ * Muestra la tabla de posiciones de una liga en el nuevo layout
+ * Puede recibir params del router o argumentos legacy
+ * @param {Object|number} idOrParams - Params { id, name } o solo ID
+ * @param {string} name - Nombre de la liga (opcional si params)
+ */
+export const showStandings = async (idOrParams, name) => {
+    let id, leagueName;
 
-    // Match Detail
-    openDetail,
-    openDetailWithTab,  // Nueva función para abrir con tab específico
-    closeDetail,
-    switchTab,
+    if (typeof idOrParams === 'object') {
+        // Llamado desde router con params
+        id = idOrParams.id;
+        leagueName = idOrParams.name || '';
+    } else {
+        // Llamado legacy con (id, name)
+        id = idOrParams;
+        leagueName = name || '';
+    }
 
-    // Featured Match
-    selectFeaturedMatch,
-    clearFeaturedMatch,
-    loadFeaturedMatch,
-    loadFeaturedMatchPicker,
+    state.selectedLeague = { id, name: leagueName };
 
-    // Standings
-    showStandings,
-    changeSeason,
-    renderTable,
-    changeRound,
-    toggleSidebarInLeague,
+    // Validar si estamos en la vista correcta, si no, resetear containers
+    const viewStandings = document.getElementById('view-standings');
+    const container = document.getElementById('standings-container'); // This will now hold the split layout
 
-    // Forum
-    navigateToForum: navigateToForumWrapper,
-    initForum,
-    sendMessage,
-    deleteMessage,
-    startReply,
-    cancelReply,
+    // Update UI Visibility
+    document.getElementById('view-match-list').classList.add('hidden');
+    document.getElementById('date-nav').classList.add('hidden');
+    viewStandings.classList.remove('hidden');
 
-    // Authentication
-    loginWithGoogle,
-    logout,
-    confirmLogout,
-    cancelLogout,
-    saveUsername,
-    getCurrentUser,
-    getCurrentUserProfile,
-    getCurrentUserRole,
-    showProfileModal,
-    closeProfileModal,
+    // START: Layout Modification
+    // Ocultar sidebars globales
+    document.getElementById('sidebar').classList.add('hidden'); // Force hide sidebar on desktop
+    document.getElementById('right-sidebar').classList.add('hidden'); // Force hide right sidebar
+    document.querySelector('main').classList.remove('lg:w-auto'); // Allow main to expanded
 
-    // Phone Authentication
-    handlePhoneLogin,
-    handleSMSVerification,
-    handleResendSMS,
-    closePhoneVerification,
+    // Update Header
+    document.getElementById('standings-title').innerHTML = `
+        <div class="flex items-center gap-3">
+            <button onclick="app.toggleSidebarInLeague()" class="bg-[#111] p-2 rounded hover:bg-[#222] border border-[#333] transition-colors" title="Ver Ligas">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <span class="text-xl font-bold text-white uppercase tracking-wider font-sport">${leagueName}</span>
+        </div>
+    `;
 
-    // Phone Linking (for Google users)
-    openPhoneLinkingModal,
-    closePhoneLinkingModal,
-    handlePhoneLinking,
-    handlePhoneLinkingVerification,
-    closePhoneLinkingVerification,
+    document.getElementById('standings-tabs').classList.add('hidden');
 
-    // Team Selection
-    goToTeamSelection,
-    goBackToUsername,
-    filterTeams,
-    selectTeam,
+    // Setup Split Views Layout
+    container.innerHTML = `
+        <div class="flex flex-col lg:flex-row h-[calc(100vh-140px)] gap-6 overflow-hidden">
+            <!-- Left: Table (Scrollable) -->
+            <div class="flex-1 flex flex-col min-h-0 bg-[#050505] rounded-xl border border-[#222] overflow-hidden">
+                 <div class="p-4 bg-black border-b border-[#222] flex justify-between items-center shrink-0">
+                    <h3 class="font-bold text-gray-400 uppercase tracking-widest text-xs">Posiciones</h3>
+                    <div id="standings-tabs-container"></div>
+                </div>
+                <div id="standings-table-container" class="flex-1 overflow-y-auto p-0">
+                    <div class="flex justify-center py-20"><div class="loader"></div></div>
+                </div>
+            </div>
 
-    // Debug
-    debugTeams: () => {
-        alert('Debug disabled to save API usage.');
-    },
+            <!-- Right: Fixtures (Fixed width) -->
+            <div class="w-full lg:w-96 shrink-0 flex flex-col bg-[#050505] rounded-xl border border-[#222] overflow-hidden h-full">
+                <!-- Round Selector -->
+                <div class="p-4 border-b border-[#222] shrink-0 bg-black">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-gray-400 uppercase tracking-widest text-xs">Calendario</h3>
+                    </div>
+                    <select id="round-selector" onchange="app.changeRound(this.value)" class="w-full bg-[#111] border border-[#333] text-white text-xs p-2 rounded focus:outline-none uppercase font-bold">
+                        <option>Cargando fechas...</option>
+                    </select>
+                </div>
+                <!-- Fixtures List -->
+                <div id="fixtures-list" class="flex-1 overflow-y-auto p-3 space-y-2">
+                    <div class="text-center py-10 text-gray-600 text-xs">Selecciona una fecha</div>
+                </div>
+            </div>
+        </div>
+    `;
 
-    // Moderation
-    openModerationPanel,
-    closeModerationPanel,
-    switchModTab,
-    handleAddModeratorForm,
-    handleMuteForm,
-    handleBanForm,
-    handleAddFirstUserForm,
-    // Ranking
-    openRankingModal,
-    closeRankingModal,
-    loadFirstUsers,
+    // Fetch Data
+    try {
+        const [standingsData, roundsData] = await Promise.all([
+            fetchAPI(`/standings?league=${id}&season=${state.season}`),
+            fetchRounds(id, state.season)
+        ]);
 
-    // New Ranking Modal
-    openRankingModal,
-    closeRankingModal,
+        // Process Standings
+        if (standingsData.response && standingsData.response.length > 0) {
+            const standings = standingsData.response[0].league.standings;
+            processStandings(standings);
+        } else {
+            document.getElementById('standings-table-container').innerHTML = `<div class="text-center text-gray-500 py-10">Sin datos.</div>`;
+        }
 
-    // Mute/Ban
-    muteUser,
-    unmuteUser,
-    banUser,
-    unbanUser,
-    handleMuteForm,
-    handleBanForm,
-    loadMutedUsers,
-    loadBannedUsers,
-    switchModTab,
+        // Process Rounds
+        const roundSelector = document.getElementById('round-selector');
+        if (roundsData && roundsData.length > 0) {
+            roundSelector.innerHTML = roundsData.map(r => `
+                <option value="${r}" ${r === state.currentRound ? 'selected' : ''}>${r.replace(/Regular Season - /g, 'Fecha ').replace(/_/g, ' ')}</option>
+            `).join('');
 
-    // Mod Panel (Green)
-    openModPanel,
-    closeModPanel,
-    handleModMuteForm,
-    handleModBanForm,
+            // Cargar fixtures de la ronda actual
+            if (state.currentRound) {
+                fetchFixturesByRound(id, state.season, state.currentRound);
+            }
+        } else {
+            roundSelector.innerHTML = `<option>No hay fechas disponibles</option>`;
+        }
 
-    // Suggestions
-    openSuggestionModal,
-    closeSuggestionModal,
-    sendSuggestion,
-
-    // Navigation
-    navigateToMatches,
-    openMobileTab,
-    updateMobileNav,
-    toggleLiveFromMobile,
-    navigate,
-    createSlug,
-
-    // Init
-    init
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs uppercase tracking-widest">Error al cargar datos.</div>`;
+    }
 };
 
-// Inicializar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
+export const toggleSidebarInLeague = () => {
+    const sidebar = document.getElementById('sidebar');
+    // Forzamos "flex" porque usamos "hidden lg:flex" originalmente
+    if (sidebar.classList.contains('hidden')) {
+        sidebar.classList.remove('hidden');
+        sidebar.classList.add('lg:flex'); // Restore desktop flex
+        // Adjust main content width if needed, but absolute positioning or overlay might be better for temporary menu
+        // For this specific request: "un boton que lo tocas y vuelve las ligas" -> likely as an overlay or pushing content
+
+        // Let's use the mobile drawer logic/style for consistency or just toggle the class we removed
+    } else {
+        sidebar.classList.add('hidden');
+        sidebar.classList.remove('lg:flex');
+    }
+};
+
+
+export const getStandingsState = () => state;
