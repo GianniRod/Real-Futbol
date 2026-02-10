@@ -250,17 +250,17 @@ export const renderTable = (groupIndex) => {
     const ptsLabel = isPromedios ? 'PROM' : 'Pts';
 
     container.innerHTML = `
-        <div class="bg-[#0a0a0a] border border-[#222] overflow-hidden rounded-lg mx-3 mb-3">
+        <div class="bg-[#0a0a0a] border border-[#222] overflow-hidden rounded-lg mx-2 mb-3 md:mx-3">
             <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left text-gray-400">
-                    <thead class="text-[10px] text-gray-500 uppercase bg-[#111] border-b border-[#222] tracking-widest">
+                <table class="w-full text-left text-gray-400">
+                    <thead class="text-[9px] md:text-[10px] text-gray-500 uppercase bg-[#111] border-b border-[#222] tracking-widest">
                         <tr>
-                            <th class="px-3 py-3 text-center w-8">#</th>
-                            <th class="px-3 py-3">Equipo</th>
-                            <th class="px-2 py-3 text-center text-white">${ptsLabel}</th>
-                            <th class="px-2 py-3 text-center">PJ</th>
-                            <th class="px-2 py-3 text-center font-mono">DG</th>
-                            <th class="px-2 py-3 text-center hidden md:table-cell">Forma</th>
+                            <th class="px-2 py-2 md:px-3 md:py-3 text-center w-6 md:w-8">#</th>
+                            <th class="px-2 py-2 md:px-3 md:py-3">Equipo</th>
+                            <th class="px-1 py-2 md:px-2 md:py-3 text-center text-white">${ptsLabel}</th>
+                            <th class="px-1 py-2 md:px-2 md:py-3 text-center">PJ</th>
+                            <th class="px-1 py-2 md:px-2 md:py-3 text-center font-mono">DG</th>
+                            <th class="px-1 py-2 md:px-2 md:py-3 text-center hidden md:table-cell">Forma</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[#1a1a1a]">
@@ -271,14 +271,14 @@ export const renderTable = (groupIndex) => {
 
         return `
                             <tr class="hover:bg-[#111] transition-colors">
-                                <td class="px-3 py-3 text-center font-bold ${t.rank <= 4 ? 'text-white' : 'text-gray-600'} border-r border-[#222] text-xs">${t.rank}</td>
-                                <td class="px-3 py-3 font-bold text-gray-300 flex items-center gap-3 whitespace-nowrap uppercase text-xs">
-                                    <img src="${t.team.logo}" class="w-6 h-6 object-contain">
+                                <td class="px-2 py-2 md:px-3 md:py-3 text-center font-bold ${t.rank <= 4 ? 'text-white' : 'text-gray-600'} border-r border-[#222] text-[10px] md:text-xs">${t.rank}</td>
+                                <td class="px-2 py-2 md:px-3 md:py-3 font-bold text-gray-300 flex items-center gap-2 md:gap-3 whitespace-nowrap uppercase text-[10px] md:text-xs">
+                                    <img src="${t.team.logo}" class="w-4 h-4 md:w-6 md:h-6 object-contain">
                                     ${t.team.name}
                                 </td>
-                                <td class="px-2 py-3 text-center font-bold text-white bg-[#111]/50">${pointsDisplay}</td>
-                                <td class="px-2 py-3 text-center font-mono text-xs">${t.all.played}</td>
-                                <td class="px-2 py-3 text-center font-mono text-xs ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff > 0 ? '+' : ''}${t.goalsDiff}</td>
+                                <td class="px-1 py-2 md:px-2 md:py-3 text-center font-bold text-white bg-[#111]/50 text-[10px] md:text-xs">${pointsDisplay}</td>
+                                <td class="px-1 py-2 md:px-2 md:py-3 text-center font-mono text-[10px] md:text-xs">${t.all.played}</td>
+                                <td class="px-1 py-2 md:px-2 md:py-3 text-center font-mono text-[10px] md:text-xs ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff > 0 ? '+' : ''}${t.goalsDiff}</td>
                                 <td class="px-2 py-3 text-center hidden md:table-cell">
                                     <div class="flex justify-center gap-0.5">
                                         ${t.form ? t.form.split('').slice(-5).map(f => `<div class="w-1.5 h-1.5 rounded-full ${f === 'W' ? 'bg-white' : (f === 'D' ? 'bg-gray-500' : 'bg-[#333]')}"></div>`).join('') : '-'}
