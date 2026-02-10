@@ -244,7 +244,10 @@ export const renderTable = (groupIndex) => {
     // NOTE: El container ID ahora es distinto porque está dentro del layout split
     const container = document.getElementById('standings-table-container');
 
-    if (!container) return;
+    if (!container || !table || table.length === 0) return;
+
+    const isPromedios = table[0].group && (table[0].group.includes('Promedio') || table[0].group === 'PROMEDIOS');
+    const ptsLabel = isPromedios ? 'PROM' : 'Pts';
 
     container.innerHTML = `
         <div class="bg-[#0a0a0a] border border-[#222] overflow-hidden rounded-lg mx-3 mb-3">
@@ -254,21 +257,26 @@ export const renderTable = (groupIndex) => {
                         <tr>
                             <th class="px-3 py-3 text-center w-8">#</th>
                             <th class="px-3 py-3">Equipo</th>
-                            <th class="px-2 py-3 text-center text-white">Pts</th>
+                            <th class="px-2 py-3 text-center text-white">${ptsLabel}</th>
                             <th class="px-2 py-3 text-center">PJ</th>
                             <th class="px-2 py-3 text-center font-mono">DG</th>
                             <th class="px-2 py-3 text-center hidden md:table-cell">Forma</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[#1a1a1a]">
-                        ${table.map(t => `
+                        ${table.map(t => {
+        const pointsDisplay = isPromedios
+            ? (t.all.played > 0 ? (t.points / t.all.played).toFixed(3) : '0.000')
+            : t.points;
+
+        return `
                             <tr class="hover:bg-[#111] transition-colors">
                                 <td class="px-3 py-3 text-center font-bold ${t.rank <= 4 ? 'text-white' : 'text-gray-600'} border-r border-[#222] text-xs">${t.rank}</td>
                                 <td class="px-3 py-3 font-bold text-gray-300 flex items-center gap-3 whitespace-nowrap uppercase text-xs">
                                     <img src="${t.team.logo}" class="w-6 h-6 object-contain">
                                     ${t.team.name}
                                 </td>
-                                <td class="px-2 py-3 text-center font-bold text-white bg-[#111]/50">${t.points}</td>
+                                <td class="px-2 py-3 text-center font-bold text-white bg-[#111]/50">${pointsDisplay}</td>
                                 <td class="px-2 py-3 text-center font-mono text-xs">${t.all.played}</td>
                                 <td class="px-2 py-3 text-center font-mono text-xs ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff > 0 ? '+' : ''}${t.goalsDiff}</td>
                                 <td class="px-2 py-3 text-center hidden md:table-cell">
@@ -277,7 +285,7 @@ export const renderTable = (groupIndex) => {
                                     </div>
                                 </td>
                             </tr>
-                        `).join('')}
+                        `}).join('')}
                     </tbody>
                 </table>
             </div>
@@ -292,14 +300,59 @@ export const processStandings = (standingsData) => {
     // El container de tabs ahora es diferente
     const tabsContainer = document.getElementById('standings-tabs-container');
 
+    // Custom Tab Names logic
+    const getTabName = (rawName) => {
+        if (!rawName) return 'TABLA';
+        if (rawName.includes('Group A')) return 'ZONA A';
+        if (rawName.includes('Group B')) return 'ZONA B';
+        if (rawName.includes('Overall') || rawName.includes('Table') || rawName.includes('Anual')) return 'TABLA ANUAL';
+        if (rawName.includes('Promedio')) return 'PROMEDIOS';
+        return rawName.toUpperCase();
+    };
+
+    // Ensure we have Promedios if user wants it
+    // If we have 3 tables (Zone A, Zone B, Annual), generate Promedios from Annual
+    if (standingsData.length > 0) {
+        // Check if Promedios exists
+        const hasPromedios = standingsData.some(g => g[0] && g[0].group && g[0].group.includes('Promedio'));
+
+        if (!hasPromedios) {
+            // Find Annual or take the last one (usually Overall)
+            const annualIndex = standingsData.findIndex(g => g[0].group.includes('Overall') || g[0].group.includes('Table') || g[0].group.includes('Anual'));
+            const sourceTable = annualIndex >= 0 ? standingsData[annualIndex] : standingsData[standingsData.length - 1];
+
+            if (sourceTable) {
+                // Clone and sort by average
+                const promediosTable = JSON.parse(JSON.stringify(sourceTable));
+                // Hack: Rename the group in the first item so our renderer knows
+                promediosTable.forEach(t => t.group = 'PROMEDIOS');
+
+                // Sort by Avg (Points / Played)
+                promediosTable.sort((a, b) => {
+                    const avgA = a.all.played > 0 ? (a.points / a.all.played) : 0;
+                    const avgB = b.all.played > 0 ? (b.points / b.all.played) : 0;
+                    return avgB - avgA;
+                });
+
+                // Re-rank
+                promediosTable.forEach((t, i) => t.rank = i + 1);
+
+                standingsData.push(promediosTable);
+            }
+        }
+    }
+
     if (standingsData.length > 1) {
         // Múltiples grupos
         if (tabsContainer) {
-            tabsContainer.innerHTML = standingsData.map((g, i) => `
+            tabsContainer.innerHTML = standingsData.map((g, i) => {
+                const rawName = g[0] && g[0].group ? g[0].group : 'GRUPO ' + (i + 1);
+                const displayName = getTabName(rawName);
+                return `
                 <button onclick="app.renderTable(${i})" class="px-3 py-1 bg-[#111] text-[10px] font-bold uppercase border border-[#333] text-gray-400 hover:text-white hover:border-white transition-all whitespace-nowrap rounded mr-2 last:mr-0">
-                    ${g[0] && g[0].group ? g[0].group : 'GRUPO ' + (i + 1)}
+                    ${displayName}
                 </button>
-            `).join('');
+            `}).join('');
         }
         state.standingsData = standingsData;
         renderTable(0);
