@@ -177,9 +177,15 @@ export const renderMatches = () => {
 
     let html = '';
     groupsList.forEach(g => {
-        html += `<div class="mb-6"><div class="px-2 py-2 flex items-center gap-3"><img src="${g.logo}" class="w-4 h-4 object-contain"><h3 class="text-xs font-bold text-white uppercase tracking-widest">${g.name}</h3></div><div class="space-y-2">`;
+        html += `
+            <div class="mb-6">
+                <div class="px-2 py-2 flex items-center gap-3 mb-1">
+                    <img src="${g.logo}" class="w-5 h-5 object-contain">
+                    <h3 class="text-xs font-black text-white uppercase tracking-widest">${g.name}</h3>
+                </div>
+                <div class="bg-[#0a0a0a] border border-[#222] rounded-lg overflow-hidden flex flex-col">`;
 
-        g.matches.forEach(m => {
+        g.matches.forEach((m, index) => {
             const s = m.fixture.status;
             const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(s.short);
             const isHT = s.short === 'HT';
@@ -211,9 +217,11 @@ export const renderMatches = () => {
 
             const clickableClass = notStarted ? 'not-clickable' : 'clickable';
             const clickAttr = notStarted ? '' : `onclick="app.navigate('/partido/${m.fixture.id}'); event.preventDefault();"`;
+            const isLast = index === g.matches.length - 1;
+            const borderClass = isLast ? '' : 'border-b border-[#222]';
 
             html += `
-                <div class="p-4 match-card ${clickableClass} relative bg-[#0a0a0a] rounded" ${clickAttr}>
+                <div class="p-4 match-card ${clickableClass} relative hover:bg-[#111] transition-colors ${borderClass}" ${clickAttr}>
                     ${isLive ? '<div class="absolute top-3 right-3 flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div><span class="text-[9px] font-bold text-red-500 uppercase tracking-widest">EN VIVO</span></div>' : ''}
                     
                     <div class="flex items-center justify-between">
