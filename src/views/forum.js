@@ -112,7 +112,7 @@ export const initForum = (context, containerId, usernameInputId) => {
                     
                     <!-- Team Logo Column -->
                     <div class="shrink-0">
-                        <div class="w-14 h-14 flex items-center justify-center">
+                        <div class="w-11 h-11 flex items-center justify-center">
                             ${msg.userTeamLogo
                     ? `<img src="${msg.userTeamLogo}" class="w-full h-full object-contain filter drop-shadow-sm" alt="Team">`
                     : '<span class="text-xs">⚽</span>'}
