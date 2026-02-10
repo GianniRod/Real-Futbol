@@ -618,6 +618,7 @@ const renderCupView = async (leagueId, season, container) => {
             ties[k] = Object.values(roundTies);
         });
 
+
         // 2. Helpers
         const findFeederTies = (currentTieMatches, previousRoundTies) => {
             if (!previousRoundTies) return [];
@@ -633,12 +634,6 @@ const renderCupView = async (leagueId, season, container) => {
             return feeders;
         };
 
-        const getTieHeight = (tie) => {
-            // Base height + padding. Single: ~80px. Double: ~120px?
-            // Let's force consistent height classes.
-            return (tie && tie.length > 1) ? 120 : 80; // px approximation for alignment
-        }
-
         // 3. Render Card
         const renderTieCard = (tieMatches) => {
             const hClass = (tieMatches && tieMatches.length > 1) ? 'h-[120px]' : 'h-[80px]';
@@ -652,8 +647,6 @@ const renderCupView = async (leagueId, season, container) => {
             tieMatches.forEach((m, idx) => {
                 const isFin = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
                 const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(m.fixture.status.short);
-                // Label: For Multi, IDA/VUELTA. For single, Date or FINAL.
-                // Improvement: If single match (Final), don't show "IDA".
                 const label = isMulti ? (idx === 0 ? 'IDA' : 'VUELTA') : (isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleDateString());
 
                 const homeWin = isFin && ((m.goals.home > m.goals.away) || (m.score.penalty.home > m.score.penalty.away));
@@ -694,7 +687,7 @@ const renderCupView = async (leagueId, season, container) => {
             `;
         };
 
-        // 4. Recursive Tree Renderer with Centered Forks
+        // 4. Recursive Tree Renderer with Pure CSS Alignment
         const renderTree = (tie, roundIndex) => {
             const prevRoundName = roundOrder[roundIndex - 1];
             if (roundIndex === 0 || !ties[prevRoundName]) return renderTieCard(tie);
@@ -702,40 +695,38 @@ const renderCupView = async (leagueId, season, container) => {
             const feeders = findFeederTies(tie, ties[prevRoundName]);
             if (feeders.length === 0) return renderTieCard(tie);
 
-            // Calculate halves for alignment (approximate center of cards)
-            const h1 = getTieHeight(feeders[0]);
-            const h2 = getTieHeight(feeders[1] || null);
-            const half1 = h1 / 2;
-            const half2 = h2 / 2;
-
             return `
                 <div class="flex items-center">
                     <!-- Children Column -->
-                    <div class="flex flex-col justify-center gap-10 mr-0"> 
-                        ${renderTree(feeders[0], roundIndex - 1)}
-                        ${renderTree(feeders[1] || null, roundIndex - 1)}
+                    <div class="flex flex-col justify-center"> <!-- Gap-0 is default for block, but flex-col might have default. Actually justify-center packs them if h is not set. -->
+                        
+                        <!-- Top Child Wrapper -->
+                        <div class="flex items-stretch pr-2 py-4"> <!-- Padding Y creates spacing between matches -->
+                            <div class="flex items-center">
+                                ${renderTree(feeders[0], roundIndex - 1)}
+                            </div>
+                            <!-- Top Connector Half -->
+                            <div class="w-8 flex flex-col">
+                                <div class="flex-1"></div> <!-- Empty Top Space -->
+                                <div class="flex-1 border-t-2 border-r-2 border-[#444] rounded-tr-xl"></div> <!-- Line from Center Left to Right-Down -->
+                            </div>
+                        </div>
+
+                        <!-- Bottom Child Wrapper -->
+                        <div class="flex items-stretch pr-2 py-4">
+                            <div class="flex items-center">
+                                ${renderTree(feeders[1] || null, roundIndex - 1)}
+                            </div>
+                            <!-- Bottom Connector Half -->
+                            <div class="w-8 flex flex-col">
+                                <div class="flex-1 border-b-2 border-r-2 border-[#444] rounded-br-xl"></div> <!-- Line from Center Left to Right-Up -->
+                                <div class="flex-1"></div> <!-- Empty Bottom Space -->
+                            </div>
+                        </div>
                     </div>
                     
-                    <!-- Fork Column -->
-                    <div class="flex flex-col w-8 self-stretch relative">
-                        <!-- Top Spacer -->
-                        <div style="height: ${half1}px;" class="w-full"></div>
-                        
-                        <!-- Bracket Top Half -->
-                        <div class="flex-1 w-full border-t-2 border-r-2 border-[#444] rounded-tr-xl"></div>
-                        
-                        <!-- Parent Link (Horizontal Line from vertical center to parent) -->
-                        <div class="absolute top-1/2 right-0 w-4 h-0.5 bg-[#444] translate-x-full"></div>
-
-                        <!-- Bracket Bottom Half -->
-                        <div class="flex-1 w-full border-b-2 border-r-2 border-[#444] rounded-br-xl"></div>
-
-                        <!-- Bottom Spacer -->
-                        <div style="height: ${half2}px;" class="w-full"></div>
-                    </div>
-                    
-                    <!-- Spacer for Link -->
-                    <div class="w-8"></div> 
+                    <!-- Horizontal Link from Fork to Parent -->
+                    <div class="w-8 h-0.5 bg-[#444]"></div>
 
                     <!-- Parent Match -->
                     <div>
@@ -778,6 +769,117 @@ const renderCupView = async (leagueId, season, container) => {
         console.error("Error rendering cup bracket:", e);
         container.innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar el cuadro.</div>`;
     }
+};
+
+const roundTies = {};
+matches.forEach(m => {
+    const teamIds = [m.teams.home.id, m.teams.away.id].sort().join('-');
+    if (!roundTies[teamIds]) roundTies[teamIds] = [];
+    roundTies[teamIds].push(m);
+});
+Object.values(roundTies).forEach(tieMatches => {
+    tieMatches.sort((a, b) => a.fixture.timestamp - b.fixture.timestamp);
+});
+ties[k] = Object.values(roundTies);
+    });
+
+// 2. Helpers
+const findFeederTies = (currentTieMatches, previousRoundTies) => {
+    if (!previousRoundTies) return [];
+    const teamIds = new Set();
+    currentTieMatches.forEach(m => { teamIds.add(m.teams.home.id); teamIds.add(m.teams.away.id); });
+    const feeders = [];
+    Array.from(teamIds).forEach(tid => {
+        const matchVal = previousRoundTies.find(tieMatches =>
+            tieMatches.some(m => m.teams.home.id === tid || m.teams.away.id === tid)
+        );
+        if (matchVal && !feeders.includes(matchVal)) feeders.push(matchVal);
+    });
+    return feeders;
+};
+
+// 4. Recursive Tree Renderer with Pure CSS Alignment
+const renderTree = (tie, roundIndex) => {
+    const prevRoundName = roundOrder[roundIndex - 1];
+    if (roundIndex === 0 || !ties[prevRoundName]) return renderTieCard(tie);
+
+    const feeders = findFeederTies(tie, ties[prevRoundName]);
+    if (feeders.length === 0) return renderTieCard(tie);
+
+    return `
+        <div class="flex items-center">
+            <!-- Children Column -->
+            <div class="flex flex-col justify-center"> 
+                
+                <!-- Top Child Wrapper -->
+                <div class="flex items-stretch pr-2 py-4"> 
+                    <div class="flex items-center">
+                        ${renderTree(feeders[0], roundIndex - 1)}
+                    </div>
+                    <!-- Top Connector Half -->
+                    <div class="w-8 flex flex-col">
+                        <div class="flex-1"></div> <!-- Empty Top Space -->
+                        <div class="flex-1 border-t-2 border-r-2 border-[#444] rounded-tr-xl"></div> <!-- Line from Center Left to Right-Down -->
+                    </div>
+                </div>
+
+                <!-- Bottom Child Wrapper -->
+                <div class="flex items-stretch pr-2 py-4">
+                    <div class="flex items-center">
+                        ${renderTree(feeders[1] || null, roundIndex - 1)}
+                    </div>
+                    <!-- Bottom Connector Half -->
+                    <div class="w-8 flex flex-col">
+                        <div class="flex-1 border-b-2 border-r-2 border-[#444] rounded-br-xl"></div> <!-- Line from Center Left to Right-Up -->
+                        <div class="flex-1"></div> <!-- Empty Bottom Space -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Horizontal Link from Fork to Parent -->
+            <div class="w-8 h-0.5 bg-[#444]"></div>
+
+            <!-- Parent Match -->
+            <div>
+                ${renderTieCard(tie)}
+            </div>
+        </div>
+    `;
+};
+
+// 5. Build HTML
+let finalTies = ties['Final'];
+if (!finalTies || finalTies.length === 0) {
+    const lastRound = [...roundOrder].reverse().find(r => ties[r] && ties[r].length > 0);
+    if (lastRound) finalTies = ties[lastRound];
+}
+
+let html = `<div class="p-8 overflow-x-auto min-h-[600px] bg-[#050505] rounded-xl border border-[#222]">`;
+html += `<div class="flex justify-between min-w-[1000px] mb-12 px-10 border-b border-[#222] pb-4 text-center">
+                    ${roundOrder.map(r => `<div class="font-bold text-gray-500 uppercase tracking-widest text-xs w-60">${displayRounds[r]}</div>`).join('')}
+                 </div>`;
+
+html += `<div class="flex justify-end min-w-[1000px] pr-10">`;
+
+if (finalTies && finalTies.length > 0) {
+    html += `<div class="flex flex-col gap-20">`;
+    finalTies.forEach(finalTie => {
+        const rRound = finalTie[0].league.round;
+        const rIdx = roundOrder.findIndex(ro => rRound.includes(ro));
+        html += renderTree(finalTie, rIdx !== -1 ? rIdx : 3);
+    });
+    html += `</div>`;
+} else {
+    html += `<div class="text-white">Imposible generar árbol (datos incompletos).</div>`;
+}
+
+html += `</div></div>`;
+container.innerHTML = html;
+
+} catch (e) {
+    console.error("Error rendering cup bracket:", e);
+    container.innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar el cuadro.</div>`;
+}
 };
 
 
