@@ -16,12 +16,15 @@
 
 import { fetchAPI } from '../core/api.js';
 import { db, collection, where, query, getCountFromServer } from '../core/firebase.js';
+import { setFeaturedMatch, clearFeaturedMatch, getFeaturedMatchId } from './featured_match.js';
+import { getCurrentUserRole } from './auth.js';
 
 // State
 const state = {
     date: new Date(),
     matches: [],
-    liveOnly: false
+    liveOnly: false,
+    featuredMatchId: null
 };
 
 // Helpers
@@ -151,7 +154,12 @@ export const loadMatches = async (silent = false) => {
 /**
  * Renderiza los partidos en el DOM
  */
-export const renderMatches = () => {
+export const renderMatches = async () => {
+    // Cargar ID del partido destacado para el botón estrella
+    const isDeveloper = getCurrentUserRole() === 'developer';
+    if (isDeveloper && state.featuredMatchId === null) {
+        state.featuredMatchId = await getFeaturedMatchId();
+    }
     const container = document.getElementById('view-match-list');
     let list = state.matches;
     if (state.liveOnly) {
@@ -212,8 +220,13 @@ export const renderMatches = () => {
             const clickableClass = notStarted ? 'not-clickable' : 'clickable';
             const clickAttr = notStarted ? '' : `onclick="app.navigate('/partido/${m.fixture.id}'); event.preventDefault();"`;
 
+            // Star button for developer
+            const isFeatured = state.featuredMatchId === m.fixture.id;
+            const starBtn = isDeveloper ? `<button id="star-btn-${m.fixture.id}" onclick="app.toggleFeaturedMatch(${m.fixture.id}); event.stopPropagation(); event.preventDefault();" class="absolute top-2.5 left-2.5 z-20 p-1 rounded-full hover:bg-[#222] transition-colors ${isFeatured ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}" title="${isFeatured ? 'Quitar destacado' : 'Destacar partido'}"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="${isFeatured ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></button>` : '';
+
             html += `
                 <div class="p-4 match-card ${clickableClass} relative bg-[#0a0a0a] rounded" ${clickAttr}>
+                    ${starBtn}
                     ${isLive ? '<div class="absolute top-3 right-3 flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div><span class="text-[9px] font-bold text-red-500 uppercase tracking-widest">EN VIVO</span></div>' : ''}
                     
                     <div class="flex items-center justify-between">
