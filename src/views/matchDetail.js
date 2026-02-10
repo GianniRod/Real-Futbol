@@ -658,17 +658,33 @@ export const openDetail = async (params) => {
     }
 
     try {
-        const data = await fetchAPI(`/fixtures?id=${id}`, true);
-        const fullMatch = data.response[0];
+        const isFinished = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
+        const hasFullData = m.events && m.lineups && m.statistics;
 
-        // Actualizar eventos en el state de matches para mostrar tarjetas rojas en la lista
-        if (fullMatch && fullMatch.events) {
-            updateMatchEvents(id, fullMatch.events);
+        // Si el partido terminó y ya tenemos datos completos, no gastar un request
+        if (isFinished && hasFullData) {
+            renderTimeline(m);
+            renderLineups(m);
+            renderStats(m);
+        } else {
+            const data = await fetchAPI(`/fixtures?id=${id}`, true);
+            const fullMatch = data.response[0];
+
+            // Actualizar eventos en el state de matches para mostrar tarjetas rojas en la lista
+            if (fullMatch && fullMatch.events) {
+                updateMatchEvents(id, fullMatch.events);
+            }
+
+            // Guardar datos completos en el objeto del match para futuras visitas
+            if (fullMatch) {
+                m.lineups = fullMatch.lineups || m.lineups;
+                m.statistics = fullMatch.statistics || m.statistics;
+            }
+
+            renderTimeline(fullMatch);
+            renderLineups(fullMatch);
+            renderStats(fullMatch);
         }
-
-        renderTimeline(fullMatch);
-        renderLineups(fullMatch);
-        renderStats(fullMatch);
     } catch (e) {
         console.error(e);
     }
