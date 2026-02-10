@@ -283,16 +283,28 @@ export const renderMatches = () => {
  * Carga los contadores de mensajes para cada partido
  */
 export const loadMessageCounts = async () => {
-    const matches = state.matches;
+    const matches = getMatches();
+    if (!matches) return;
+
     matches.forEach(async m => {
         try {
-            const q = query(collection(db, "forum_messages"), where("context", "==", `match_${m.fixture.id} `));
+            const context = `match_${m.fixture.id}`;
+            const q = query(collection(db, "forum_messages"), where("context", "==", context));
             const snapshot = await getCountFromServer(q);
             const count = snapshot.data().count;
-            const el = document.getElementById(`msg - count - ${m.fixture.id} `);
-            if (el) el.innerText = count > 0 ? count : '';
+
+            const el = document.getElementById(`msg-count-${m.fixture.id}`);
+            if (el) {
+                if (count > 0) {
+                    el.innerText = count;
+                    el.classList.remove('hidden');
+                } else {
+                    el.innerText = '';
+                    el.classList.add('hidden');
+                }
+            }
         } catch (e) {
-            console.error(e);
+            console.error("Error loading msg count:", e);
         }
     });
 };
@@ -373,8 +385,8 @@ const renderFullCalendar = () => {
 
         const btn = document.createElement('button');
         btn.className = `p - 2 rounded text - sm font - bold transition - colors ${isSelected
-                ? 'bg-white text-black'
-                : (isToday ? 'text-yellow-500 hover:bg-[#222]' : 'text-gray-300 hover:bg-[#222]')
+            ? 'bg-white text-black'
+            : (isToday ? 'text-yellow-500 hover:bg-[#222]' : 'text-gray-300 hover:bg-[#222]')
             } `;
         btn.innerText = i;
         btn.onclick = () => {
