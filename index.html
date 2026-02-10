@@ -519,12 +519,23 @@
                     <div class="flex justify-between items-center mb-4">
                         <button onclick="app.changeMonth(-1)"
                             class="p-1 hover:text-white text-gray-400 hover:bg-[#222] rounded transition-colors">
-                            << /button>
-                                <span id="cal-month-year"
-                                    class="font-bold text-white text-sm uppercase tracking-widest font-sport">MES
-                                    AÑO</span>
-                                <button onclick="app.changeMonth(1)"
-                                    class="p-1 hover:text-white text-gray-400 hover:bg-[#222] rounded transition-colors">></button>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <span id="cal-month-year"
+                            class="font-bold text-white text-sm uppercase tracking-widest font-sport">MES
+                            AÑO</span>
+                        <button onclick="app.changeMonth(1)"
+                            class="p-1 hover:text-white text-gray-400 hover:bg-[#222] rounded transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
                     </div>
                     <div class="grid grid-cols-7 gap-1 text-center text-xs mb-2">
                         <span class="text-gray-500 font-bold">D</span>
