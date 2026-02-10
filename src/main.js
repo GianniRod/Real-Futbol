@@ -56,6 +56,10 @@ import {
     getCurrentUserRole,
     showProfileModal,
     closeProfileModal,
+    goToTeamSelection,
+    goBackToUsername,
+    filterTeams,
+    selectTeam,
     loginWithPhone,
     verifyPhoneCode,
     resendPhoneCode,
@@ -724,6 +728,13 @@ window.app = {
     handlePhoneLinking,
     handlePhoneLinkingVerification,
     closePhoneLinkingVerification,
+
+    // Team Selection
+    goToTeamSelection,
+    goBackToUsername,
+    filterTeams,
+    selectTeam,
+
     // Moderation
     openModerationPanel,
     closeModerationPanel,
