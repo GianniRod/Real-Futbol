@@ -575,9 +575,10 @@ export const showStandings = async (idOrParams, name) => {
 export const getStandingsState = () => state;
 
 /**
- * Renderiza la vista de Bracket para Copas (Versión Refinada)
+ * Renderiza la vista de Bracket para Copas (Versión Refinada con Agrupación de Ida y Vuelta)
  */
 const renderCupView = async (leagueId, season, container) => {
+
     container.innerHTML = `<div class="flex justify-center items-center h-96"><div class="loader"></div></div>`;
 
     try {
