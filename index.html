@@ -490,7 +490,7 @@
         <main class="flex-1 flex flex-col relative w-full lg:w-auto overflow-hidden bg-black">
 
             <!-- Date Navigation -->
-            <div id="date-nav" class="border-b border-[#222] p-3 z-10 bg-black/95 backdrop-blur shrink-0">
+            <div id="date-nav" class="border-b border-[#222] p-3 z-10 bg-black/95 backdrop-blur shrink-0 relative">
                 <div class="flex items-center justify-center gap-6 mb-3 max-w-lg mx-auto">
                     <button onclick="app.changeDate(-1)"
                         class="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded transition-colors"><svg
@@ -498,7 +498,7 @@
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg></button>
-                    <div class="text-center cursor-pointer" onclick="app.resetDate()">
+                    <div class="text-center cursor-pointer" onclick="app.toggleCalendar()">
                         <h2 id="current-month"
                             class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">MES</h2>
                         <div id="current-day-text" class="text-lg font-bold text-white leading-none font-sport">HOY
@@ -512,6 +512,39 @@
                         </svg></button>
                 </div>
                 <div id="calendar-days" class="flex justify-between max-w-lg mx-auto gap-1"></div>
+
+                <!-- Calendar Dropdown -->
+                <div id="calendar-dropdown"
+                    class="hidden absolute left-1/2 -translate-x-1/2 mt-4 bg-[#111] border border-[#333] rounded-lg p-4 shadow-2xl z-50 w-72 top-16">
+                    <div class="flex justify-between items-center mb-4">
+                        <button onclick="app.changeMonth(-1)"
+                            class="p-1 hover:text-white text-gray-400 hover:bg-[#222] rounded transition-colors">
+                            << /button>
+                                <span id="cal-month-year"
+                                    class="font-bold text-white text-sm uppercase tracking-widest font-sport">MES
+                                    AÑO</span>
+                                <button onclick="app.changeMonth(1)"
+                                    class="p-1 hover:text-white text-gray-400 hover:bg-[#222] rounded transition-colors">></button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+                        <span class="text-gray-500 font-bold">D</span>
+                        <span class="text-gray-500 font-bold">L</span>
+                        <span class="text-gray-500 font-bold">M</span>
+                        <span class="text-gray-500 font-bold">M</span>
+                        <span class="text-gray-500 font-bold">J</span>
+                        <span class="text-gray-500 font-bold">V</span>
+                        <span class="text-gray-500 font-bold">S</span>
+                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center text-xs">
+                        <!-- Days grid populated by JS -->
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-[#333] text-center">
+                        <button onclick="app.resetDate(); app.toggleCalendar()"
+                            class="text-[10px] text-yellow-500 hover:text-yellow-400 uppercase tracking-widest font-bold">
+                            Volver a Hoy
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Live Toggle (Desktop only) -->
                 <div class="hidden lg:flex items-center justify-center gap-3 mt-4 pt-3 border-t border-[#222]">
