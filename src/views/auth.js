@@ -39,6 +39,7 @@ import {
 
 import { getUserRole, DEVELOPER_UID } from './moderation.js';
 import { getUserStats, getTopUsers } from './user_stats.js';
+import { ARGENTINE_TEAMS } from '../data/teams.js';
 
 // State
 let currentUser = null;
@@ -46,6 +47,7 @@ let currentUserProfile = null;
 let currentUserRole = 'user'; // 'developer', 'moderator', or 'user'
 let isRoleLoaded = false;
 let roleReadyCallbacks = [];
+let selectedTeam = null; // { id, name, logo }
 
 // Phone Auth State
 let recaptchaVerifier = null;
@@ -94,9 +96,10 @@ const isUsernameAvailable = async (username) => {
  * @param {string} email - Email del usuario
  * @param {string} username - Username elegido
  * @param {string} photoURL - URL de la foto de perfil
+ * @param {object|null} team - Team data { id, name, logo }
  * @returns {Promise<boolean>} - Éxito o fallo
  */
-export const setUserUsername = async (uid, email, username, photoURL = '') => {
+export const setUserUsername = async (uid, email, username, photoURL = '', team = null) => {
     try {
         // Verificar si el username ya existe (solo si no es el mismo usuario actualizando)
         const existingProfile = await getUserProfile(uid);
@@ -116,23 +119,30 @@ export const setUserUsername = async (uid, email, username, photoURL = '') => {
             }
         }
 
-        const docRef = doc(db, "user_profiles", uid);
-        await setDoc(docRef, {
+        const profileData = {
             uid: uid,
             email: email,
             username: username,
             photoURL: photoURL,
             createdAt: existingProfile?.createdAt || Date.now()
-        });
+        };
+
+        // Add team data if provided (or keep existing)
+        if (team) {
+            profileData.teamId = team.id;
+            profileData.teamName = team.name;
+            profileData.teamLogo = team.logo;
+        } else if (existingProfile?.teamId) {
+            profileData.teamId = existingProfile.teamId;
+            profileData.teamName = existingProfile.teamName;
+            profileData.teamLogo = existingProfile.teamLogo;
+        }
+
+        const docRef = doc(db, "user_profiles", uid);
+        await setDoc(docRef, profileData);
 
         // Actualizar el perfil en memoria
-        currentUserProfile = {
-            uid,
-            email,
-            username,
-            photoURL,
-            createdAt: existingProfile?.createdAt || Date.now()
-        };
+        currentUserProfile = profileData;
 
         return true;
     } catch (error) {
@@ -286,7 +296,7 @@ const hideUsernameError = () => {
 };
 
 /**
- * Guarda el username establecido por el usuario
+ * Guarda el username y equipo establecidos por el usuario
  */
 export const saveUsername = async () => {
     // Limpiar errores previos
@@ -322,21 +332,143 @@ export const saveUsername = async () => {
         return;
     }
 
+    // Developer no necesita equipo
+    const isDeveloper = currentUser.uid === DEVELOPER_UID;
+
+    if (!isDeveloper && !selectedTeam) {
+        alert('Por favor elegí un equipo de fútbol');
+        return;
+    }
+
     const success = await setUserUsername(
         currentUser.uid,
         currentUser.email,
         username,
-        currentUser.photoURL || ''
+        currentUser.photoURL || '',
+        isDeveloper ? null : selectedTeam
     );
 
     if (success) {
-        // Cerrar modal
+        // Cerrar modal y resetear
         const modal = document.getElementById('username-modal');
         if (modal) modal.classList.add('hidden');
+        selectedTeam = null;
 
         // Actualizar UI
         updateAuthUI(currentUser, currentUserProfile);
     }
+};
+
+/**
+ * Navega del paso 1 (username) al paso 2 (equipo)
+ */
+export const goToTeamSelection = () => {
+    hideUsernameError();
+    const input = document.getElementById('username-input');
+    const username = input?.value.trim();
+
+    if (!username) {
+        showUsernameError('Por favor ingresa un nombre de usuario');
+        return;
+    }
+    if (username.length < 3) {
+        showUsernameError('El nombre de usuario debe tener al menos 3 caracteres');
+        return;
+    }
+    if (username.length > 20) {
+        showUsernameError('El nombre de usuario no puede tener más de 20 caracteres');
+        return;
+    }
+    const validUsernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!validUsernameRegex.test(username)) {
+        showUsernameError('Solo se permiten letras, números y guión bajo (_)');
+        return;
+    }
+
+    // Show step 2, hide step 1
+    document.getElementById('registration-step-1').classList.add('hidden');
+    document.getElementById('registration-step-2').classList.remove('hidden');
+
+    // Populate team grid
+    populateTeamGrid();
+};
+
+/**
+ * Vuelve del paso 2 al paso 1
+ */
+export const goBackToUsername = () => {
+    document.getElementById('registration-step-2').classList.add('hidden');
+    document.getElementById('registration-step-1').classList.remove('hidden');
+};
+
+/**
+ * Filtra equipos por búsqueda
+ */
+export const filterTeams = () => {
+    const searchInput = document.getElementById('team-search-input');
+    const query = searchInput?.value.trim().toLowerCase() || '';
+    populateTeamGrid(query);
+};
+
+/**
+ * Selecciona un equipo
+ */
+export const selectTeam = (teamId) => {
+    const team = ARGENTINE_TEAMS.find(t => t.id === teamId);
+    if (!team) return;
+
+    selectedTeam = team;
+
+    // Update indicator
+    const indicator = document.getElementById('selected-team-indicator');
+    const logoEl = document.getElementById('selected-team-logo');
+    const nameEl = document.getElementById('selected-team-name');
+    if (indicator && logoEl && nameEl) {
+        indicator.classList.remove('hidden');
+        logoEl.src = team.logo;
+        nameEl.textContent = team.name;
+    }
+
+    // Update grid highlights
+    document.querySelectorAll('#team-grid button').forEach(btn => {
+        const id = parseInt(btn.dataset.teamId);
+        if (id === teamId) {
+            btn.classList.add('border-yellow-500', 'bg-yellow-500/10');
+            btn.classList.remove('border-[#333]', 'hover:border-[#555]');
+        } else {
+            btn.classList.remove('border-yellow-500', 'bg-yellow-500/10');
+            btn.classList.add('border-[#333]', 'hover:border-[#555]');
+        }
+    });
+};
+
+/**
+ * Popula la grilla de equipos
+ */
+const populateTeamGrid = (searchQuery = '') => {
+    const grid = document.getElementById('team-grid');
+    if (!grid) return;
+
+    const filtered = searchQuery
+        ? ARGENTINE_TEAMS.filter(t => t.name.toLowerCase().includes(searchQuery))
+        : ARGENTINE_TEAMS;
+
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div class="col-span-4 text-center text-gray-500 text-xs py-4">No se encontraron equipos</div>';
+        return;
+    }
+
+    grid.innerHTML = filtered.map(team => {
+        const isSelected = selectedTeam?.id === team.id;
+        const borderClass = isSelected ? 'border-yellow-500 bg-yellow-500/10' : 'border-[#333] hover:border-[#555]';
+        return `
+            <button data-team-id="${team.id}" onclick="app.selectTeam(${team.id})"
+                class="flex flex-col items-center gap-1 p-2 rounded-lg border ${borderClass} bg-[#0a0a0a] transition-all cursor-pointer">
+                <img src="${team.logo}" class="w-8 h-8 object-contain" alt="${team.name}" loading="lazy">
+                <span class="text-[8px] text-gray-400 text-center leading-tight truncate w-full">${team.name}</span>
+            </button>
+        `;
+    }).join('');
 };
 
 /**
@@ -486,6 +618,9 @@ export const initAuth = () => {
             if (!profile || !profile.username) {
                 // No tiene username - mostrar modal
                 showUsernameModal(user);
+            } else if (!profile.teamId && user.uid !== DEVELOPER_UID) {
+                // Tiene username pero no eligió equipo - mostrar modal en step 2
+                showTeamSelectionOnly(user, profile);
             } else {
                 updateAuthUI(user, profile);
             }
