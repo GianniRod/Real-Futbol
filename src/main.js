@@ -100,6 +100,13 @@ import {
     sendSuggestion
 } from './views/suggestions.js';
 
+import {
+    setFeaturedMatch,
+    clearFeaturedMatch,
+    loadFeaturedMatch,
+    getFeaturedMatchId
+} from './views/featured_match.js';
+
 /**
  * Navega a la vista de partidos
  */
@@ -167,6 +174,28 @@ const openDetailWithTab = (id, tab) => {
     navigate(`/partido/${id}`);
     // Abrir con el tab específico (lo maneja openDetail internamente)
     openDetail({ id, tab });
+};
+
+/**
+ * Toggle featured match (solo para developer)
+ * @param {number} fixtureId - ID del partido
+ */
+const toggleFeaturedMatch = async (fixtureId) => {
+    const currentFeatured = await getFeaturedMatchId();
+    if (currentFeatured === fixtureId) {
+        // Quitar destacado
+        await clearFeaturedMatch();
+    } else {
+        // Buscar el match en la lista actual
+        const { getMatches } = await import('./views/matches.js');
+        const matches = getMatches();
+        const match = matches.find(m => m.fixture.id === fixtureId);
+        if (match) {
+            await setFeaturedMatch(fixtureId, match);
+        }
+    }
+    // Re-renderizar matches para actualizar botones estrella
+    renderMatches();
 };
 
 /**
@@ -595,6 +624,9 @@ const init = () => {
     // Inicializar matches (carga calendario y partidos)
     initMatches();
 
+    // Cargar partido destacado en sidebar
+    loadFeaturedMatch();
+
     // Setup del sidebar mobile
     const sidebar = document.getElementById('sidebar');
     const backdrop = document.getElementById('mobile-backdrop');
@@ -640,6 +672,10 @@ window.app = {
     openDetailWithTab,  // Nueva función para abrir con tab específico
     closeDetail,
     switchTab,
+
+    // Featured Match
+    toggleFeaturedMatch,
+    loadFeaturedMatch,
 
     // Standings
     showStandings,
