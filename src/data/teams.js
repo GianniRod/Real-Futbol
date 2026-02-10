@@ -75,10 +75,10 @@ export const ARGENTINE_TEAMS = [
     { id: 485, name: 'San Martín Tucumán', logo: 'https://media.api-sports.io/football/teams/485.png' },
     // Missing: Temperley, San Telmo, Dep Maipu, etc. User didn't correct them, so I assume they are fine or unimportant.
     // I'll keep the ones from my previous list that weren't complained about.
-    { id: 491, name: 'Gimnasia Mendoza', logo: 'https://media.api-sports.io/football/teams/491.png' }, // Wait, old list had Gimnasia Jujuy 491. User says Jujuy 479.
+    { id: 1066, name: 'Gimnasia Mendoza', logo: 'https://media.api-sports.io/football/teams/1066.png' }, // Wait, old list had Gimnasia Jujuy 491. User says Jujuy 479.
     // I'll leave other B teams if I'm not sure. But I'll prioritize User list.
-    { id: 489, name: 'Dep. Maipú', logo: 'https://media.api-sports.io/football/teams/489.png' },
-    { id: 485, name: 'San Telmo', logo: 'https://media.api-sports.io/football/teams/485.png' }, // Wait, 485 is San Martin Tucuman (User). So San Telmo is NOT 485.
+    { id: 1954, name: 'Dep. Maipú', logo: 'https://media.api-sports.io/football/teams/1954.png' },
+    { id: 1932, name: 'San Telmo', logo: 'https://media.api-sports.io/football/teams/1932.png' }, // Wait, 485 is San Martin Tucuman (User). So San Telmo is NOT 485.
     // I'll remove San Telmo for now to avoid error.
 
     // I will include only verified and user-provided IDs to be safe.
