@@ -104,6 +104,7 @@ import {
     setFeaturedMatch,
     clearFeaturedMatch,
     loadFeaturedMatch,
+    loadFeaturedMatchPicker,
     getFeaturedMatchId
 } from './views/featured_match.js';
 
@@ -177,25 +178,16 @@ const openDetailWithTab = (id, tab) => {
 };
 
 /**
- * Toggle featured match (solo para developer)
+ * Selecciona un partido como destacado desde el panel de moderación
  * @param {number} fixtureId - ID del partido
  */
-const toggleFeaturedMatch = async (fixtureId) => {
-    const currentFeatured = await getFeaturedMatchId();
-    if (currentFeatured === fixtureId) {
-        // Quitar destacado
-        await clearFeaturedMatch();
-    } else {
-        // Buscar el match en la lista actual
-        const { getMatches } = await import('./views/matches.js');
-        const matches = getMatches();
-        const match = matches.find(m => m.fixture.id === fixtureId);
-        if (match) {
-            await setFeaturedMatch(fixtureId, match);
-        }
+const selectFeaturedMatch = async (fixtureId) => {
+    const { getMatches } = await import('./views/matches.js');
+    const matches = getMatches();
+    const match = matches.find(m => m.fixture.id === fixtureId);
+    if (match) {
+        await setFeaturedMatch(fixtureId, match);
     }
-    // Re-renderizar matches para actualizar botones estrella
-    renderMatches();
 };
 
 /**
@@ -593,7 +585,7 @@ const closePhoneLinkingVerification = () => {
  */
 const switchModTab = (tabName) => {
     // Ocultar todos los contenidos
-    const contents = ['team', 'sanctions', 'badges'];
+    const contents = ['team', 'sanctions', 'badges', 'featured'];
     contents.forEach(name => {
         const content = document.getElementById(`mod-content-${name}`);
         const tab = document.getElementById(`mod-tab-${name}`);
@@ -611,6 +603,11 @@ const switchModTab = (tabName) => {
     if (selectedTab) {
         selectedTab.classList.remove('text-gray-500', 'border-transparent');
         selectedTab.classList.add('text-white', 'bg-[#1a1a1a]', 'border-orange-500');
+    }
+
+    // Si es el tab de destacado, cargar la lista de partidos
+    if (tabName === 'featured') {
+        loadFeaturedMatchPicker();
     }
 };
 
@@ -674,8 +671,10 @@ window.app = {
     switchTab,
 
     // Featured Match
-    toggleFeaturedMatch,
+    selectFeaturedMatch,
+    clearFeaturedMatch,
     loadFeaturedMatch,
+    loadFeaturedMatchPicker,
 
     // Standings
     showStandings,
