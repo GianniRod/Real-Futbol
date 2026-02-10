@@ -1076,6 +1076,10 @@ export const showProfileModal = async () => {
     // Cargar datos del usuario
     const profileAvatar = document.getElementById('profile-avatar');
     const profileUsername = document.getElementById('profile-username');
+    const profileTeamLogo = document.getElementById('profile-team-logo');
+    const profileTeamName = document.getElementById('profile-team-name');
+    const profileTeamContainer = document.getElementById('profile-team-container');
+
     const profileCommentCount = document.getElementById('profile-comment-count');
     const profileRanking = document.getElementById('profile-ranking');
     const linkPhoneSection = document.getElementById('link-phone-section');
@@ -1090,6 +1094,25 @@ export const showProfileModal = async () => {
 
     if (profileUsername) {
         profileUsername.textContent = currentUserProfile.username;
+    }
+
+    // Equipo y opción de cambio
+    if (profileTeamContainer) {
+        if (currentUserProfile.teamLogo) {
+            if (profileTeamLogo) {
+                profileTeamLogo.src = currentUserProfile.teamLogo;
+                profileTeamLogo.classList.remove('hidden');
+            }
+            if (profileTeamName) profileTeamName.textContent = currentUserProfile.teamName || 'Equipo';
+        } else {
+            if (profileTeamLogo) profileTeamLogo.classList.add('hidden');
+            if (profileTeamName) profileTeamName.textContent = 'Seleccionar Equipo';
+        }
+
+        profileTeamContainer.onclick = () => {
+            closeProfileModal();
+            showTeamSelectionOnly(currentUser, currentUserProfile);
+        };
     }
 
     // Mostrar/ocultar sección de vincular teléfono según el proveedor
