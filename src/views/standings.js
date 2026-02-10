@@ -603,151 +603,140 @@ const renderCupView = async (leagueId, season, container) => {
             }
         });
 
-        // Group matches into Tie Objects (Arrays of matches)
         const ties = {};
         Object.keys(grouped).forEach(k => {
             const matches = grouped[k];
             const roundTies = {};
-
             matches.forEach(m => {
                 const teamIds = [m.teams.home.id, m.teams.away.id].sort().join('-');
                 if (!roundTies[teamIds]) roundTies[teamIds] = [];
                 roundTies[teamIds].push(m);
             });
-
-            // Sort matches within each tie by date
             Object.values(roundTies).forEach(tieMatches => {
                 tieMatches.sort((a, b) => a.fixture.timestamp - b.fixture.timestamp);
             });
-
             ties[k] = Object.values(roundTies);
         });
 
-        // 2. Helper to find "feeder" ties
+        // 2. Helpers
         const findFeederTies = (currentTieMatches, previousRoundTies) => {
             if (!previousRoundTies) return [];
-
-            // Get teams in current tie
             const teamIds = new Set();
-            currentTieMatches.forEach(m => {
-                teamIds.add(m.teams.home.id);
-                teamIds.add(m.teams.away.id);
-            });
-
-            // Find previous ties that contain these teams
-            // We expect exactly 2 feeders (one for each team that advanced)
+            currentTieMatches.forEach(m => { teamIds.add(m.teams.home.id); teamIds.add(m.teams.away.id); });
             const feeders = [];
-            const teamsArray = Array.from(teamIds);
-
-            teamsArray.forEach(tid => {
+            Array.from(teamIds).forEach(tid => {
                 const matchVal = previousRoundTies.find(tieMatches =>
                     tieMatches.some(m => m.teams.home.id === tid || m.teams.away.id === tid)
                 );
-                if (matchVal && !feeders.includes(matchVal)) {
-                    feeders.push(matchVal);
-                }
+                if (matchVal && !feeders.includes(matchVal)) feeders.push(matchVal);
             });
-
             return feeders;
         };
 
-        // 3. Render Card Component (Handles 1 or 2 matches)
+        const getTieHeight = (tie) => {
+            // Base height + padding. Single: ~80px. Double: ~120px?
+            // Let's force consistent height classes.
+            return (tie && tie.length > 1) ? 120 : 80; // px approximation for alignment
+        }
+
+        // 3. Render Card
         const renderTieCard = (tieMatches) => {
+            const hClass = (tieMatches && tieMatches.length > 1) ? 'h-[120px]' : 'h-[80px]';
+
             if (!tieMatches || tieMatches.length === 0)
-                return `<div class="w-60 h-[70px] bg-[#0a0a0a] border border-[#222] rounded flex items-center justify-center text-gray-700 text-xs">TBD</div>`;
+                return `<div class="w-60 ${hClass} bg-[#0a0a0a] border border-[#222] rounded flex items-center justify-center text-gray-700 text-xs">TBD</div>`;
 
             const isMulti = tieMatches.length > 1;
-
-            // Calculate Aggregate Score if multi
-            let homeAgg = 0, awayAgg = 0;
-            // Identify primary teams (to consistently show Home/Away across legs)
-            // Tie key is sorted IDs, so we can use that order or just pick first match layout.
-            // But headers "Ida" and "Vuelta" imply order.
-
             let content = '';
 
             tieMatches.forEach((m, idx) => {
                 const isFin = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
                 const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(m.fixture.status.short);
+                // Label: For Multi, IDA/VUELTA. For single, Date or FINAL.
+                // Improvement: If single match (Final), don't show "IDA".
                 const label = isMulti ? (idx === 0 ? 'IDA' : 'VUELTA') : (isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleDateString());
 
                 const homeWin = isFin && ((m.goals.home > m.goals.away) || (m.score.penalty.home > m.score.penalty.away));
                 const awayWin = isFin && ((m.goals.away > m.goals.home) || (m.score.penalty.away > m.score.penalty.home));
 
                 content += `
-                    <div class="flex flex-col gap-1 w-full ${idx > 0 ? 'pt-2 border-t border-[#222] mt-1' : ''} relative">
+                    <div class="flex flex-col gap-0.5 w-full ${idx > 0 ? 'pt-1.5 border-t border-[#222] mt-1' : ''} relative justify-center flex-1">
                         ${isLive ? '<div class="absolute -top-1 -right-1 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>' : ''}
-                        
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-2 min-w-0">
                                 <img src="${m.teams.home.logo}" class="w-4 h-4 object-contain shrink-0">
-                                <span class="text-[10px] ${homeWin ? 'text-white' : 'text-gray-500'} font-bold uppercase truncate">${m.teams.home.name}</span>
+                                <span class="text-[10px] ${homeWin ? 'text-white' : 'text-gray-500'} font-bold uppercase truncate leading-none">${m.teams.home.name}</span>
                             </div>
                             <div class="flex items-center gap-1 shrink-0">
-                                <span class="font-bold text-white text-[10px]">${m.goals.home ?? '-'}</span>
+                                <span class="font-bold text-white text-[10px] leading-none">${m.goals.home ?? '-'}</span>
                                 ${m.score.penalty.home ? `<span class="text-[9px] text-gray-600 ml-1">(${m.score.penalty.home})</span>` : ''}
                             </div>
                         </div>
-                        
                         <div class="flex justify-between items-center">
                              <div class="flex items-center gap-2 min-w-0">
                                 <img src="${m.teams.away.logo}" class="w-4 h-4 object-contain shrink-0">
-                                <span class="text-[10px] ${awayWin ? 'text-white' : 'text-gray-500'} font-bold uppercase truncate">${m.teams.away.name}</span>
+                                <span class="text-[10px] ${awayWin ? 'text-white' : 'text-gray-500'} font-bold uppercase truncate leading-none">${m.teams.away.name}</span>
                             </div>
                             <div class="flex items-center gap-1 shrink-0">
-                                <span class="font-bold text-white text-[10px]">${m.goals.away ?? '-'}</span>
+                                <span class="font-bold text-white text-[10px] leading-none">${m.goals.away ?? '-'}</span>
                                 ${m.score.penalty.away ? `<span class="text-[9px] text-gray-600 ml-1">(${m.score.penalty.away})</span>` : ''}
                             </div>
                         </div>
-                        
-                         <div class="text-[8px] text-gray-700 text-center uppercase font-mono tracking-wider">${label}</div>
+                         <div class="text-[8px] text-gray-700 text-center uppercase font-mono tracking-wider pt-0.5 leading-none">${label}</div>
                     </div>
                 `;
             });
 
             return `
-                <div class="w-60 bg-[#111] border border-[#222] rounded p-3 flex flex-col hover:border-gray-600 transition-colors cursor-pointer shadow-lg z-10 relative" onclick="app.navigate('/partido/${tieMatches[tieMatches.length - 1].fixture.id}')">
+                <div class="w-60 ${hClass} bg-[#111] border border-[#222] rounded-lg p-3 flex flex-col hover:border-gray-600 transition-colors cursor-pointer shadow-lg z-10 relative justify-center" onclick="app.navigate('/partido/${tieMatches[tieMatches.length - 1].fixture.id}')">
                    ${content}
                 </div>
             `;
         };
 
-        // 4. Recursive Tree Renderer with Flex Fork
+        // 4. Recursive Tree Renderer with Centered Forks
         const renderTree = (tie, roundIndex) => {
-            const prevRoundName = roundOrder[roundIndex - 1]; // e.g. Semi -> Quarter
+            const prevRoundName = roundOrder[roundIndex - 1];
+            if (roundIndex === 0 || !ties[prevRoundName]) return renderTieCard(tie);
 
-            // Base Case
-            if (roundIndex === 0 || !ties[prevRoundName]) {
-                return renderTieCard(tie);
-            }
-
-            // Find feeders
             const feeders = findFeederTies(tie, ties[prevRoundName]);
+            if (feeders.length === 0) return renderTieCard(tie);
 
-            if (feeders.length === 0) {
-                return renderTieCard(tie);
-            }
-
-            // Flex Fork Structure:
-            // [Children Column] [Fork Column] [Horizontal Link] [Parent]
+            // Calculate halves for alignment (approximate center of cards)
+            const h1 = getTieHeight(feeders[0]);
+            const h2 = getTieHeight(feeders[1] || null);
+            const half1 = h1 / 2;
+            const half2 = h2 / 2;
 
             return `
                 <div class="flex items-center">
                     <!-- Children Column -->
-                    <div class="flex flex-col justify-center gap-8 mr-0"> 
+                    <div class="flex flex-col justify-center gap-10 mr-0"> 
                         ${renderTree(feeders[0], roundIndex - 1)}
                         ${renderTree(feeders[1] || null, roundIndex - 1)}
                     </div>
                     
-                    <!-- Fork Column (Self stretching based on child height) -->
-                    <div class="flex flex-col w-6 self-stretch">
-                        <div class="flex-1 border-b border-r border-[#444] rounded-br"></div>
-                        <div class="flex-1 border-t border-r border-[#444] rounded-tr"></div>
+                    <!-- Fork Column -->
+                    <div class="flex flex-col w-8 self-stretch relative">
+                        <!-- Top Spacer -->
+                        <div style="height: ${half1}px;" class="w-full"></div>
+                        
+                        <!-- Bracket Top Half -->
+                        <div class="flex-1 w-full border-t-2 border-r-2 border-[#444] rounded-tr-xl"></div>
+                        
+                        <!-- Parent Link (Horizontal Line from vertical center to parent) -->
+                        <div class="absolute top-1/2 right-0 w-4 h-0.5 bg-[#444] translate-x-full"></div>
+
+                        <!-- Bracket Bottom Half -->
+                        <div class="flex-1 w-full border-b-2 border-r-2 border-[#444] rounded-br-xl"></div>
+
+                        <!-- Bottom Spacer -->
+                        <div style="height: ${half2}px;" class="w-full"></div>
                     </div>
                     
-                    <!-- Horizontal Link -->
-                    <div class="w-4 h-px bg-[#444]"></div>
-                    
+                    <!-- Spacer for Link -->
+                    <div class="w-8"></div> 
+
                     <!-- Parent Match -->
                     <div>
                         ${renderTieCard(tie)}
@@ -758,26 +747,21 @@ const renderCupView = async (leagueId, season, container) => {
 
         // 5. Build HTML
         let finalTies = ties['Final'];
-
-        // Fallback if no final
         if (!finalTies || finalTies.length === 0) {
             const lastRound = [...roundOrder].reverse().find(r => ties[r] && ties[r].length > 0);
             if (lastRound) finalTies = ties[lastRound];
         }
 
         let html = `<div class="p-8 overflow-x-auto min-h-[600px] bg-[#050505] rounded-xl border border-[#222]">`;
-
-        // Headers
-        html += `<div class="flex justify-between min-w-[1000px] mb-8 px-10 border-b border-[#222] pb-2 text-center">
-                    ${roundOrder.map(r => `<div class="font-bold text-gray-500 uppercase tracking-widest text-[10px] w-60">${displayRounds[r]}</div>`).join('')}
+        html += `<div class="flex justify-between min-w-[1000px] mb-12 px-10 border-b border-[#222] pb-4 text-center">
+                    ${roundOrder.map(r => `<div class="font-bold text-gray-500 uppercase tracking-widest text-xs w-60">${displayRounds[r]}</div>`).join('')}
                  </div>`;
 
         html += `<div class="flex justify-end min-w-[1000px] pr-10">`;
 
         if (finalTies && finalTies.length > 0) {
-            html += `<div class="flex flex-col gap-16">`;
+            html += `<div class="flex flex-col gap-20">`;
             finalTies.forEach(finalTie => {
-                // Identify round index for this tie
                 const rRound = finalTie[0].league.round;
                 const rIdx = roundOrder.findIndex(ro => rRound.includes(ro));
                 html += renderTree(finalTie, rIdx !== -1 ? rIdx : 3);
@@ -795,4 +779,5 @@ const renderCupView = async (leagueId, season, container) => {
         container.innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar el cuadro.</div>`;
     }
 };
+
 
