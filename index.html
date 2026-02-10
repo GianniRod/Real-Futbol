@@ -1563,6 +1563,10 @@
                     class="flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-white transition-colors border-b-2 border-transparent">
                     Insignias
                 </button>
+                <button onclick="app.switchModTab('featured')" id="mod-tab-featured"
+                    class="flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-white transition-colors border-b-2 border-transparent">
+                    ⭐ Destacado
+                </button>
             </div>
 
             <!-- Tab Content -->
@@ -1669,6 +1673,32 @@
                         <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios con Insignia</h4>
                         <div id="first-users-list" class="space-y-2 max-h-48 overflow-y-auto">
                             <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Partido Destacado -->
+                <div id="mod-content-featured" class="space-y-4 hidden">
+                    <div class="space-y-2">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                            ⭐ Partido Destacado del Día
+                        </h4>
+                        <p class="text-gray-400 text-xs">Seleccioná un partido de hoy para mostrarlo en el sidebar
+                            derecho.</p>
+                    </div>
+                    <!-- Partido actualmente destacado -->
+                    <div id="featured-match-current" class="hidden">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider mb-2">Actualmente Destacado
+                        </h4>
+                        <div id="featured-match-current-info"
+                            class="bg-[#0a0a0a] border border-yellow-500/30 rounded p-3 flex items-center justify-between">
+                        </div>
+                    </div>
+                    <!-- Lista de partidos de hoy -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Partidos de Hoy</h4>
+                        <div id="featured-match-picker" class="space-y-1.5 max-h-60 overflow-y-auto">
+                            <div class="text-gray-500 text-xs text-center py-4">Cargando partidos...</div>
                         </div>
                     </div>
                 </div>
