@@ -736,29 +736,8 @@ window.app = {
     selectTeam,
 
     // Debug
-    debugTeams: async () => {
-        try {
-            console.log('Fetching teams...');
-            const { fetchAPI } = await import('./core/api.js');
-            // Liga Profesional
-            const resp1 = await fetchAPI('/teams?league=128&season=2024');
-            // Primera Nacional
-            const resp2 = await fetchAPI('/teams?league=129&season=2024');
-
-            const teams = [...(resp1.response || []), ...(resp2.response || [])];
-
-            const simplified = teams.map(t => ({
-                id: t.team.id,
-                name: t.team.name,
-                logo: t.team.logo
-            })).sort((a, b) => a.name.localeCompare(b.name));
-
-            console.log(JSON.stringify(simplified, null, 2));
-            alert('Equipos mostrados en consola. Por favor copia el resultado y envíalo.');
-        } catch (e) {
-            console.error(e);
-            alert('Error fetching teams: ' + e.message);
-        }
+    debugTeams: () => {
+        alert('Debug disabled to save API usage.');
     },
 
     // Moderation
