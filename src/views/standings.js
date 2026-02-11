@@ -335,9 +335,62 @@ export const renderTable = (groupIndex) => {
             ? (t.all.played > 0 ? (t.points / t.all.played).toFixed(3) : '0.000')
             : t.points;
 
+        // --- INDICATOR COLOR LOGIC ---
+        let indicatorClass = '';
+        const leagueId = state.selectedLeague ? parseInt(state.selectedLeague.id) : 0;
+        const rank = t.rank;
+        const totalTeams = table.length;
+        const group = t.group || '';
+
+        // BRASILEIRAO (71)
+        if (leagueId === 71) {
+            if (rank >= 1 && rank <= 4) indicatorClass = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]'; // Lib
+            else if (rank === 5) indicatorClass = 'bg-yellow-500'; // Repechaje Lib
+            else if (rank >= 6 && rank <= 11) indicatorClass = 'bg-blue-600'; // Sudamericana
+            else if (rank >= 17) indicatorClass = 'bg-red-600'; // Descenso (User said 18-20, usually 17-20 is 4 teams)
+        }
+        // ARGENTINA (128)
+        else if (leagueId === 128) {
+            if (group.includes('Group') || group.includes('ZONA')) {
+                if (rank <= 4) indicatorClass = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]';
+            } else if (isPromedios) {
+                if (rank === totalTeams) indicatorClass = 'bg-red-600';
+            } else {
+                // Annual Table
+                if (rank === 1) indicatorClass = 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]'; // Campeon/Lib
+                else if (rank >= 2 && rank <= 3) indicatorClass = 'bg-green-500'; // Lib
+                else if (rank >= 4 && rank <= 9) indicatorClass = 'bg-blue-600'; // Sudamericana
+                else if (rank === totalTeams) indicatorClass = 'bg-red-600'; // Descenso
+            }
+        }
+        // PREMIER LEAGUE (39)
+        else if (leagueId === 39) {
+            if (rank <= 4) indicatorClass = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]';
+            else if (rank === 5) indicatorClass = 'bg-blue-600';
+            else if (rank >= 18) indicatorClass = 'bg-red-600';
+        }
+        // LA LIGA (140)
+        else if (leagueId === 140) {
+            if (rank <= 4) indicatorClass = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]';
+            else if (rank === 5) indicatorClass = 'bg-blue-600';
+            else if (rank === 6) indicatorClass = 'bg-cyan-500';
+            else if (rank >= 18) indicatorClass = 'bg-red-600';
+        }
+        // BUNDESLIGA (78)
+        else if (leagueId === 78) {
+            if (rank <= 4) indicatorClass = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]';
+            else if (rank === 5) indicatorClass = 'bg-blue-600';
+            else if (rank === 6) indicatorClass = 'bg-cyan-500';
+            else if (rank === 16) indicatorClass = 'bg-yellow-500'; // Repechaje
+            else if (rank >= 17) indicatorClass = 'bg-red-600';
+        }
+
         return `
-                            <tr class="hover:bg-[#111] transition-colors">
-                                <td class="px-2 py-2 md:px-3 md:py-3 text-center font-bold ${t.rank <= 4 ? 'text-white' : 'text-gray-600'} border-r border-[#222] text-[10px] md:text-xs">${t.rank}</td>
+                            <tr class="hover:bg-[#111] transition-colors relative">
+                                <td class="px-2 py-2 md:px-3 md:py-3 text-center font-bold ${t.rank <= 4 ? 'text-white' : 'text-gray-600'} border-r border-[#222] text-[10px] md:text-xs relative">
+                                    ${indicatorClass ? `<div class="absolute left-0 top-2 bottom-2 w-[3px] ${indicatorClass} rounded-r"></div>` : ''}
+                                    ${t.rank}
+                                </td>
                                 <td class="px-2 py-2 md:px-3 md:py-3 font-bold text-gray-300 flex items-center gap-2 md:gap-3 whitespace-nowrap uppercase text-[10px] md:text-xs">
                                     <img src="${t.team.logo}" class="w-4 h-4 md:w-6 md:h-6 object-contain">
                                     ${t.team.name}
