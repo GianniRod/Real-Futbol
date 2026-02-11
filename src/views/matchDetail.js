@@ -684,7 +684,20 @@ export const openDetail = async (params) => {
 
     const matches = getMatches();
 
-    const m = matches.find(x => String(x.fixture.id) === String(id));
+    let m = matches.find(x => String(x.fixture.id) === String(id));
+
+    // Si no está en el state local (ej: partido de otra fecha desde el calendario de standings),
+    // buscarlo directamente en la API
+    if (!m) {
+        try {
+            const data = await fetchAPI(`/fixtures?id=${id}`, true);
+            if (data.response && data.response.length > 0) {
+                m = data.response[0];
+            }
+        } catch (e) {
+            console.error('Error fetching match:', e);
+        }
+    }
 
     if (!m) {
         console.warn('Match not found:', id);
