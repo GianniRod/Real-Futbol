@@ -98,7 +98,7 @@
             border: 1px solid #333;
             position: relative;
             width: 100%;
-            aspect-ratio: 7 / 5;
+            aspect-ratio: 7 / 9;
             border-radius: 0 !important;
             overflow: hidden;
         }
@@ -106,7 +106,7 @@
         /* Cancha vertical en móvil */
         @media (max-width: 768px) {
             .football-pitch {
-                aspect-ratio: 2 / 3;
+                aspect-ratio: 2 / 3.5;
             }
 
             /* Línea central horizontal en móvil */
@@ -190,8 +190,8 @@
         /* Marcadores Jugadores - Círculos con caras */
         .player-marker {
             position: absolute;
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -280,14 +280,30 @@
         }
 
         .player-event-icon {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
             background: rgba(17, 17, 17, 0.9);
             border: 1px solid #444;
+        }
+
+        .player-event-sub-out-container {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            padding: 1px 4px 1px 1px;
+        }
+
+        .player-event-sub-out-container .sub-minute {
+            font-size: 8px;
+            font-weight: bold;
+            color: #EF4444;
+            font-family: monospace;
         }
 
         .player-event-sub-out {
@@ -323,8 +339,8 @@
 
         @media (max-width: 768px) {
             .player-marker {
-                width: 28px;
-                height: 28px;
+                width: 32px;
+                height: 32px;
             }
 
             .player-rating-badge {
@@ -336,7 +352,7 @@
 
             .player-name-label {
                 font-size: 6px;
-                bottom: -12px;
+                bottom: -14px;
             }
 
             .player-marker:has(.player-events-container) .player-name-label {
@@ -1005,15 +1021,17 @@
                                         <div class="corner-arc corner-bottom-left"></div>
                                         <div class="corner-arc corner-bottom-right"></div>
                                     </div>
-                                    <div class="grid grid-cols-2 gap-4 mt-6">
-                                        <div class="bg-[#111] p-4 rounded border border-[#222]">
+                                    <div class="grid grid-cols-2 gap-4 mt-6" id="lineup-lists-grid">
+                                        <div class="bg-[#111] p-4 rounded border border-[#222] overflow-y-auto"
+                                            style="max-height: 600px;">
                                             <h4
                                                 class="text-white font-bold border-b border-[#333] pb-2 mb-2 text-xs uppercase tracking-wider">
                                                 Local</h4>
                                             <div id="lineup-home-list"
                                                 class="space-y-2 text-xs text-gray-400 font-mono"></div>
                                         </div>
-                                        <div class="bg-[#111] p-4 rounded border border-[#222]">
+                                        <div class="bg-[#111] p-4 rounded border border-[#222] overflow-y-auto"
+                                            style="max-height: 600px;">
                                             <h4
                                                 class="text-white font-bold border-b border-[#333] pb-2 mb-2 text-right text-xs uppercase tracking-wider">
                                                 Visitante</h4>
