@@ -86,10 +86,13 @@ export const initForum = (context, containerId, usernameInputId) => {
             console.warn('Could not load first_users:', e);
         }
 
-        container.innerHTML = messagesData.map(msg => {
+        container.innerHTML = messagesData.map((msg, index) => {
             // Comparar por userId en lugar de username de localStorage
             const isMe = currentUserId && msg.userId === currentUserId;
             const date = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+            // Ver si es el mismo usuario que el anterior
+            const isSameUser = index > 0 && messagesData[index - 1].userId === msg.userId;
 
             // Badge según role del autor y badges especiales
             let badge = '';
@@ -104,33 +107,41 @@ export const initForum = (context, containerId, usernameInputId) => {
                 badge += '<span class="ml-2 px-2 py-0.5 bg-gradient-to-r from-cyan-400 to-sky-500 text-black text-[9px] font-black uppercase rounded">PRIMER USUARIO</span>';
             }
 
+            // Header content (only show if not same user)
+            const headerHtml = !isSameUser ? `
+                <div class="flex items-center gap-2 mb-1 px-1 ${isMe ? 'flex-row-reverse' : ''}">
+                    <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wide">${msg.user}</span>
+                    ${badge}
+                    <span class="font-normal text-[#444] text-[10px] whitespace-nowrap">${date}</span>
+                    ${canDelete ? `
+                        <button onclick="app.deleteMessage('${msg.id}'); event.stopPropagation();" 
+                            class="lg:hidden text-red-500 hover:text-red-400 p-1 transition-colors"
+                            title="Borrar mensaje">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    ` : ''}
+                </div>
+            ` : '';
+
+            // Logo content (invisible if same user to keep alignment)
+            const logoVisibilityClass = isSameUser ? 'invisible' : '';
+
             return `
-                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-4 animate-fade-in group relative message-container" 
+                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} ${isSameUser ? 'mb-1' : 'mb-4'} animate-fade-in group relative message-container" 
                      data-message-id="${msg.id}"
                      data-message-user="${msg.user.replace(/"/g, '&quot;')}"
                      data-message-text="${msg.text.substring(0, 100).replace(/"/g, '&quot;').replace(/\n/g, ' ')}">
                     
                     <!-- Header Row -->
-                    <div class="flex items-center gap-2 mb-1 px-1 ${isMe ? 'flex-row-reverse' : ''}">
-                        <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wide">${msg.user}</span>
-                        ${badge}
-                        <span class="font-normal text-[#444] text-[10px] whitespace-nowrap">${date}</span>
-                        ${canDelete ? `
-                            <button onclick="app.deleteMessage('${msg.id}'); event.stopPropagation();" 
-                                class="lg:hidden text-red-500 hover:text-red-400 p-1 transition-colors"
-                                title="Borrar mensaje">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        ` : ''}
-                    </div>
+                    ${headerHtml}
 
                     <!-- Body Row -->
                     <div class="flex items-start gap-2 ${isMe ? 'flex-row-reverse' : ''} max-w-[95%] lg:max-w-[85%]">
                         <!-- Team Logo -->
-                        <div class="shrink-0 mt-0.5">
-                            <div class="w-10 h-10 flex items-center justify-center">
+                        <div class="shrink-0 mt-0.5 ${logoVisibilityClass}">
+                            <div class="w-8 h-8 flex items-center justify-center">
                                 ${msg.userTeamLogo
                     ? `<img src="${msg.userTeamLogo}" class="w-full h-full object-contain filter drop-shadow-sm" alt="Team">`
                     : '<span class="text-xs">⚽</span>'}
