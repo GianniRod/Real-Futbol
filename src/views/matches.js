@@ -200,7 +200,7 @@ export const renderMatches = () => {
             const timeDisplay = isLive
                 ? (s.short === 'P' ? '<span class="text-red-500 font-bold animate-pulse text-xs">PEN</span>' : `<span class="text-white font-bold animate-pulse text-xs">${s.elapsed ?? ''}'</span>`)
                 : (isHT ? '<span class="text-white font-bold text-xs">ET</span>'
-                    : (isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })));
+                    : (isFin ? '' : new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })));
 
             let homeOpacity = 'opacity-100';
             let awayOpacity = 'opacity-100';
@@ -228,9 +228,26 @@ export const renderMatches = () => {
             const isLast = index === g.matches.length - 1;
             const borderClass = isLast ? '' : 'border-b border-[#222]';
 
+            // Aggregate Score Logic
+            let aggHtml = '';
+            // Attempt to show aggregate if available in API response
+            if (m.score && m.score.aggregate && (m.score.aggregate.home != null || m.score.aggregate.away != null)) {
+                aggHtml = `<div class="text-[10px] text-gray-500 font-mono mt-0.5">(${m.score.aggregate.home}-${m.score.aggregate.away})</div>`;
+            }
+
             html += `
-        <div class="p-4 match-card ${clickableClass} relative hover:bg-[#111] transition-colors ${borderClass}" ${clickAttr}>
+        <div class="p-4 match-card ${clickableClass} relative hover:bg-[#111] transition-colors ${borderClass} pr-14" ${clickAttr}>
             ${isLive ? '<div class="absolute top-3 right-3 flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div><span class="text-[9px] font-bold text-red-500 uppercase tracking-widest">EN VIVO</span></div>' : ''}
+
+            <!-- Forum/Chat Button (Absolute Right) -->
+            <div class="absolute right-4 top-1/2 -translate-y-1/2 z-20" onclick="app.openDetailWithTab(${m.fixture.id}, 'forum'); event.stopPropagation(); event.preventDefault();">
+                <div class="w-8 h-8 rounded-full bg-[#161616] border border-[#333] flex items-center justify-center hover:bg-[#222] hover:border-gray-500 transition-colors group/chat relative shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 group-hover/chat:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span id="msg-count-${m.fixture.id}" class="hidden absolute -top-1 -right-1 bg-blue-600 text-[8px] font-bold text-white px-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full border border-[#111]"></span>
+                </div>
+            </div>
 
             <div class="flex items-center justify-between">
                 <!-- HOME TEAM -->
@@ -259,11 +276,8 @@ export const renderMatches = () => {
                                    ${(m.score?.penalty?.away != null) ? `<span class="text-xs text-gray-400 font-bold mt-1">(${m.score.penalty.away})</span>` : ''}
                                    </div>`
                 }
-                    <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap">${isLive || isHT || isFin ? timeDisplay : ''}</span>
-                    <div class="mt-1 px-1.5 py-0.5 bg-[#111] hover:bg-[#222] border border-[#222] rounded flex items-center gap-1 transition-colors cursor-pointer" onclick="app.openDetailWithTab(${m.fixture.id}, 'forum'); event.stopPropagation(); event.preventDefault();">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                        <span id="msg-count-${m.fixture.id}" class="text-[8px] font-bold text-gray-500 font-mono">...</span>
-                    </div>
+                    <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap min-h-[14px]">${isLive || isHT || isFin ? timeDisplay : ''}</span>
+                    ${aggHtml}
                 </div>
 
                 <!-- AWAY TEAM -->
