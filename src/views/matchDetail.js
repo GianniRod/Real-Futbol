@@ -301,6 +301,22 @@ const renderLineups = (m) => {
 
     const idsMatch = (id1, id2) => String(id1) === String(id2);
 
+    // Helper to build a player face thumbnail for the list
+    const buildListFace = (playerId) => {
+        const pStats = playerStatsMap[String(playerId)] || {};
+        const photo = pStats.photo || `https://media.api-sports.io/football/players/${playerId}.png`;
+        const rating = pStats.rating;
+        let borderColor = '#555';
+        let ratingHtml = '';
+        if (rating !== null && rating !== undefined) {
+            const colors = getRatingColors(rating);
+            borderColor = colors.border;
+            ratingHtml = `<span class="text-[9px] font-bold ml-auto px-1.5 py-0.5 rounded" style="background:${colors.bg}; color:${colors.text}">${rating.toFixed(1).replace('.', ',')}</span>`;
+        }
+        const faceHtml = `<div class="w-7 h-7 rounded-full overflow-hidden border-2 shrink-0" style="border-color:${borderColor}; background:#222;"><img src="${photo}" class="w-full h-full object-cover" onerror="this.style.display='none'"/></div>`;
+        return { faceHtml, ratingHtml };
+    };
+
     const renderList = (lineup) => {
         let html = lineup.startXI.map(p => {
             const subOut = events.find(e => {
@@ -308,10 +324,13 @@ const renderLineups = (m) => {
                 return (eventType === 'subst' || eventType === 'substitution') && e.assist && idsMatch(e.assist.id, p.player.id);
             });
             const subInfo = subOut ? `<span class="text-red-400 text-[10px] ml-2 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
+            const { faceHtml, ratingHtml } = buildListFace(p.player.id);
 
-            return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
-                <div class="flex items-center gap-2"><span class="text-gray-300 transition-colors">${p.player.name}</span>${subInfo}</div>
-                <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
+            return `<div class="flex items-center gap-2 border-b border-[#222] py-1.5">
+                ${faceHtml}
+                <span class="text-gray-300 transition-colors text-sm">${p.player.name}</span>${subInfo}
+                ${ratingHtml}
+                <span class="text-gray-600 font-mono text-xs ml-auto">${p.player.number}</span>
             </div>`;
         }).join('');
 
@@ -323,10 +342,13 @@ const renderLineups = (m) => {
                     return (eventType === 'subst' || eventType === 'substitution') && e.player && idsMatch(e.player.id, p.player.id);
                 });
                 const subInfo = subIn ? `<span class="text-green-400 text-[10px] ml-2 font-bold">▲ ${subIn.time.elapsed}'</span>` : '';
+                const { faceHtml, ratingHtml } = buildListFace(p.player.id);
 
-                return `<div class="flex justify-between border-b border-[#222] py-1.5 items-center">
-                    <div class="flex items-center gap-2"><span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}</div>
-                    <span class="text-gray-600 font-mono text-xs">${p.player.number}</span>
+                return `<div class="flex items-center gap-2 border-b border-[#222] py-1.5">
+                    ${faceHtml}
+                    <span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}
+                    ${ratingHtml}
+                    <span class="text-gray-600 font-mono text-xs ml-auto">${p.player.number}</span>
                 </div>`;
             }).join('');
         }
@@ -627,6 +649,12 @@ export const openDetail = async (params) => {
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-forum').classList.add('hidden');
 
+    // Ocultar sidebar derecha (comunidad) para dar más espacio al detalle
+    const rightSidebar = document.getElementById('right-sidebar');
+    if (rightSidebar) {
+        rightSidebar.style.display = 'none';
+    }
+
     // Ocultar fecha en mobile (en desktop ya está en sidebar/header o no molesta)
     const dateNav = document.getElementById('date-nav');
     if (dateNav) {
@@ -850,6 +878,12 @@ export const closeDetail = () => {
     const bottomNav = document.querySelector('nav.fixed.bottom-0');
     if (bottomNav) {
         bottomNav.style.display = '';
+    }
+
+    // Restaurar sidebar derecha (comunidad)
+    const rightSidebar = document.getElementById('right-sidebar');
+    if (rightSidebar) {
+        rightSidebar.style.display = '';
     }
 
     // Navegar de vuelta a matches
