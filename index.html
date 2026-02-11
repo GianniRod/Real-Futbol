@@ -314,10 +314,10 @@
         /* Etiqueta nombre jugador */
         .player-name-label {
             position: absolute;
-            bottom: -14px;
+            bottom: -16px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 7px;
+            font-size: 9px;
             font-weight: bold;
             white-space: nowrap;
             background: rgba(0, 0, 0, 0.85);
@@ -334,7 +334,7 @@
 
         /* Ajuste si hay eventos: bajar el nombre */
         .player-marker:has(.player-events-container) .player-name-label {
-            bottom: -26px;
+            bottom: -28px;
         }
 
         @media (max-width: 768px) {
@@ -351,12 +351,12 @@
             }
 
             .player-name-label {
-                font-size: 8px;
-                bottom: -18px;
+                font-size: 10px;
+                bottom: -20px;
             }
 
             .player-marker:has(.player-events-container) .player-name-label {
-                bottom: -24px;
+                bottom: -32px;
             }
 
             .player-event-icon {
