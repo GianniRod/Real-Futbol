@@ -171,23 +171,43 @@ export const loadMatches = async (silent = false) => {
 /**
  * Carga scores agregados para partidos de vuelta (2nd Leg)
  * Busca el partido de ida y calcula el global
+ * 
+ * Supported round formats:
+ * - UEFA: "Round of 16 - 2nd Leg" → "Round of 16 - 1st Leg"
+ * - CONMEBOL: "Qualifying Round 2 - 2" → "Qualifying Round 2 - 1"
+ * - Alt: "Phase 2 - Leg 2" → "Phase 2 - Leg 1"
  */
 const loadAggregateScores = async (matches) => {
-    // Find 2nd leg matches
+    // Find 2nd leg matches with multiple pattern detection
     const secondLegMatches = matches.filter(m => {
-        const round = (m.league.round || '').toLowerCase();
-        return round.includes('2nd leg') || round.includes('leg 2');
+        const round = (m.league.round || '');
+        const roundLower = round.toLowerCase();
+        return roundLower.includes('2nd leg') ||
+            roundLower.includes('leg 2') ||
+            /- 2$/.test(round.trim()); // Ends with "- 2" (CONMEBOL format)
     });
 
     if (secondLegMatches.length === 0) return;
 
+    console.log(`Found ${secondLegMatches.length} 2nd leg matches, fetching 1st legs...`);
+
     // For each 2nd leg match, fetch the 1st leg
     const promises = secondLegMatches.map(async (m) => {
         try {
-            // Build the 1st leg round name
-            const firstLegRound = m.league.round
-                .replace(/2nd Leg/i, '1st Leg')
-                .replace(/Leg 2/i, 'Leg 1');
+            // Build the 1st leg round name based on the format
+            let firstLegRound = m.league.round;
+
+            if (/2nd Leg/i.test(firstLegRound)) {
+                // UEFA format: "Round of 16 - 2nd Leg" → "Round of 16 - 1st Leg"
+                firstLegRound = firstLegRound.replace(/2nd Leg/i, '1st Leg');
+            } else if (/Leg 2/i.test(firstLegRound)) {
+                firstLegRound = firstLegRound.replace(/Leg 2/i, 'Leg 1');
+            } else if (/- 2$/.test(firstLegRound.trim())) {
+                // CONMEBOL format: "Qualifying Round 2 - 2" → "Qualifying Round 2 - 1"
+                firstLegRound = firstLegRound.trim().replace(/- 2$/, '- 1');
+            }
+
+            console.log(`Fetching 1st leg: round="${firstLegRound}" for ${m.teams.home.name} vs ${m.teams.away.name}`);
 
             // Fetch 1st leg fixtures for same league, season, and round
             const data = await fetchAPI(
@@ -203,11 +223,6 @@ const loadAggregateScores = async (matches) => {
                 );
 
                 if (firstLeg && firstLeg.goals.home !== null) {
-                    // Calculate aggregate from perspective of 2nd leg's home/away
-                    // 1st leg: Team A (home) vs Team B (away) -> score X - Y
-                    // 2nd leg: Team B (home) vs Team A (away) -> score W - Z
-                    // Aggregate for 2nd leg home team = W + (1st leg score where they played)
-
                     const isReversed = firstLeg.teams.home.id === m.teams.away.id;
 
                     let homeAgg, awayAgg;
@@ -222,7 +237,12 @@ const loadAggregateScores = async (matches) => {
                     }
 
                     m._aggregate = { home: homeAgg, away: awayAgg };
+                    console.log(`Aggregate for ${m.teams.home.name} vs ${m.teams.away.name}: ${homeAgg}-${awayAgg}`);
+                } else {
+                    console.warn('1st leg match not found in response for:', m.teams.home.name, 'vs', m.teams.away.name);
                 }
+            } else {
+                console.warn('No fixtures returned for 1st leg round:', firstLegRound);
             }
         } catch (e) {
             console.warn('Could not fetch 1st leg for aggregate:', e);
