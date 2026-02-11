@@ -102,7 +102,11 @@ import {
     openModPanel,
     closeModPanel,
     handleModMuteForm,
-    handleModBanForm
+    handleModBanForm,
+    loadDemoUsers,
+    deleteDemoUser,
+    handleCreateDemoUserForm,
+    populateDemoTeamSelect
 } from './views/moderation.js';
 
 import {
@@ -644,9 +648,9 @@ const switchModTab = (tabName) => {
     if (tabName === 'featured') {
         loadFeaturedMatchPicker();
     } else if (tabName === 'demo') {
-        const { loadDemoUsers, populateDemoTeamSelect } = app; // Accessible via window.app
-        if (loadDemoUsers) loadDemoUsers();
-        if (populateDemoTeamSelect) populateDemoTeamSelect();
+        // Use imported functions directly
+        if (typeof loadDemoUsers === 'function') loadDemoUsers();
+        if (typeof populateDemoTeamSelect === 'function') populateDemoTeamSelect();
     }
 };
 
