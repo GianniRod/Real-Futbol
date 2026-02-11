@@ -809,7 +809,14 @@ window.app = {
     openModPanel,
     closeModPanel,
     handleModMuteForm,
+    handleModMuteForm,
     handleModBanForm,
+
+    // Demo Accounts
+    loadDemoUsers,
+    deleteDemoUser,
+    handleCreateDemoUserForm,
+    populateDemoTeamSelect,
 
     // Suggestions
     openSuggestionModal,
