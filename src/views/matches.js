@@ -197,7 +197,10 @@ export const renderMatches = () => {
             const isFin = ['FT', 'AET', 'PEN'].includes(s.short);
             const notStarted = ['NS', 'TBD'].includes(s.short);
 
-            const timeDisplay = isLive ? `<span class="text-white font-bold animate-pulse text-xs">${s.elapsed}'</span>` : (isHT ? '<span class="text-white font-bold text-xs">ET</span>' : (isFin ? 'FINAL' : new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })));
+            const timeDisplay = isLive
+                ? (s.short === 'P' ? '<span class="text-red-500 font-bold animate-pulse text-xs">PEN</span>' : `<span class="text-white font-bold animate-pulse text-xs">${s.elapsed ?? ''}'</span>`)
+                : (isHT ? '<span class="text-white font-bold text-xs">ET</span>'
+                    : (isFin ? (s.short === 'PEN' ? 'PEN' : 'FINAL') : new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })));
 
             let homeOpacity = 'opacity-100';
             let awayOpacity = 'opacity-100';
