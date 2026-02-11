@@ -702,10 +702,9 @@ export const openDetail = async (params) => {
     // Mostrar el modal
     detailView.classList.remove('hidden');
 
-    // Ocultar otras vistas para que no se solapen en Desktop
-    document.getElementById('view-match-list').classList.add('hidden');
-    document.getElementById('view-standings').classList.add('hidden');
-    document.getElementById('view-forum').classList.add('hidden');
+    // Ocultar contenido principal para que no se solapen (incluyendo footer)
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) mainContent.classList.add('hidden');
 
     // Ocultar sidebar derecha (comunidad) para dar más espacio al detalle
     const rightSidebar = document.getElementById('right-sidebar');
@@ -943,6 +942,10 @@ export const closeDetail = () => {
     if (rightSidebar) {
         rightSidebar.style.display = '';
     }
+
+    // Restaurar main content
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) mainContent.classList.remove('hidden');
 
     // Navegar de vuelta a matches
     if (window.app && window.app.navigate) {
