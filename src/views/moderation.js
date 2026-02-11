@@ -914,7 +914,13 @@ export const handleCreateDemoUserForm = async () => {
     }
 
     const team = ARGENTINE_TEAMS.find(t => t.id === teamId);
-    if (!team) return;
+    if (!team) {
+        console.error('Team not found for ID:', teamId);
+        alert('Error: Equipo no encontrado');
+        return;
+    }
+
+    console.log('Creating demo user:', username, team.name);
 
     try {
         // Verificar si existe el nombre de usuario
