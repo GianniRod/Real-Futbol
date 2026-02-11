@@ -87,6 +87,20 @@ export const loadFeaturedMatch = async () => {
 
         const featured = docSnap.data();
 
+        // Auto-clear if featured match is not from today
+        const matchDate = new Date(featured.date);
+        const today = new Date();
+        const isSameDay = matchDate.getFullYear() === today.getFullYear() &&
+            matchDate.getMonth() === today.getMonth() &&
+            matchDate.getDate() === today.getDate();
+
+        if (!isSameDay) {
+            console.log('Featured match is from a different day, auto-clearing.');
+            await deleteDoc(docRef);
+            container.innerHTML = '';
+            return;
+        }
+
         // Intentar obtener datos frescos de la API
         try {
             const data = await fetchAPI(`/fixtures?id=${featured.fixtureId}`);
