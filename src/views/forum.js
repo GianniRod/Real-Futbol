@@ -125,11 +125,11 @@ export const initForum = (context, containerId, usernameInputId) => {
                 </div>
             ` : '';
 
-            // Logo content (invisible if same user to keep alignment)
-            const logoVisibilityClass = isSameUser ? 'invisible' : '';
+            // Top margin based on spacing: small if same user, large if new block
+            const marginTopClass = index === 0 ? 'mt-0' : (isSameUser ? 'mt-0.5' : 'mt-4');
 
             return `
-                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} ${isSameUser ? 'mb-0 -mt-1' : 'mb-4'} animate-fade-in group relative message-container" 
+                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} ${marginTopClass} mb-0 animate-fade-in group relative message-container" 
                      data-message-id="${msg.id}"
                      data-message-user="${msg.user.replace(/"/g, '&quot;')}"
                      data-message-text="${msg.text.substring(0, 100).replace(/"/g, '&quot;').replace(/\n/g, ' ')}">
