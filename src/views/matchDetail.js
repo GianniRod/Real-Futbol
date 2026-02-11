@@ -790,22 +790,11 @@ export const openDetail = async (params) => {
     document.getElementById('detail-home-name').innerHTML = m.teams.home.name + homeRedCardsHTML;
     document.getElementById('detail-away-name').innerHTML = m.teams.away.name + awayRedCardsHTML;
 
-    // Goleadores
+    // Goleadores - Ocultos del header
     const hList = document.getElementById('detail-home-scorers-list');
     const aList = document.getElementById('detail-away-scorers-list');
-    hList.innerHTML = '';
-    aList.innerHTML = '';
-
-    if (m.events && m.events.length > 0) {
-        const goals = m.events.filter(e => e.type === 'Goal');
-        const formatScorer = (ev) => `<div class="truncate leading-tight max-w-[120px] text-center">${ev.player.name} ${ev.time.elapsed}'</div>`;
-
-        const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(formatScorer);
-        if (hGoals.length > 0) hList.innerHTML = hGoals.join('');
-
-        const aGoals = goals.filter(e => e.team.id === m.teams.away.id).map(formatScorer);
-        if (aGoals.length > 0) aList.innerHTML = aGoals.join('');
-    }
+    if (hList) hList.innerHTML = '';
+    if (aList) aList.innerHTML = '';
 
     try {
         const isFinished = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
