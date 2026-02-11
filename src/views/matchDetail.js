@@ -244,6 +244,18 @@ const renderTimeline = (m) => {
 };
 
 /**
+ * Obtiene el color del borde del rating según la calificación
+ * @param {number} rating - Calificación del jugador
+ * @returns {object} { bg, text, border } - Colores CSS
+ */
+const getRatingColors = (rating) => {
+    if (rating >= 8.0) return { bg: '#87CEEB', text: '#000', border: '#87CEEB' }; // Celeste
+    if (rating >= 7.0) return { bg: '#4CAF50', text: '#fff', border: '#4CAF50' }; // Verde
+    if (rating >= 6.0) return { bg: '#FF9800', text: '#000', border: '#FF9800' }; // Naranja
+    return { bg: '#F44336', text: '#fff', border: '#F44336' }; // Rojo
+};
+
+/**
  * Renderiza las alineaciones y cancha táctica
  */
 const renderLineups = (m) => {
@@ -261,6 +273,31 @@ const renderLineups = (m) => {
     const homeL = m.lineups[0];
     const awayL = m.lineups[1];
     const events = m.events || [];
+    const isFinished = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
+
+    // Build player stats map from m.players if available
+    // m.players contains [{team: {id, name}, players: [{player: {id, name, photo}, statistics: [{games: {rating}, ...}]}]}]
+    const playerStatsMap = {};
+    let bestPlayerId = null;
+    let bestRating = -1;
+    if (m.players && m.players.length > 0) {
+        m.players.forEach(teamData => {
+            if (teamData.players) {
+                teamData.players.forEach(p => {
+                    const stats = p.statistics && p.statistics[0];
+                    const rating = stats && stats.games && stats.games.rating ? parseFloat(stats.games.rating) : null;
+                    playerStatsMap[String(p.player.id)] = {
+                        photo: p.player.photo || null,
+                        rating: rating
+                    };
+                    if (rating !== null && rating > bestRating) {
+                        bestRating = rating;
+                        bestPlayerId = String(p.player.id);
+                    }
+                });
+            }
+        });
+    }
 
     const idsMatch = (id1, id2) => String(id1) === String(id2);
 
@@ -349,6 +386,7 @@ const renderLineups = (m) => {
                 let displayName = p.player.name;
                 let isSubbed = false;
                 let subInName = '';
+                let currentPlayerId = p.player.id; // ID del jugador actual en posición
 
                 const subOutEvent = events.find(e => e.type === 'subst' && e.assist && idsMatch(e.assist.id, p.player.id));
 
@@ -358,33 +396,65 @@ const renderLineups = (m) => {
                     if (subInPlayer) {
                         displayNumber = subInPlayer.player.number;
                         subInName = subInPlayer.player.name;
+                        currentPlayerId = subInPlayer.player.id;
                     } else {
                         subInName = subOutEvent.player.name;
                         displayNumber = "⇄";
+                        currentPlayerId = subOutEvent.player.id;
                     }
                 }
 
-                // SVG de camiseta con número
-                const shirtColor = side === 'home' ? '#ffffff' : '#333333';
-                const textColor = side === 'home' ? '#000000' : '#ffffff';
+                // Get player stats (photo & rating)
+                const pStats = playerStatsMap[String(currentPlayerId)] || playerStatsMap[String(p.player.id)] || {};
+                const playerPhoto = pStats.photo || `https://media.api-sports.io/football/players/${currentPlayerId}.png`;
+                const playerRating = pStats.rating;
+                const isBestPlayer = isFinished && String(currentPlayerId) === bestPlayerId;
+
+                // Determine border color based on rating
+                let borderColor = '#555'; // Default gray when no rating
+                if (playerRating !== null && playerRating !== undefined) {
+                    const colors = getRatingColors(playerRating);
+                    borderColor = colors.border;
+                }
+
+                // Build player circle with face photo
                 el.innerHTML = `
-                    <svg viewBox="0 0 40 44" width="100%" height="100%" class="pointer-events-none">
-                        <path d="M8 4 L16 0 L24 0 L32 4 L40 10 L36 18 L32 16 L32 44 L8 44 L8 16 L4 18 L0 10 Z" 
-                              fill="${shirtColor}" stroke="${side === 'home' ? '#000' : '#fff'}" stroke-width="1"/>
-                        <text x="20" y="28" text-anchor="middle" fill="${textColor}" 
-                              font-size="14" font-weight="bold" font-family="monospace">${displayNumber}</text>
-                    </svg>
+                    <div class="player-face-circle" style="border-color: ${borderColor}">
+                        <img src="${playerPhoto}" alt="${displayName}" 
+                             class="player-face-img" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                        />
+                        <div class="player-face-fallback" style="display:none;">${displayNumber}</div>
+                    </div>
                 `;
 
+                // Rating badge (top-right)
+                if (playerRating !== null && playerRating !== undefined) {
+                    const colors = getRatingColors(playerRating);
+                    const ratingBadge = document.createElement('div');
+                    ratingBadge.className = 'player-rating-badge';
+                    ratingBadge.style.backgroundColor = colors.bg;
+                    ratingBadge.style.color = colors.text;
+
+                    // Show star for best player when match is finished
+                    if (isBestPlayer) {
+                        ratingBadge.innerHTML = `${playerRating.toFixed(1).replace('.', ',')} <span class="player-star">★</span>`;
+                    } else {
+                        ratingBadge.textContent = playerRating.toFixed(1).replace('.', ',');
+                    }
+                    el.appendChild(ratingBadge);
+                }
+
+                // Goal icon
                 const playerGoals = events.filter(e => e.type === 'Goal' && (idsMatch(e.player.id, p.player.id) || (isSubbed && subOutEvent && idsMatch(e.player.id, subOutEvent.player.id))));
 
                 if (playerGoals.length > 0) {
                     const ballIcon = document.createElement('div');
-                    ballIcon.className = `absolute -top-2 -right-2 w-3.5 h-3.5 flex items-center justify-center rounded-full bg-black shadow-sm z-20`;
+                    ballIcon.className = 'player-goal-icon';
                     const isOwn = playerGoals[playerGoals.length - 1].detail === 'Own Goal';
                     ballIcon.innerHTML = isOwn
                         ? `<div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>`
-                        : `<div class="w-full h-full rounded-full bg-white flex items-center justify-center"><div class="w-1.5 h-1.5 bg-black rounded-full opacity-80"></div></div>`;
+                        : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="10" height="10" fill="white"><circle cx="12" cy="12" r="10" fill="#111" stroke="#888" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="white"/></svg>`;
                     el.appendChild(ballIcon);
                 }
 
@@ -393,40 +463,34 @@ const renderLineups = (m) => {
 
                 if (isMobile) {
                     // En móvil: cancha vertical
-                    // Equipo visitante arriba, local abajo (como imagen de referencia)
                     const totalLines = Object.keys(lines).length;
 
                     if (side === 'away') {
-                        // Equipo visitante arriba (5%-45%)
                         const availableSpace = 40;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
                         y = 5 + (lineIdx - 1) * spacing;
                         if (lineIdx === 1) y = 5;
                     } else {
-                        // Equipo local abajo (55%-92%)
                         const availableSpace = 37;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
                         y = 92 - (lineIdx - 1) * spacing;
                         if (lineIdx === 1) y = 92;
                     }
 
-                    // Aprovechar más los costados en móvil
                     const segment = 100 / (count + 1);
                     x = segment * (index + 1);
                     if (x < 3) x = 3;
                     if (x > 97) x = 97;
                 } else {
-                    // En desktop: cancha horizontal - reducir separación entre equipos
+                    // En desktop: cancha horizontal
                     const totalLines = Object.keys(lines).length;
 
                     if (side === 'home') {
-                        // Equipo local izquierda (3-46%) - espaciado dinámico
                         const availableSpace = 43;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
                         x = 3 + (lineIdx - 1) * spacing;
                         if (lineIdx === 1) x = 3;
                     } else {
-                        // Equipo visitante derecha (54-97%) - espaciado dinámico
                         const availableSpace = 43;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
                         x = 97 - (lineIdx - 1) * spacing;
@@ -443,7 +507,7 @@ const renderLineups = (m) => {
                 el.style.top = y + '%';
 
                 const nameEl = document.createElement('div');
-                nameEl.className = `absolute -bottom-6 left-1/2 -translate-x-1/2 text-[7px] font-bold whitespace-nowrap bg-black/80 px-1.5 py-0.5 rounded flex flex-col items-center leading-none z-30 border border-[#333] pointer-events-none`;
+                nameEl.className = 'player-name-label';
 
                 // Función para formatear nombre como "L. Messi"
                 const formatPlayerName = (fullName) => {
@@ -663,6 +727,17 @@ export const openDetail = async (params) => {
 
         // Si el partido terminó y ya tenemos datos completos, no gastar un request
         if (isFinished && hasFullData) {
+            // Fetch player stats (photos & ratings) if not already loaded
+            if (!m.players) {
+                try {
+                    const playersData = await fetchAPI(`/fixtures/players?fixture=${id}`, true);
+                    if (playersData && playersData.response) {
+                        m.players = playersData.response;
+                    }
+                } catch (pe) {
+                    console.warn('Could not fetch player stats:', pe);
+                }
+            }
             renderTimeline(m);
             renderLineups(m);
             renderStats(m);
@@ -679,6 +754,17 @@ export const openDetail = async (params) => {
             if (fullMatch) {
                 m.lineups = fullMatch.lineups || m.lineups;
                 m.statistics = fullMatch.statistics || m.statistics;
+            }
+
+            // Fetch player stats (photos & ratings)
+            try {
+                const playersData = await fetchAPI(`/fixtures/players?fixture=${id}`, true);
+                if (playersData && playersData.response) {
+                    fullMatch.players = playersData.response;
+                    m.players = playersData.response;
+                }
+            } catch (pe) {
+                console.warn('Could not fetch player stats:', pe);
             }
 
             renderTimeline(fullMatch);
