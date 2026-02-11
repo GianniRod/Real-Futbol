@@ -125,6 +125,9 @@ export const initForum = (context, containerId, usernameInputId) => {
                 </div>
             ` : '';
 
+            // Logo content (invisible if same user to keep alignment)
+            const logoVisibilityClass = isSameUser ? 'invisible' : '';
+
             // Top margin based on spacing: small if same user, large if new block
             const marginTopClass = index === 0 ? 'mt-0' : (isSameUser ? 'mt-0.5' : 'mt-4');
 
