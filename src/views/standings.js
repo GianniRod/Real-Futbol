@@ -388,7 +388,7 @@ export const renderTable = (groupIndex) => {
 
         return `
                             <tr class="hover:bg-[#111] transition-colors relative">
-                                <td class="px-2 py-2 md:px-3 md:py-3 text-center font-bold ${t.rank <= 4 ? 'text-white' : 'text-gray-600'} border-r border-[#222] text-[10px] md:text-xs relative">
+                                <td class="px-2 py-2 md:px-3 md:py-3 text-center text-gray-500 border-r border-[#222] text-[10px] md:text-xs relative">
                                     ${indicatorClass ? `<div class="absolute left-0 top-2 bottom-2 w-[3px] ${indicatorClass} rounded-r"></div>` : ''}
                                     ${t.rank}
                                 </td>
