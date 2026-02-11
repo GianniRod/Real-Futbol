@@ -391,8 +391,8 @@ export const renderMatches = () => {
 
             <!-- Row 2: Status + Aggregate (below, centered) -->
             ${(isLive || isHT || aggHtml) ? `
-            <div class="flex flex-col items-center mt-1">
-                ${isLive || isHT ? `<span class="text-[9px] font-bold uppercase text-gray-500 tracking-widest text-center whitespace-nowrap">${timeDisplay}</span>` : ''}
+            <div class="flex flex-col items-center mt-1 pr-10">
+                ${isLive || isHT ? `<span class="text-[10px] font-bold uppercase text-green-500 tracking-widest text-center whitespace-nowrap">${timeDisplay}</span>` : ''}
                 ${aggHtml}
             </div>` : ''}
         </div>`;
