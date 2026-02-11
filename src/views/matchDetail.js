@@ -944,3 +944,10 @@ export const closeDetail = () => {
         rightSidebar.style.display = '';
     }
 
+    // Navegar de vuelta a matches
+    if (window.app && window.app.navigate) {
+        window.app.navigate('/');
+    }
+};
+
+export const getSelectedMatch = () => selectedMatch;
