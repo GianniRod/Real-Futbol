@@ -21,7 +21,8 @@ import {
     setDoc,
     deleteDoc,
     getDocs,
-    query
+    query,
+    where
 } from '../core/firebase.js';
 
 import { ARGENTINE_TEAMS } from '../data/teams.js'; // Import teams data
@@ -916,6 +917,15 @@ export const handleCreateDemoUserForm = async () => {
     if (!team) return;
 
     try {
+        // Verificar si existe el nombre de usuario
+        const q = query(collection(db, 'demo_users'), where('username', '==', username));
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+            alert('⚠️ El nombre de usuario ya está en uso. Por favor, elige otro.');
+            return;
+        }
+
         // Generar un ID "fake" pero único
         const demoUid = 'demo_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
 
