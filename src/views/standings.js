@@ -243,11 +243,59 @@ const renderFixtures = () => {
  * @param {number} groupIndex - Índice del grupo a renderizar
  */
 export const renderTable = (groupIndex) => {
-    const table = state.standingsData[groupIndex];
-    // NOTE: El container ID ahora es distinto porque está dentro del layout split
+    // Clone table to safely mutate/sort
+    let table = JSON.parse(JSON.stringify(state.standingsData[groupIndex]));
     const container = document.getElementById('standings-table-container');
 
     if (!container || !table || table.length === 0) return;
+
+    // --- LIVE SORTING LOGIC ---
+    if (state.liveFixtures && state.liveFixtures.length > 0) {
+        table.forEach(t => {
+            const match = state.liveFixtures.find(m => m.teams.home.id === t.team.id || m.teams.away.id === t.team.id);
+            // Attach match for rendering later
+            t.liveMatch = match;
+
+            if (match) {
+                const isHome = match.teams.home.id === t.team.id;
+                const myScore = isHome ? (match.goals.home ?? 0) : (match.goals.away ?? 0);
+                const oppScore = isHome ? (match.goals.away ?? 0) : (match.goals.home ?? 0);
+
+                // Update Stats for Sorting
+                t.all.played += 1; // Live match counts as played
+                t.goalsDiff += (myScore - oppScore);
+                t.all.goals.for += myScore;
+
+                // Update Points
+                if (myScore > oppScore) {
+                    t.points += 3;
+                } else if (myScore === oppScore) {
+                    t.points += 1;
+                }
+            }
+        });
+
+        // Re-Sort based on updated valid props
+        const isPromediosSort = table[0].group && (table[0].group.includes('Promedio') || table[0].group === 'PROMEDIOS');
+
+        if (isPromediosSort) {
+            table.sort((a, b) => {
+                const avgA = a.all.played > 0 ? (a.points / a.all.played) : 0;
+                const avgB = b.all.played > 0 ? (b.points / b.all.played) : 0;
+                return avgB - avgA;
+            });
+        } else {
+            table.sort((a, b) => {
+                if (a.points !== b.points) return b.points - a.points;
+                if (a.goalsDiff !== b.goalsDiff) return b.goalsDiff - a.goalsDiff;
+                return b.all.goals.for - a.all.goals.for;
+            });
+        }
+
+        // Re-Rank
+        table.forEach((t, i) => t.rank = i + 1);
+    }
+    // --------------------------
 
     const isPromedios = table[0].group && (table[0].group.includes('Promedio') || table[0].group === 'PROMEDIOS');
     const ptsLabel = isPromedios ? 'PROM' : 'Pts';
@@ -268,43 +316,24 @@ export const renderTable = (groupIndex) => {
                     </thead>
                     <tbody class="divide-y divide-[#1a1a1a]">
                         ${table.map(t => {
-        // Logic to find live match and calculate live points
-        let liveMatch = null;
-        let livePointsAdded = 0;
         let badgeHtml = '';
+        const liveMatch = t.liveMatch;
 
-        if (state.liveFixtures) {
-            liveMatch = state.liveFixtures.find(m => m.teams.home.id === t.team.id || m.teams.away.id === t.team.id);
-            if (liveMatch) {
-                const isHome = liveMatch.teams.home.id === t.team.id;
-                const myScore = isHome ? liveMatch.goals.home : liveMatch.goals.away;
-                const oppScore = isHome ? liveMatch.goals.away : liveMatch.goals.home;
+        if (liveMatch) {
+            const isHome = liveMatch.teams.home.id === t.team.id;
+            const myScore = isHome ? (liveMatch.goals.home ?? 0) : (liveMatch.goals.away ?? 0);
+            const oppScore = isHome ? (liveMatch.goals.away ?? 0) : (liveMatch.goals.home ?? 0);
 
-                let bgClass = 'bg-yellow-600'; // Draw
-                livePointsAdded = 1;
+            let bgClass = 'bg-yellow-600'; // Draw
+            if (myScore > oppScore) bgClass = 'bg-green-600';
+            else if (myScore < oppScore) bgClass = 'bg-red-600';
 
-                if (myScore > oppScore) {
-                    bgClass = 'bg-green-600';
-                    livePointsAdded = 3;
-                } else if (myScore < oppScore) {
-                    bgClass = 'bg-red-600';
-                    livePointsAdded = 0;
-                }
-
-                badgeHtml = `<span class="ml-2 px-1.5 py-0.5 rounded ${bgClass} text-white font-bold text-[10px] animate-pulse">${liveMatch.goals.home} - ${liveMatch.goals.away}</span>`;
-            }
+            badgeHtml = `<span class="ml-2 px-1.5 py-0.5 rounded ${bgClass} text-white font-bold text-[10px] animate-pulse">${liveMatch.goals.home} - ${liveMatch.goals.away}</span>`;
         }
 
-        // Calculate Points Display
-        let pointsDisplay;
-        if (isPromedios) {
-            pointsDisplay = (t.all.played > 0 ? (t.points / t.all.played).toFixed(3) : '0.000');
-        } else {
-            // Add live points to display (heuristic)
-            const currentPoints = t.points || 0;
-            const finalPoints = liveMatch ? (currentPoints + livePointsAdded) : currentPoints;
-            pointsDisplay = finalPoints;
-        }
+        const pointsDisplay = isPromedios
+            ? (t.all.played > 0 ? (t.points / t.all.played).toFixed(3) : '0.000')
+            : t.points;
 
         return `
                             <tr class="hover:bg-[#111] transition-colors">
