@@ -525,10 +525,10 @@ const renderLineups = (m) => {
                     eventIcons.push(`<div class="player-event-icon" title="Tarjeta Roja"><div style="width:9px;height:12px;background:#EF4444;border-radius:1.5px;border:1px solid #991b1b;"></div></div>`);
                 });
 
-                // Substituted out → custom sub-out image
+                // Substituted out → custom sub-out image + visible minute
                 if (isSubbed && subOutEvent) {
                     const subMinute = subOutEvent.time.elapsed;
-                    eventIcons.push(`<div class="player-event-icon player-event-sub-out" title="Sust. ${subMinute}'"><img src="https://i.postimg.cc/fy6mRKB5/Proyecto_nuevo_4.png" class="w-3.5 h-3.5 object-contain" /></div>`);
+                    eventIcons.push(`<div class="player-event-sub-out-container" title="Sust. ${subMinute}'"><img src="https://i.postimg.cc/fy6mRKB5/Proyecto_nuevo_4.png" class="w-3.5 h-3.5 object-contain" /><span class="sub-minute">${subMinute}'</span></div>`);
                 }
 
                 if (eventIcons.length > 0) {
