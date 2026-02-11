@@ -10,6 +10,7 @@
  * - addModerator(uid): Agrega moderador
  * - removeModerator(uid): Quita moderador
  * - getUserRole(uid): Obtiene el rol del usuario
+ * - loadDemoUsers(): Carga usuarios demo
  */
 
 import {
@@ -22,6 +23,8 @@ import {
     getDocs,
     query
 } from '../core/firebase.js';
+
+import { ARGENTINE_TEAMS } from '../data/teams.js'; // Import teams data
 
 // UID del desarrollador (hardcoded)
 export const DEVELOPER_UID = 'SvMj82K5gNXub6StrHjz4JVpRB83';
@@ -796,14 +799,159 @@ export const loadMutedUsers = async () => {
             `;
         }
 
-        if (!html) {
-            container.innerHTML = '<div class="text-gray-500 text-xs text-center py-4">No hay usuarios muteados</div>';
-        } else {
-            container.innerHTML = html;
-        }
+        container.innerHTML = html;
     } catch (error) {
         console.error('Error loading muted users:', error);
         container.innerHTML = '<div class="text-red-500 text-xs text-center py-4">Error al cargar</div>';
+    }
+};
+
+// ==================== DEMO ACCOUNTS SYSTEM ====================
+
+/**
+ * Carga y muestra la lista de cuentas demo
+ */
+export const loadDemoUsers = async () => {
+    const container = document.getElementById('demo-users-list');
+    if (!container) return;
+
+    container.innerHTML = '<div class="text-gray-500 text-xs text-center py-4">Cargando...</div>';
+
+    try {
+        const q = query(collection(db, 'demo_users'));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            container.innerHTML = '<div class="text-gray-500 text-xs text-center py-4">No hay cuentas demo</div>';
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            // Encode data for passing to JS function
+            const dataStr = JSON.stringify({
+                uid: docSnap.id,
+                username: data.username,
+                teamId: data.teamId,
+                teamName: data.teamName,
+                teamLogo: data.teamLogo
+            }).replace(/"/g, '&quot;');
+
+            html += `
+                <div class="flex items-center justify-between p-3 bg-[#0a0a0a] rounded border border-[#222]">
+                    <div class="flex items-center gap-3">
+                        <img src="${data.teamLogo}" class="w-8 h-8 object-contain" alt="Team">
+                        <div>
+                            <div class="text-white text-sm font-bold flex items-center gap-2">
+                                ${data.username}
+                                <span class="px-1.5 py-0.5 bg-gray-700 text-gray-300 text-[9px] font-bold uppercase rounded">DEMO</span>
+                            </div>
+                            <div class="text-gray-500 text-xs">${data.teamName}</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="app.enterDemoMode(${dataStr})" 
+                            class="text-black bg-white hover:bg-gray-200 text-xs font-bold px-3 py-1 rounded">
+                            Usar
+                        </button>
+                        <button onclick="app.deleteDemoUser('${docSnap.id}')" 
+                            class="text-red-500 hover:text-red-400 p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Error loading demo users:', error);
+        container.innerHTML = '<div class="text-red-500 text-xs text-center py-4">Error al cargar cuentas demo</div>';
+    }
+};
+
+/**
+ * Popula el select de equipos para crear usuario demo
+ */
+export const populateDemoTeamSelect = () => {
+    const select = document.getElementById('demo-team-select');
+    if (!select) return;
+
+    // Solo popular si está vacío (excepto la opción default)
+    if (select.options.length > 1) return;
+
+    ARGENTINE_TEAMS.forEach(team => {
+        const option = document.createElement('option');
+        option.value = team.id;
+        option.textContent = team.name;
+        select.appendChild(option);
+    });
+};
+
+/**
+ * Crea un nuevo usuario demo
+ */
+export const handleCreateDemoUserForm = async () => {
+    const usernameInput = document.getElementById('demo-username-input');
+    const teamSelect = document.getElementById('demo-team-select');
+
+    if (!usernameInput || !teamSelect) return;
+
+    const username = usernameInput.value.trim();
+    const teamId = parseInt(teamSelect.value);
+
+    if (!username) {
+        alert('Ingresa un apodo');
+        return;
+    }
+    if (!teamId) {
+        alert('Selecciona un equipo');
+        return;
+    }
+
+    const team = ARGENTINE_TEAMS.find(t => t.id === teamId);
+    if (!team) return;
+
+    try {
+        // Generar un ID "fake" pero único
+        const demoUid = 'demo_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+
+        await setDoc(doc(db, 'demo_users', demoUid), {
+            uid: demoUid,
+            username: username,
+            teamId: team.id,
+            teamName: team.name,
+            teamLogo: team.logo,
+            createdAt: Date.now(),
+            createdBy: DEVELOPER_UID
+        });
+
+        alert('✅ Cuenta demo creada');
+        usernameInput.value = '';
+        teamSelect.value = '';
+        loadDemoUsers();
+
+    } catch (error) {
+        console.error('Error creating demo user:', error);
+        alert('Error: ' + error.message);
+    }
+};
+
+/**
+ * Elimina un usuario demo
+ */
+export const deleteDemoUser = async (uid) => {
+    if (!confirm('¿Borrar esta cuenta demo?')) return;
+
+    try {
+        await deleteDoc(doc(db, 'demo_users', uid));
+        loadDemoUsers();
+    } catch (error) {
+        console.error('Error deleting demo user:', error);
+        alert('Error: ' + error.message);
     }
 };
 
