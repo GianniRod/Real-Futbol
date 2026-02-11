@@ -321,9 +321,15 @@ const renderLineups = (m) => {
         const substitutesWhoEntered = [];
         if (lineup.substitutes && lineup.substitutes.length > 0) {
             lineup.substitutes.forEach(p => {
+                // Check both e.player and e.assist for the substitute coming in
+                // API-Football: e.player = OUT, e.assist = IN (in some versions it's reversed)
                 const subInEvent = events.find(e => {
-                    const eventType = (e.type || '').toLowerCase();
-                    return (eventType === 'subst' || eventType === 'substitution') && e.player && idsMatch(e.player.id, p.player.id);
+                    const et = (e.type || '').toLowerCase();
+                    if (et !== 'subst' && et !== 'substitution') return false;
+                    // Check if this sub is referenced in the event
+                    if (e.player && idsMatch(e.player.id, p.player.id)) return true;
+                    if (e.assist && idsMatch(e.assist.id, p.player.id)) return true;
+                    return false;
                 });
                 if (subInEvent) {
                     substitutesWhoEntered.push({ player: p, event: subInEvent });
@@ -343,10 +349,8 @@ const renderLineups = (m) => {
                 }
                 const faceHtml = buildListFace(p.player.id);
                 const minute = subInEvent.time.elapsed;
-                const enteredIcon = `<div class="flex items-center gap-1 ml-auto shrink-0">
-                    <div class="w-5 h-5 rounded-full bg-green-600/30 border border-green-500 flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                    </div>
+                const enteredIcon = `<div class="flex items-center gap-1.5 ml-auto shrink-0">
+                    <img src="https://i.postimg.cc/rsvxwJQj/Proyecto_nuevo_3.png" class="w-4 h-4 object-contain" alt="Ingresa" />
                     <span class="text-green-400 text-[10px] font-bold font-mono">${minute}'</span>
                 </div>`;
                 return `<div class="flex items-center gap-2 border-b border-[#222] py-2">
@@ -432,7 +436,10 @@ const renderLineups = (m) => {
                 let subInName = '';
                 let currentPlayerId = p.player.id; // ID del jugador actual en posición
 
-                const subOutEvent = events.find(e => e.type === 'subst' && e.assist && idsMatch(e.assist.id, p.player.id));
+                const subOutEvent = events.find(e => {
+                    const et = (e.type || '').toLowerCase();
+                    return (et === 'subst' || et === 'substitution') && e.assist && idsMatch(e.assist.id, p.player.id);
+                });
 
                 if (subOutEvent) {
                     isSubbed = true;
@@ -494,16 +501,16 @@ const renderLineups = (m) => {
                 const originalId = p.player.id;
                 const eventIcons = [];
 
-                // Goal → soccer ball
+                // Goal → custom ball image
                 const goals = events.filter(e => e.type === 'Goal' && e.detail !== 'Own Goal' && e.player && (idsMatch(e.player.id, checkId) || idsMatch(e.player.id, originalId)));
                 goals.forEach(() => {
-                    eventIcons.push(`<div class="player-event-icon" title="Gol"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13"><circle cx="12" cy="12" r="10" fill="#222" stroke="#bbb" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="white"/></svg></div>`);
+                    eventIcons.push(`<div class="player-event-icon" title="Gol"><img src="https://i.postimg.cc/R0XtH9g4/Proyecto_nuevo_6.png" class="w-3 h-3 object-contain" /></div>`);
                 });
 
-                // Assist → boot/cleat
+                // Assist → custom boot image
                 const playerAssists = events.filter(e => e.type === 'Goal' && e.assist && (idsMatch(e.assist.id, checkId) || idsMatch(e.assist.id, originalId)));
                 playerAssists.forEach(() => {
-                    eventIcons.push(`<div class="player-event-icon" title="Asistencia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13"><circle cx="12" cy="12" r="10" fill="#222" stroke="#bbb" stroke-width="1.5"/><path d="M7 16 L10 10 L14 9 L17 12 L15 16 Z" fill="#ccc" stroke="#888" stroke-width="0.5"/></svg></div>`);
+                    eventIcons.push(`<div class="player-event-icon" title="Asistencia"><img src="https://i.postimg.cc/QCR1db0b/Proyecto_nuevo_2.png" class="w-3 h-3 object-contain" /></div>`);
                 });
 
                 // Yellow Card
@@ -518,10 +525,10 @@ const renderLineups = (m) => {
                     eventIcons.push(`<div class="player-event-icon" title="Tarjeta Roja"><div style="width:9px;height:12px;background:#EF4444;border-radius:1.5px;border:1px solid #991b1b;"></div></div>`);
                 });
 
-                // Substituted out → red circle with arrow + minute
+                // Substituted out → custom sub-out image
                 if (isSubbed && subOutEvent) {
                     const subMinute = subOutEvent.time.elapsed;
-                    eventIcons.push(`<div class="player-event-icon player-event-sub-out" title="Sust. ${subMinute}'"><div style="width:14px;height:14px;border-radius:50%;background:rgba(239,68,68,0.3);border:1.5px solid #EF4444;display:flex;align-items:center;justify-content:center;"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></div></div>`);
+                    eventIcons.push(`<div class="player-event-icon player-event-sub-out" title="Sust. ${subMinute}'"><img src="https://i.postimg.cc/fy6mRKB5/Proyecto_nuevo_4.png" class="w-3.5 h-3.5 object-contain" /></div>`);
                 }
 
                 if (eventIcons.length > 0) {
@@ -937,10 +944,3 @@ export const closeDetail = () => {
         rightSidebar.style.display = '';
     }
 
-    // Navegar de vuelta a matches
-    if (window.app && window.app.navigate) {
-        window.app.navigate('/');
-    }
-};
-
-export const getSelectedMatch = () => selectedMatch;
