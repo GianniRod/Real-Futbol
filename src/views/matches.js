@@ -21,7 +21,8 @@ import { db, collection, where, query, getCountFromServer } from '../core/fireba
 const state = {
     date: new Date(),
     matches: [],
-    liveOnly: false
+    liveOnly: false,
+    isViewingToday: true
 };
 
 // Helpers
@@ -60,6 +61,7 @@ export const renderCalendar = () => {
         div.innerHTML = `<span class="text-[9px] font-bold uppercase tracking-widest">${getDayName(d)}</span><span class="text-sm font-bold">${d.getDate()}</span>`;
         div.onclick = () => {
             state.date = d;
+            state.isViewingToday = d.toDateString() === new Date().toDateString();
             renderCalendar();
             loadMatches();
         };
@@ -73,6 +75,7 @@ export const renderCalendar = () => {
  */
 export const changeDate = (days) => {
     state.date.setDate(state.date.getDate() + days);
+    state.isViewingToday = state.date.toDateString() === new Date().toDateString();
     renderCalendar();
     loadMatches();
 };
@@ -82,6 +85,7 @@ export const changeDate = (days) => {
  */
 export const resetDate = () => {
     state.date = new Date();
+    state.isViewingToday = true;
     renderCalendar();
     loadMatches();
 };
@@ -91,6 +95,18 @@ export const resetDate = () => {
  * @param {boolean} silent - Si es true, no muestra loader
  */
 export const loadMatches = async (silent = false) => {
+    // Auto-update date if viewing today (handles midnight transition)
+    if (state.isViewingToday) {
+        const now = new Date();
+        const currentStr = formatDate(state.date);
+        const newStr = formatDate(now);
+        if (currentStr !== newStr) {
+            state.date = now;
+            console.log("Auto-updating date to new day:", newStr);
+            renderCalendar();
+        }
+    }
+
     if (!silent) {
         document.getElementById('view-match-list').innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
     }
