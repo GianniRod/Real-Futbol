@@ -264,20 +264,35 @@
             line-height: 1;
         }
 
-        /* Ícono de gol en el jugador */
-        .player-goal-icon {
+
+        /* Contenedor de íconos de eventos del jugador */
+        .player-events-container {
             position: absolute;
             bottom: -2px;
-            left: -2px;
-            width: 14px;
-            height: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .player-event-icon {
+            width: 16px;
+            height: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            background: #111;
-            border: 1px solid #555;
-            z-index: 20;
+            background: rgba(17, 17, 17, 0.9);
+            border: 1px solid #444;
+        }
+
+        .player-event-sub-out {
+            background: transparent;
+            border: none;
         }
 
         /* Etiqueta nombre jugador */
@@ -301,6 +316,11 @@
             pointer-events: none;
         }
 
+        /* Ajuste si hay eventos: bajar el nombre */
+        .player-marker:has(.player-events-container) .player-name-label {
+            bottom: -26px;
+        }
+
         @media (max-width: 768px) {
             .player-marker {
                 width: 28px;
@@ -317,6 +337,15 @@
             .player-name-label {
                 font-size: 6px;
                 bottom: -12px;
+            }
+
+            .player-marker:has(.player-events-container) .player-name-label {
+                bottom: -24px;
+            }
+
+            .player-event-icon {
+                width: 14px;
+                height: 14px;
             }
         }
 
