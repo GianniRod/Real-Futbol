@@ -590,17 +590,146 @@ export const cancelLogout = () => {
  * Obtiene el usuario actual
  * @returns {object|null} - Usuario actual
  */
+/**
+ * Obtiene el usuario actual (Real o Demo)
+ * @returns {object|null} - Usuario actual
+ */
 export const getCurrentUser = () => {
+    if (isDemoMode && currentDemoUser) {
+        return {
+            uid: currentDemoUser.uid,
+            email: 'demo@realfutbol.app',
+            displayName: currentDemoUser.username,
+            photoURL: currentDemoUser.teamLogo || '',
+            isAnonymous: false,
+            emailVerified: true
+        };
+    }
     return currentUser;
 };
 
 /**
- * Obtiene el perfil del usuario actual
+ * Obtiene el perfil del usuario actual (Real o Demo)
  * @returns {object|null} - Perfil del usuario actual
  */
 export const getCurrentUserProfile = () => {
+    if (isDemoMode && currentDemoUser) {
+        return {
+            uid: currentDemoUser.uid,
+            username: currentDemoUser.username,
+            teamId: currentDemoUser.teamId,
+            teamName: currentDemoUser.teamName,
+            teamLogo: currentDemoUser.teamLogo,
+            role: 'user', // Demo users are always normal users
+            createdAt: Date.now()
+        };
+    }
     return currentUserProfile;
 };
+
+// Demo Mode State
+let isDemoMode = false;
+let currentDemoUser = null;
+let realUserSnapshot = null; // Store real user data to restore later
+
+/**
+ * Entra en modo Demo con un usuario específico
+ * @param {object} demoUser - Datos del usuario demo {uid, username, teamId...}
+ */
+export const enterDemoMode = async (demoUser) => {
+    if (!currentUser) {
+        alert('Debes estar logueado como administrador para usar cuentas demo');
+        return;
+    }
+
+    // Verificar si es developer
+    const role = await getUserRole(currentUser.uid);
+    if (role !== 'developer') {
+        alert('solo el desarrollador puede usar cuentas demo');
+        return;
+    }
+
+    // Guardar estado real
+    realUserSnapshot = {
+        user: currentUser,
+        profile: currentUserProfile,
+        role: currentUserRole
+    };
+
+    // Activar modo demo
+    isDemoMode = true;
+    currentDemoUser = demoUser;
+    currentUserRole = 'user'; // Force user role
+
+    // Actualizar UI
+    updateAuthUI(getCurrentUser(), getCurrentUserProfile());
+
+    // Mostrar overlay de demo
+    const overlay = document.getElementById('demo-mode-overlay');
+    const demoName = document.getElementById('demo-user-name');
+    if (overlay && demoName) {
+        demoName.textContent = demoUser.username;
+        overlay.classList.remove('hidden');
+    }
+
+    // Cerrar panel de moderación si está abierto
+    const modModal = document.getElementById('moderation-modal');
+    if (modModal) modModal.classList.add('hidden');
+
+    // Recargar foro si está visible
+    const forumContainer = document.getElementById('view-forum');
+    if (!forumContainer.classList.contains('hidden')) {
+        if (window.app && window.app.navigateToForum) {
+            // Force reload
+            const { initForum } = await import('./forum.js');
+            initForum('global', 'forum-messages', 'forum-username');
+        }
+    }
+
+    console.log('Entered Demo Mode as:', demoUser.username);
+};
+
+/**
+ * Sale del modo Demo y restaura la sesión del desarrollador
+ */
+export const exitDemoMode = async () => {
+    if (!isDemoMode) return;
+
+    // Restaurar estado
+    isDemoMode = false;
+    currentDemoUser = null;
+
+    // Restaurar usuario real (auth state doesn't change, just our local overrides)
+    // currentUser se mantiene igual porque viene de firebase auth
+    if (realUserSnapshot) {
+        currentUser = realUserSnapshot.user;
+        currentUserProfile = realUserSnapshot.profile;
+        currentUserRole = realUserSnapshot.role;
+    }
+
+    // Actualizar UI
+    updateAuthUI(currentUser, currentUserProfile);
+
+    // Ocultar overlay
+    const overlay = document.getElementById('demo-mode-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
+
+    // Recargar foro
+    const forumContainer = document.getElementById('view-forum');
+    if (!forumContainer.classList.contains('hidden')) {
+        const { initForum } = await import('./forum.js');
+        initForum('global', 'forum-messages', 'forum-username');
+    }
+
+    console.log('Exited Demo Mode');
+};
+
+/**
+ * Retorna si estamos en modo demo
+ */
+export const isInDemoMode = () => isDemoMode;
 
 /**
  * Inicializa el sistema de autenticación
@@ -699,6 +828,7 @@ export const initAuth = () => {
  * @returns {string} - 'developer', 'moderator', o 'user'
  */
 export const getCurrentUserRole = () => {
+    if (isDemoMode) return 'user';
     return currentUserRole;
 };
 
