@@ -22,7 +22,8 @@ const state = {
     standingsData: null,
     rounds: [],
     currentRound: null,
-    fixtures: []
+    fixtures: [],
+    liveFixtures: []
 };
 
 // IDs de ligas europeas (para formato de temporada)
@@ -277,6 +278,20 @@ export const renderTable = (groupIndex) => {
                                 <td class="px-2 py-2 md:px-3 md:py-3 font-bold text-gray-300 flex items-center gap-2 md:gap-3 whitespace-nowrap uppercase text-[10px] md:text-xs">
                                     <img src="${t.team.logo}" class="w-4 h-4 md:w-6 md:h-6 object-contain">
                                     ${t.team.name}
+                                    ${(() => {
+                if (!state.liveFixtures) return '';
+                const match = state.liveFixtures.find(m => m.teams.home.id === t.team.id || m.teams.away.id === t.team.id);
+                if (match) {
+                    const isHome = match.teams.home.id === t.team.id;
+                    const myScore = isHome ? match.goals.home : match.goals.away;
+                    const oppScore = isHome ? match.goals.away : match.goals.home;
+                    let colorClass = 'text-yellow-500'; // Draw
+                    if (myScore > oppScore) colorClass = 'text-green-500';
+                    if (myScore < oppScore) colorClass = 'text-red-500';
+                    return `<span class="ml-2 ${colorClass} font-mono animate-pulse">(${match.goals.home}-${match.goals.away})</span>`;
+                }
+                return '';
+            })()}
                                 </td>
                                 <td class="px-1 py-2 md:px-2 md:py-3 text-center font-bold text-white bg-[#111]/50 text-[10px] md:text-xs">${pointsDisplay}</td>
                                 <td class="px-1 py-2 md:px-2 md:py-3 text-center font-mono text-[10px] md:text-xs">${t.all.played}</td>
@@ -533,10 +548,17 @@ export const showStandings = async (idOrParams, name) => {
 
     // Fetch Data
     try {
-        const [standingsData, roundsData] = await Promise.all([
+        const [standingsData, roundsData, liveData] = await Promise.all([
             fetchAPI(`/standings?league=${id}&season=${state.season}`),
-            fetchRounds(id, state.season)
+            fetchRounds(id, state.season),
+            fetchAPI('/fixtures?live=all')
         ]);
+
+        if (liveData && liveData.response) {
+            state.liveFixtures = liveData.response;
+        } else {
+            state.liveFixtures = [];
+        }
 
         // Process Standings
         if (standingsData.response && standingsData.response.length > 0) {
