@@ -230,13 +230,14 @@ export const renderMatches = () => {
 
             // Aggregate Score Logic
             let aggHtml = '';
-            // Attempt to show aggregate if available in API response
-            if (m.score && m.score.aggregate && (m.score.aggregate.home != null || m.score.aggregate.away != null)) {
-                aggHtml = `<div class="text-[10px] text-gray-500 font-mono mt-0.5">(${m.score.aggregate.home}-${m.score.aggregate.away})</div>`;
+            // Check for aggregate score in common API fields
+            const agg = m.score?.aggregate || m.goals?.aggregate;
+            if (agg && (agg.home !== null || agg.away !== null)) {
+                aggHtml = `<div class="text-[10px] text-gray-500 font-bold mt-0.5 tracking-wider">(${agg.home}-${agg.away})</div>`;
             }
 
             html += `
-        <div class="p-4 match-card ${clickableClass} relative hover:bg-[#111] transition-colors ${borderClass} pr-14" ${clickAttr}>
+        <div class="p-4 match-card ${clickableClass} relative hover:bg-[#111] transition-colors ${borderClass}" ${clickAttr}>
             ${isLive ? '<div class="absolute top-3 right-3 flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div><span class="text-[9px] font-bold text-red-500 uppercase tracking-widest">EN VIVO</span></div>' : ''}
 
             <!-- Forum/Chat Button (Absolute Right) -->
@@ -249,15 +250,15 @@ export const renderMatches = () => {
                 </div>
             </div>
 
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-center relative">
                 <!-- HOME TEAM -->
-                <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 transition-opacity duration-300 text-right min-w-0">
+                <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 transition-opacity duration-300 text-right min-w-0 pr-2">
                     <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-right">${m.teams.home.name}</span>
                     <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain shrink-0">
                 </div>
 
                 <!-- SCORE / TIME -->
-                <div class="px-2 md:px-3 flex flex-col items-center w-auto min-w-[80px] shrink-0">
+                <div class="px-1 flex flex-col items-center justify-center w-[90px] shrink-0 relative">
                     ${notStarted
                     ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
                     : `<div class="flex items-center gap-2 justify-center">
@@ -281,7 +282,7 @@ export const renderMatches = () => {
                 </div>
 
                 <!-- AWAY TEAM -->
-                <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 transition-opacity duration-300 text-left min-w-0">
+                <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 transition-opacity duration-300 text-left min-w-0 pl-2 pr-10">
                     <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain shrink-0">
                         <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-left">${m.teams.away.name}</span>
                 </div>
