@@ -746,68 +746,76 @@ export const openDetail = async (params) => {
     document.getElementById('detail-content-wrapper').classList.add('hidden');
     document.getElementById('detail-loader').classList.remove('hidden');
 
-    document.getElementById('detail-home-logo').src = m.teams.home.logo;
-    document.getElementById('detail-away-logo').src = m.teams.away.logo;
-    const homeScore = m.goals.home ?? 0;
-    const awayScore = m.goals.away ?? 0;
+    try {
+        document.getElementById('detail-home-logo').src = m.teams?.home?.logo || '';
+        document.getElementById('detail-away-logo').src = m.teams?.away?.logo || '';
+        const homeScore = m.goals?.home ?? 0;
+        const awayScore = m.goals?.away ?? 0;
 
-    // Check for penalties logic
-    const hasPenalties = m.score && m.score.penalty && (m.score.penalty.home !== null || m.score.penalty.away !== null);
+        // Check for penalties logic
+        const hasPenalties = m.score?.penalty && (m.score.penalty.home !== null || m.score.penalty.away !== null);
 
-    if (hasPenalties) {
-        // Format: (5) 1 - 1 (4)
-        document.getElementById('detail-home-score').innerHTML = `<span class="text-sm text-gray-400 font-normal mr-1">(${m.score.penalty.home})</span>${homeScore}`;
-        document.getElementById('detail-away-score').innerHTML = `${awayScore}<span class="text-sm text-gray-400 font-normal ml-1">(${m.score.penalty.away})</span>`;
-    } else {
-        document.getElementById('detail-home-score').innerText = homeScore;
-        document.getElementById('detail-away-score').innerText = awayScore;
-    }
+        if (hasPenalties) {
+            // Format: (5) 1 - 1 (4)
+            document.getElementById('detail-home-score').innerHTML = `<span class="text-sm text-gray-400 font-normal mr-1">(${m.score.penalty.home})</span>${homeScore}`;
+            document.getElementById('detail-away-score').innerHTML = `${awayScore}<span class="text-sm text-gray-400 font-normal ml-1">(${m.score.penalty.away})</span>`;
+        } else {
+            document.getElementById('detail-home-score').innerText = homeScore;
+            document.getElementById('detail-away-score').innerText = awayScore;
+        }
 
-    const statusShort = m.fixture.status.short;
-    let statusText = m.fixture.status.long;
+        const statusShort = m.fixture?.status?.short;
+        let statusText = m.fixture?.status?.long || '';
 
-    if (['1H', '2H', 'ET', 'P'].includes(statusShort)) {
-        statusText = m.fixture.status.elapsed + "'";
-    } else if (statusShort === 'HT') {
-        statusText = 'ENTRETIEMPO';
-    }
+        if (['1H', '2H', 'ET', 'P'].includes(statusShort)) {
+            statusText = (m.fixture?.status?.elapsed || 0) + "'";
+        } else if (statusShort === 'HT') {
+            statusText = 'ENTRETIEMPO';
+        }
 
-    document.getElementById('detail-status').innerText = statusText;
+        document.getElementById('detail-status').innerText = statusText;
 
-    // Red cards
-    let homeRedCardsHTML = '';
-    let awayRedCardsHTML = '';
-    if (m.events && m.events.length > 0) {
-        const redCards = m.events.filter(e => e.type === 'Card' && e.detail === 'Red Card');
-        const hReds = redCards.filter(e => e.team.id === m.teams.home.id).length;
-        const aReds = redCards.filter(e => e.team.id === m.teams.away.id).length;
+        // Red cards
+        let homeRedCardsHTML = '';
+        let awayRedCardsHTML = '';
+        if (m.events && m.events.length > 0) {
+            const redCards = m.events.filter(e => e.type === 'Card' && e.detail === 'Red Card');
+            const hReds = redCards.filter(e => e.team?.id === m.teams?.home?.id).length;
+            const aReds = redCards.filter(e => e.team?.id === m.teams?.away?.id).length;
 
-        if (hReds > 0) homeRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(hReds) + '</div>';
-        if (aReds > 0) awayRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(aReds) + '</div>';
-    }
+            if (hReds > 0) homeRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(hReds) + '</div>';
+            if (aReds > 0) awayRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(aReds) + '</div>';
+        }
 
-    document.getElementById('detail-home-name').innerHTML = m.teams.home.name + homeRedCardsHTML;
-    document.getElementById('detail-away-name').innerHTML = m.teams.away.name + awayRedCardsHTML;
+        document.getElementById('detail-home-name').innerHTML = (m.teams?.home?.name || 'Local') + homeRedCardsHTML;
+        document.getElementById('detail-away-name').innerHTML = (m.teams?.away?.name || 'Visitante') + awayRedCardsHTML;
 
-    // Goleadores
-    const hList = document.getElementById('detail-home-scorers-list');
-    const aList = document.getElementById('detail-away-scorers-list');
-    hList.innerHTML = '';
-    aList.innerHTML = '';
+        // Goleadores
+        const hList = document.getElementById('detail-home-scorers-list');
+        const aList = document.getElementById('detail-away-scorers-list');
+        if (hList) hList.innerHTML = '';
+        if (aList) aList.innerHTML = '';
 
-    if (m.events && m.events.length > 0) {
-        const goals = m.events.filter(e => e.type === 'Goal');
-        const formatScorer = (ev) => `<div class="truncate leading-tight max-w-[120px] text-center">${ev.player.name} ${ev.time.elapsed}'</div>`;
+        if (m.events && m.events.length > 0) {
+            const goals = m.events.filter(e => e.type === 'Goal');
+            const formatScorer = (ev) => {
+                const name = ev.player?.name || 'Jugador';
+                const time = ev.time?.elapsed || '';
+                return `<div class="truncate leading-tight max-w-[120px] text-center">${name} ${time}'</div>`;
+            };
 
-        const hGoals = goals.filter(e => e.team.id === m.teams.home.id).map(formatScorer);
-        if (hGoals.length > 0) hList.innerHTML = hGoals.join('');
+            const hGoals = goals.filter(e => e.team?.id === m.teams?.home?.id).map(formatScorer);
+            if (hGoals.length > 0 && hList) hList.innerHTML = hGoals.join('');
 
-        const aGoals = goals.filter(e => e.team.id === m.teams.away.id).map(formatScorer);
-        if (aGoals.length > 0) aList.innerHTML = aGoals.join('');
+            const aGoals = goals.filter(e => e.team?.id === m.teams?.away?.id).map(formatScorer);
+            if (aGoals.length > 0 && aList) aList.innerHTML = aGoals.join('');
+        }
+    } catch (err) {
+        console.error('Error rendering match detail header:', err);
     }
 
     try {
-        const isFinished = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
+        const isFinished = ['FT', 'AET', 'PEN'].includes(m.fixture?.status?.short);
         const hasFullData = m.events && m.lineups && m.statistics;
 
         // Si el partido terminó y ya tenemos datos completos, no gastar un request
@@ -828,36 +836,42 @@ export const openDetail = async (params) => {
             renderStats(m);
         } else {
             const data = await fetchAPI(`/fixtures?id=${id}`, true);
-            const fullMatch = data.response[0];
+            const fullMatch = data.response?.[0];
 
-            // Actualizar eventos en el state de matches para mostrar tarjetas rojas en la lista
-            if (fullMatch && fullMatch.events) {
-                updateMatchEvents(id, fullMatch.events);
-            }
-
-            // Guardar datos completos en el objeto del match para futuras visitas
             if (fullMatch) {
+                // Actualizar eventos en el state de matches para mostrar tarjetas rojas en la lista
+                if (fullMatch.events) {
+                    updateMatchEvents(id, fullMatch.events);
+                }
+
+                // Guardar datos completos en el objeto del match para futuras visitas
                 m.lineups = fullMatch.lineups || m.lineups;
                 m.statistics = fullMatch.statistics || m.statistics;
-            }
 
-            // Fetch player stats (photos & ratings)
-            try {
-                const playersData = await fetchAPI(`/fixtures/players?fixture=${id}`, true);
-                if (playersData && playersData.response) {
-                    fullMatch.players = playersData.response;
-                    m.players = playersData.response;
+                // Fetch player stats (photos & ratings)
+                try {
+                    const playersData = await fetchAPI(`/fixtures/players?fixture=${id}`, true);
+                    if (playersData && playersData.response) {
+                        fullMatch.players = playersData.response;
+                        m.players = playersData.response;
+                    }
+                } catch (pe) {
+                    console.warn('Could not fetch player stats:', pe);
                 }
-            } catch (pe) {
-                console.warn('Could not fetch player stats:', pe);
-            }
 
-            renderTimeline(fullMatch);
-            renderLineups(fullMatch);
-            renderStats(fullMatch);
+                renderTimeline(fullMatch);
+                renderLineups(fullMatch);
+                renderStats(fullMatch);
+            } else {
+                console.warn('No full match data returned from API for id:', id);
+                // Render limits with what we have
+                renderTimeline(m);
+                renderLineups(m);
+                renderStats(m);
+            }
         }
     } catch (e) {
-        console.error(e);
+        console.error('Error fetching/rendering full match details:', e);
     }
 
     document.getElementById('detail-loader').classList.add('hidden');
