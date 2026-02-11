@@ -215,7 +215,7 @@ const renderFixtures = () => {
             <div class="bg-[#1a1a1a] border border-[#333] rounded p-3 hover:bg-[#222] transition-colors cursor-pointer" onclick="app.openDetailWithTab(${m.fixture.id}, 'forum')">
                 <div class="flex justify-between items-center mb-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                     <span>${dayName}</span>
-                    <span class="${isLive ? 'text-red-500 animate-pulse' : ''}">${isLive ? `${m.fixture.status.elapsed}'` : (isFin ? 'FINAL' : time)}</span>
+                    <span class="${isLive ? 'text-red-500 animate-pulse' : ''}">${isLive ? `${m.fixture.status.elapsed}'` : (status === 'PEN' ? 'PEN' : (isFin ? 'FINAL' : time))}</span>
                 </div>
                 <div class="flex flex-col gap-2">
                     <div class="flex justify-between items-center">
@@ -352,12 +352,13 @@ export const renderTable = (groupIndex) => {
         // ARGENTINA (128)
         else if (leagueId === 128) {
             if (group.includes('Group') || group.includes('ZONA')) {
-                if (rank <= 4) indicatorClass = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]';
+                // Zona A/B: 1-8 Clasifican
+                if (rank <= 8) indicatorClass = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]';
             } else if (isPromedios) {
                 if (rank === totalTeams) indicatorClass = 'bg-red-600';
             } else {
                 // Annual Table
-                if (rank === 1) indicatorClass = 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]'; // Campeon/Lib
+                if (rank === 1) indicatorClass = 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]'; // Campeon
                 else if (rank >= 2 && rank <= 3) indicatorClass = 'bg-green-500'; // Lib
                 else if (rank >= 4 && rank <= 9) indicatorClass = 'bg-blue-600'; // Sudamericana
                 else if (rank === totalTeams) indicatorClass = 'bg-red-600'; // Descenso
