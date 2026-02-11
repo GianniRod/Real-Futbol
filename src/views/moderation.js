@@ -896,10 +896,16 @@ export const populateDemoTeamSelect = () => {
  * Crea un nuevo usuario demo
  */
 export const handleCreateDemoUserForm = async () => {
+    console.log('handleCreateDemoUserForm called'); // Debug
+
     const usernameInput = document.getElementById('demo-username-input');
     const teamSelect = document.getElementById('demo-team-select');
 
-    if (!usernameInput || !teamSelect) return;
+    if (!usernameInput || !teamSelect) {
+        console.error('Elements not found:', { usernameInput, teamSelect });
+        alert('Error interno: No se encuentran los elementos del formulario (Input/Select).');
+        return;
+    }
 
     const username = usernameInput.value.trim();
     const teamId = parseInt(teamSelect.value);
