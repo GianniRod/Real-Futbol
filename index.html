@@ -190,8 +190,8 @@
         /* Marcadores Jugadores - Círculos con caras */
         .player-marker {
             position: absolute;
-            width: 40px;
-            height: 40px;
+            width: 55px;
+            height: 55px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -339,8 +339,8 @@
 
         @media (max-width: 768px) {
             .player-marker {
-                width: 32px;
-                height: 32px;
+                width: 38px;
+                height: 38px;
             }
 
             .player-rating-badge {
@@ -655,6 +655,8 @@
         <!-- Main Content -->
         <main class="flex-1 flex flex-col relative w-full lg:w-auto overflow-hidden bg-black">
 
+
+
             <!-- Date Navigation -->
             <div id="date-nav" class="border-b border-[#222] p-3 z-10 bg-black/95 backdrop-blur shrink-0 relative">
                 <div class="flex items-center justify-center gap-6 mb-3 max-w-lg mx-auto">
@@ -861,10 +863,12 @@
 
                 <!-- Match Detail Overlay -->
                 <!-- LG: Modificado para que en PC sea parte del flujo (static) y no un overlay (fixed) -->
+                <!-- Match Detail Overlay -->
+                <!-- LG: Modificado para que en PC sea parte del flujo (static) y no un overlay (fixed) -->
                 <div id="view-match-detail"
                     class="hidden fixed inset-0 lg:static lg:w-full lg:h-full lg:z-0 bg-black z-[60] overflow-y-auto lg:overflow-y-visible animate-fade-in"
                     style="touch-action: pan-y; -webkit-overflow-scrolling: touch;">
-                    <div class="max-w-4xl mx-auto bg-[#050505] relative">
+                    <div class="max-w-[95%] mx-auto bg-[#050505] relative">
 
                         <!-- Botón Volver Flotante -->
                         <button onclick="app.closeDetail()" class="btn-float-back hover:bg-[#222] transition-all">
@@ -880,8 +884,9 @@
 
                         <div id="detail-content-wrapper" class="pt-4 pb-20">
                             <!-- Scoreboard -->
+                            <!-- Scoreboard -->
                             <div class="relative pt-14 px-6 pb-6 text-center border-b border-[#222] bg-[#0a0a0a]">
-                                <div class="flex justify-between items-center max-w-md mx-auto">
+                                <div class="flex justify-between items-center w-full mx-auto">
                                     <div class="flex-1 flex flex-col items-center min-w-0">
                                         <img id="detail-home-logo" src="" class="w-16 h-16 object-contain mb-3">
                                         <h3 id="detail-home-name"
@@ -1009,7 +1014,7 @@
                                     </div>
                                 </div>
 
-                                <div id="tab-lineups" class="tab-content hidden max-w-2xl mx-auto">
+                                <div id="tab-lineups" class="tab-content hidden w-full mx-auto">
                                     <div class="football-pitch mx-auto" id="football-pitch">
                                         <div class="center-line"></div>
                                         <div class="center-circle"></div>
@@ -1041,7 +1046,8 @@
                                     </div>
                                 </div>
 
-                                <div id="tab-stats" class="tab-content hidden space-y-4 max-w-xl mx-auto"></div>
+                                <!-- Stats View -->
+                                <div id="tab-stats" class="tab-content hidden space-y-4 w-full mx-auto"></div>
                             </div>
                         </div>
                     </div>
