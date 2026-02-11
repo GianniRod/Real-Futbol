@@ -129,7 +129,7 @@ export const initForum = (context, containerId, usernameInputId) => {
             const logoVisibilityClass = isSameUser ? 'invisible' : '';
 
             return `
-                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} ${isSameUser ? 'mb-0.5' : 'mb-4'} animate-fade-in group relative message-container" 
+                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} ${isSameUser ? 'mb-0' : 'mb-4'} animate-fade-in group relative message-container" 
                      data-message-id="${msg.id}"
                      data-message-user="${msg.user.replace(/"/g, '&quot;')}"
                      data-message-text="${msg.text.substring(0, 100).replace(/"/g, '&quot;').replace(/\n/g, ' ')}">
