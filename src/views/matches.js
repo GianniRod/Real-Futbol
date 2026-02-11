@@ -127,6 +127,10 @@ export const loadMatches = async (silent = false) => {
         });
 
         state.matches = matches;
+
+        // Fetch aggregate scores for 2nd leg matches
+        await loadAggregateScores(matches);
+
         renderMatches();
         loadMessageCounts();
     } catch (e) {
@@ -162,6 +166,70 @@ export const loadMatches = async (silent = false) => {
             </div>
         `;
     }
+};
+
+/**
+ * Carga scores agregados para partidos de vuelta (2nd Leg)
+ * Busca el partido de ida y calcula el global
+ */
+const loadAggregateScores = async (matches) => {
+    // Find 2nd leg matches
+    const secondLegMatches = matches.filter(m => {
+        const round = (m.league.round || '').toLowerCase();
+        return round.includes('2nd leg') || round.includes('leg 2');
+    });
+
+    if (secondLegMatches.length === 0) return;
+
+    // For each 2nd leg match, fetch the 1st leg
+    const promises = secondLegMatches.map(async (m) => {
+        try {
+            // Build the 1st leg round name
+            const firstLegRound = m.league.round
+                .replace(/2nd Leg/i, '1st Leg')
+                .replace(/Leg 2/i, 'Leg 1');
+
+            // Fetch 1st leg fixtures for same league, season, and round
+            const data = await fetchAPI(
+                `/fixtures?league=${m.league.id}&season=${m.league.season}&round=${encodeURIComponent(firstLegRound)}`,
+                true // silent
+            );
+
+            if (data.response && data.response.length > 0) {
+                // Find the specific 1st leg match with same teams (reversed home/away)
+                const firstLeg = data.response.find(f =>
+                    (f.teams.home.id === m.teams.away.id && f.teams.away.id === m.teams.home.id) ||
+                    (f.teams.home.id === m.teams.home.id && f.teams.away.id === m.teams.away.id)
+                );
+
+                if (firstLeg && firstLeg.goals.home !== null) {
+                    // Calculate aggregate from perspective of 2nd leg's home/away
+                    // 1st leg: Team A (home) vs Team B (away) -> score X - Y
+                    // 2nd leg: Team B (home) vs Team A (away) -> score W - Z
+                    // Aggregate for 2nd leg home team = W + (1st leg score where they played)
+
+                    const isReversed = firstLeg.teams.home.id === m.teams.away.id;
+
+                    let homeAgg, awayAgg;
+                    if (isReversed) {
+                        // Normal case: teams are flipped between legs
+                        homeAgg = (m.goals.home ?? 0) + (firstLeg.goals.away ?? 0);
+                        awayAgg = (m.goals.away ?? 0) + (firstLeg.goals.home ?? 0);
+                    } else {
+                        // Same order (rare)
+                        homeAgg = (m.goals.home ?? 0) + (firstLeg.goals.home ?? 0);
+                        awayAgg = (m.goals.away ?? 0) + (firstLeg.goals.away ?? 0);
+                    }
+
+                    m._aggregate = { home: homeAgg, away: awayAgg };
+                }
+            }
+        } catch (e) {
+            console.warn('Could not fetch 1st leg for aggregate:', e);
+        }
+    });
+
+    await Promise.all(promises);
 };
 
 /**
@@ -244,12 +312,10 @@ export const renderMatches = () => {
             const isLast = index === g.matches.length - 1;
             const borderClass = isLast ? '' : 'border-b border-[#222]';
 
-            // Aggregate Score Logic
+            // Aggregate Score Logic (from _aggregate calculated by loadAggregateScores)
             let aggHtml = '';
-            // Check for aggregate score in common API fields
-            const agg = m.score?.aggregate || m.goals?.aggregate;
-            if (agg && (agg.home !== null || agg.away !== null)) {
-                aggHtml = `<div class="text-[10px] text-gray-500 font-bold mt-0.5 tracking-wider">(${agg.home}-${agg.away})</div>`;
+            if (m._aggregate) {
+                aggHtml = `<div class="text-[10px] text-gray-400 font-bold tracking-wider">(${m._aggregate.home}-${m._aggregate.away})</div>`;
             }
 
             html += `
@@ -257,7 +323,7 @@ export const renderMatches = () => {
             ${isLive ? '<div class="absolute top-3 right-3 flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div><span class="text-[9px] font-bold text-red-500 uppercase tracking-widest">EN VIVO</span></div>' : ''}
 
             <!-- Forum/Chat Button (Absolute Right) -->
-            <div class="absolute right-4 top-1/2 -translate-y-1/2 z-20" onclick="app.openDetailWithTab(${m.fixture.id}, 'forum'); event.stopPropagation(); event.preventDefault();">
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 z-20" onclick="app.openDetailWithTab(${m.fixture.id}, 'forum'); event.stopPropagation(); event.preventDefault();">
                 <div class="w-8 h-8 rounded-full bg-[#161616] border border-[#333] flex items-center justify-center hover:bg-[#222] hover:border-gray-500 transition-colors group/chat relative shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 group-hover/chat:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -266,19 +332,20 @@ export const renderMatches = () => {
                 </div>
             </div>
 
-            <div class="flex items-center justify-center relative">
+            <!-- Row 1: Teams + Score (centered vertically) -->
+            <div class="flex items-center justify-center pr-10">
                 <!-- HOME TEAM -->
-                <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 transition-opacity duration-300 text-right min-w-0 pr-2">
+                <div class="flex-1 flex justify-end items-center gap-2 md:gap-3 text-right min-w-0">
                     <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-right">${m.teams.home.name}</span>
                     <img src="${m.teams.home.logo}" class="w-8 h-8 object-contain shrink-0">
                 </div>
 
-                <!-- SCORE / TIME -->
-                <div class="px-1 flex flex-col items-center justify-center w-[90px] shrink-0 relative">
+                <!-- SCORE / TIME (same height as crests) -->
+                <div class="px-2 md:px-3 flex items-center justify-center shrink-0 min-w-[80px]">
                     ${notStarted
-                    ? `<span class="text-xl font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
-                    : `<div class="flex items-center gap-2 justify-center">
-                                    ${(m.score?.penalty?.home != null) ? `<span class="text-xs text-gray-400 font-bold mt-1">(${m.score.penalty.home})</span>` : ''}
+                    ? `<span class="text-lg font-bold text-gray-600 score-font tracking-tighter">${timeDisplay}</span>`
+                    : `<div class="flex items-center gap-1.5 justify-center">
+                                    ${(m.score?.penalty?.home != null) ? `<span class="text-xs text-gray-400 font-bold">(${m.score.penalty.home})</span>` : ''}
                                     <div class="flex gap-2 text-xl md:text-2xl font-black text-white score-font tracking-widest">
                                      <span class="relative">
                                         ${hRedCards}
@@ -290,19 +357,24 @@ export const renderMatches = () => {
                                         ${aRedCards}
                                      </span>
                                    </div>
-                                   ${(m.score?.penalty?.away != null) ? `<span class="text-xs text-gray-400 font-bold mt-1">(${m.score.penalty.away})</span>` : ''}
+                                   ${(m.score?.penalty?.away != null) ? `<span class="text-xs text-gray-400 font-bold">(${m.score.penalty.away})</span>` : ''}
                                    </div>`
                 }
-                    <span class="text-[9px] font-bold uppercase text-gray-500 mt-1 tracking-widest text-center whitespace-nowrap min-h-[14px]">${isLive || isHT || isFin ? timeDisplay : ''}</span>
-                    ${aggHtml}
                 </div>
 
                 <!-- AWAY TEAM -->
-                <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 transition-opacity duration-300 text-left min-w-0 pl-2 pr-10">
+                <div class="flex-1 flex justify-start items-center gap-2 md:gap-3 text-left min-w-0">
                     <img src="${m.teams.away.logo}" class="w-8 h-8 object-contain shrink-0">
-                        <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-left">${m.teams.away.name}</span>
+                    <span class="font-bold text-white text-xs md:text-sm uppercase tracking-tight leading-none md:truncate text-wrap text-left">${m.teams.away.name}</span>
                 </div>
             </div>
+
+            <!-- Row 2: Status + Aggregate (below, centered) -->
+            ${(isLive || isHT || aggHtml) ? `
+            <div class="flex flex-col items-center mt-1">
+                ${isLive || isHT ? `<span class="text-[9px] font-bold uppercase text-gray-500 tracking-widest text-center whitespace-nowrap">${timeDisplay}</span>` : ''}
+                ${aggHtml}
+            </div>` : ''}
         </div>`;
         });
 
