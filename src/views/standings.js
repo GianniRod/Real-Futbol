@@ -268,9 +268,43 @@ export const renderTable = (groupIndex) => {
                     </thead>
                     <tbody class="divide-y divide-[#1a1a1a]">
                         ${table.map(t => {
-        const pointsDisplay = isPromedios
-            ? (t.all.played > 0 ? (t.points / t.all.played).toFixed(3) : '0.000')
-            : t.points;
+        // Logic to find live match and calculate live points
+        let liveMatch = null;
+        let livePointsAdded = 0;
+        let badgeHtml = '';
+
+        if (state.liveFixtures) {
+            liveMatch = state.liveFixtures.find(m => m.teams.home.id === t.team.id || m.teams.away.id === t.team.id);
+            if (liveMatch) {
+                const isHome = liveMatch.teams.home.id === t.team.id;
+                const myScore = isHome ? liveMatch.goals.home : liveMatch.goals.away;
+                const oppScore = isHome ? liveMatch.goals.away : liveMatch.goals.home;
+
+                let bgClass = 'bg-yellow-600'; // Draw
+                livePointsAdded = 1;
+
+                if (myScore > oppScore) {
+                    bgClass = 'bg-green-600';
+                    livePointsAdded = 3;
+                } else if (myScore < oppScore) {
+                    bgClass = 'bg-red-600';
+                    livePointsAdded = 0;
+                }
+
+                badgeHtml = `<span class="ml-2 px-1.5 py-0.5 rounded ${bgClass} text-white font-bold text-[10px] animate-pulse">${liveMatch.goals.home} - ${liveMatch.goals.away}</span>`;
+            }
+        }
+
+        // Calculate Points Display
+        let pointsDisplay;
+        if (isPromedios) {
+            pointsDisplay = (t.all.played > 0 ? (t.points / t.all.played).toFixed(3) : '0.000');
+        } else {
+            // Add live points to display (heuristic)
+            const currentPoints = t.points || 0;
+            const finalPoints = liveMatch ? (currentPoints + livePointsAdded) : currentPoints;
+            pointsDisplay = finalPoints;
+        }
 
         return `
                             <tr class="hover:bg-[#111] transition-colors">
@@ -278,23 +312,10 @@ export const renderTable = (groupIndex) => {
                                 <td class="px-2 py-2 md:px-3 md:py-3 font-bold text-gray-300 flex items-center gap-2 md:gap-3 whitespace-nowrap uppercase text-[10px] md:text-xs">
                                     <img src="${t.team.logo}" class="w-4 h-4 md:w-6 md:h-6 object-contain">
                                     ${t.team.name}
-                                    ${(() => {
-                if (!state.liveFixtures) return '';
-                const match = state.liveFixtures.find(m => m.teams.home.id === t.team.id || m.teams.away.id === t.team.id);
-                if (match) {
-                    const isHome = match.teams.home.id === t.team.id;
-                    const myScore = isHome ? match.goals.home : match.goals.away;
-                    const oppScore = isHome ? match.goals.away : match.goals.home;
-                    let colorClass = 'text-yellow-500'; // Draw
-                    if (myScore > oppScore) colorClass = 'text-green-500';
-                    if (myScore < oppScore) colorClass = 'text-red-500';
-                    return `<span class="ml-2 ${colorClass} font-mono animate-pulse">(${match.goals.home}-${match.goals.away})</span>`;
-                }
-                return '';
-            })()}
+                                    ${badgeHtml}
                                 </td>
                                 <td class="px-1 py-2 md:px-2 md:py-3 text-center font-bold text-white bg-[#111]/50 text-[10px] md:text-xs">${pointsDisplay}</td>
-                                <td class="px-1 py-2 md:px-2 md:py-3 text-center font-mono text-[10px] md:text-xs">${t.all.played}</td>
+                                <td class="px-1 py-2 md:px-2 md:py-3 text-center font-mono text-[10px] md:text-xs">${t.all.played + (liveMatch ? 1 : 0)}</td>
                                 <td class="px-1 py-2 md:px-2 md:py-3 text-center font-mono text-[10px] md:text-xs ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff > 0 ? '+' : ''}${t.goalsDiff}</td>
                                 <td class="px-2 py-3 text-center hidden md:table-cell">
                                     <div class="flex justify-center gap-0.5">
