@@ -74,7 +74,10 @@ import {
     getAuthProvider,
     getLinkedPhone,
     openRankingModal,
-    closeRankingModal
+    closeRankingModal,
+    enterDemoMode,
+    exitDemoMode,
+    isInDemoMode
 } from './views/auth.js';
 
 import {
@@ -613,11 +616,11 @@ const closePhoneLinkingVerification = () => {
 
 /**
  * Cambia entre tabs del panel de moderación
- * @param {string} tabName - 'team', 'sanctions', o 'badges'
+ * @param {string} tabName - 'team', 'sanctions', 'badges', 'featured', o 'demo'
  */
 const switchModTab = (tabName) => {
     // Ocultar todos los contenidos
-    const contents = ['team', 'sanctions', 'badges', 'featured'];
+    const contents = ['team', 'sanctions', 'badges', 'featured', 'demo'];
     contents.forEach(name => {
         const content = document.getElementById(`mod-content-${name}`);
         const tab = document.getElementById(`mod-tab-${name}`);
@@ -637,9 +640,13 @@ const switchModTab = (tabName) => {
         selectedTab.classList.add('text-white', 'bg-[#1a1a1a]', 'border-orange-500');
     }
 
-    // Si es el tab de destacado, cargar la lista de partidos
+    // Lógica específica por tab
     if (tabName === 'featured') {
         loadFeaturedMatchPicker();
+    } else if (tabName === 'demo') {
+        const { loadDemoUsers, populateDemoTeamSelect } = app; // Accessible via window.app
+        if (loadDemoUsers) loadDemoUsers();
+        if (populateDemoTeamSelect) populateDemoTeamSelect();
     }
 };
 
@@ -749,6 +756,11 @@ window.app = {
     handlePhoneLinking,
     handlePhoneLinkingVerification,
     closePhoneLinkingVerification,
+
+    // Demo Mode
+    enterDemoMode,
+    exitDemoMode,
+    isInDemoMode,
 
     // Team Selection
     goToTeamSelection,
