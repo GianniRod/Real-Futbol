@@ -302,56 +302,78 @@ const renderLineups = (m) => {
     const idsMatch = (id1, id2) => String(id1) === String(id2);
 
     // Helper to build a player face thumbnail for the list
-    const buildListFace = (playerId) => {
+    const buildListFace = (playerId, size = 'w-7 h-7') => {
         const pStats = playerStatsMap[String(playerId)] || {};
         const photo = pStats.photo || `https://media.api-sports.io/football/players/${playerId}.png`;
         const rating = pStats.rating;
         let borderColor = '#555';
-        let ratingHtml = '';
         if (rating !== null && rating !== undefined) {
             const colors = getRatingColors(rating);
             borderColor = colors.border;
-            ratingHtml = `<span class="text-[9px] font-bold ml-auto px-1.5 py-0.5 rounded" style="background:${colors.bg}; color:${colors.text}">${rating.toFixed(1).replace('.', ',')}</span>`;
         }
-        const faceHtml = `<div class="w-7 h-7 rounded-full overflow-hidden border-2 shrink-0" style="border-color:${borderColor}; background:#222;"><img src="${photo}" class="w-full h-full object-cover" onerror="this.style.display='none'"/></div>`;
-        return { faceHtml, ratingHtml };
+        return `<div class="${size} rounded-full overflow-hidden border-2 shrink-0" style="border-color:${borderColor}; background:#222;"><img src="${photo}" class="w-full h-full object-cover" onerror="this.style.display='none'"/></div>`;
     };
 
     const renderList = (lineup) => {
-        let html = lineup.startXI.map(p => {
-            const subOut = events.find(e => {
-                const eventType = (e.type || '').toLowerCase();
-                return (eventType === 'subst' || eventType === 'substitution') && e.assist && idsMatch(e.assist.id, p.player.id);
-            });
-            const subInfo = subOut ? `<span class="text-red-400 text-[10px] ml-2 font-bold">▼ ${subOut.time.elapsed}'</span>` : '';
-            const { faceHtml, ratingHtml } = buildListFace(p.player.id);
+        let html = '';
 
-            return `<div class="flex items-center gap-2 border-b border-[#222] py-1.5">
-                ${faceHtml}
-                <span class="text-gray-300 transition-colors text-sm">${p.player.name}</span>${subInfo}
-                ${ratingHtml}
-                <span class="text-gray-600 font-mono text-xs ml-auto">${p.player.number}</span>
-            </div>`;
-        }).join('');
-
+        // === SUSTITUTOS (players who actually entered the game) ===
+        const substitutesWhoEntered = [];
         if (lineup.substitutes && lineup.substitutes.length > 0) {
-            html += `<div class="mt-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Suplentes</div>`;
-            html += lineup.substitutes.map(p => {
-                const subIn = events.find(e => {
+            lineup.substitutes.forEach(p => {
+                const subInEvent = events.find(e => {
                     const eventType = (e.type || '').toLowerCase();
                     return (eventType === 'subst' || eventType === 'substitution') && e.player && idsMatch(e.player.id, p.player.id);
                 });
-                const subInfo = subIn ? `<span class="text-green-400 text-[10px] ml-2 font-bold">▲ ${subIn.time.elapsed}'</span>` : '';
-                const { faceHtml, ratingHtml } = buildListFace(p.player.id);
+                if (subInEvent) {
+                    substitutesWhoEntered.push({ player: p, event: subInEvent });
+                }
+            });
+        }
 
-                return `<div class="flex items-center gap-2 border-b border-[#222] py-1.5">
+        if (substitutesWhoEntered.length > 0) {
+            html += `<div class="mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Sustitutos</div>`;
+            html += substitutesWhoEntered.map(({ player: p, event: subInEvent }) => {
+                const pStats = playerStatsMap[String(p.player.id)] || {};
+                const rating = pStats.rating;
+                let ratingHtml = '';
+                if (rating !== null && rating !== undefined) {
+                    const colors = getRatingColors(rating);
+                    ratingHtml = `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background:${colors.bg}; color:${colors.text}">${rating.toFixed(1).replace('.', ',')}</span>`;
+                }
+                const faceHtml = buildListFace(p.player.id);
+                const minute = subInEvent.time.elapsed;
+                const enteredIcon = `<div class="flex items-center gap-1 ml-auto shrink-0">
+                    <div class="w-5 h-5 rounded-full bg-green-600/30 border border-green-500 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                    <span class="text-green-400 text-[10px] font-bold font-mono">${minute}'</span>
+                </div>`;
+                return `<div class="flex items-center gap-2 border-b border-[#222] py-2">
                     ${faceHtml}
-                    <span class="text-gray-400 text-sm">${p.player.name}</span>${subInfo}
                     ${ratingHtml}
-                    <span class="text-gray-600 font-mono text-xs ml-auto">${p.player.number}</span>
+                    <span class="text-gray-300 text-sm font-medium">${p.player.name}</span>
+                    ${enteredIcon}
                 </div>`;
             }).join('');
         }
+
+        // === SUPLENTES (players who didn't enter — just face + name) ===
+        const benchOnly = (lineup.substitutes || []).filter(p => {
+            return !substitutesWhoEntered.some(s => idsMatch(s.player.player.id, p.player.id));
+        });
+
+        if (benchOnly.length > 0) {
+            html += `<div class="mt-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Suplentes</div>`;
+            html += benchOnly.map(p => {
+                const faceHtml = buildListFace(p.player.id, 'w-6 h-6');
+                return `<div class="flex items-center gap-2 border-b border-[#222] py-1.5">
+                    ${faceHtml}
+                    <span class="text-gray-500 text-sm">${p.player.name}</span>
+                </div>`;
+            }).join('');
+        }
+
         return html;
     };
 
@@ -467,17 +489,46 @@ const renderLineups = (m) => {
                     el.appendChild(ratingBadge);
                 }
 
-                // Goal icon
-                const playerGoals = events.filter(e => e.type === 'Goal' && (idsMatch(e.player.id, p.player.id) || (isSubbed && subOutEvent && idsMatch(e.player.id, subOutEvent.player.id))));
+                // === EVENT ICONS around the player face ===
+                const checkId = isSubbed ? currentPlayerId : p.player.id;
+                const originalId = p.player.id;
+                const eventIcons = [];
 
-                if (playerGoals.length > 0) {
-                    const ballIcon = document.createElement('div');
-                    ballIcon.className = 'player-goal-icon';
-                    const isOwn = playerGoals[playerGoals.length - 1].detail === 'Own Goal';
-                    ballIcon.innerHTML = isOwn
-                        ? `<div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>`
-                        : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="10" height="10" fill="white"><circle cx="12" cy="12" r="10" fill="#111" stroke="#888" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="white"/></svg>`;
-                    el.appendChild(ballIcon);
+                // Goal → soccer ball
+                const goals = events.filter(e => e.type === 'Goal' && e.detail !== 'Own Goal' && e.player && (idsMatch(e.player.id, checkId) || idsMatch(e.player.id, originalId)));
+                goals.forEach(() => {
+                    eventIcons.push(`<div class="player-event-icon" title="Gol"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13"><circle cx="12" cy="12" r="10" fill="#222" stroke="#bbb" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="white"/></svg></div>`);
+                });
+
+                // Assist → boot/cleat
+                const playerAssists = events.filter(e => e.type === 'Goal' && e.assist && (idsMatch(e.assist.id, checkId) || idsMatch(e.assist.id, originalId)));
+                playerAssists.forEach(() => {
+                    eventIcons.push(`<div class="player-event-icon" title="Asistencia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13"><circle cx="12" cy="12" r="10" fill="#222" stroke="#bbb" stroke-width="1.5"/><path d="M7 16 L10 10 L14 9 L17 12 L15 16 Z" fill="#ccc" stroke="#888" stroke-width="0.5"/></svg></div>`);
+                });
+
+                // Yellow Card
+                const yellows = events.filter(e => e.type === 'Card' && e.detail === 'Yellow Card' && e.player && (idsMatch(e.player.id, checkId) || idsMatch(e.player.id, originalId)));
+                yellows.forEach(() => {
+                    eventIcons.push(`<div class="player-event-icon" title="Tarjeta Amarilla"><div style="width:9px;height:12px;background:#FACC15;border-radius:1.5px;border:1px solid #a38a00;"></div></div>`);
+                });
+
+                // Red Card
+                const reds = events.filter(e => e.type === 'Card' && e.detail === 'Red Card' && e.player && (idsMatch(e.player.id, checkId) || idsMatch(e.player.id, originalId)));
+                reds.forEach(() => {
+                    eventIcons.push(`<div class="player-event-icon" title="Tarjeta Roja"><div style="width:9px;height:12px;background:#EF4444;border-radius:1.5px;border:1px solid #991b1b;"></div></div>`);
+                });
+
+                // Substituted out → red circle with arrow + minute
+                if (isSubbed && subOutEvent) {
+                    const subMinute = subOutEvent.time.elapsed;
+                    eventIcons.push(`<div class="player-event-icon player-event-sub-out" title="Sust. ${subMinute}'"><div style="width:14px;height:14px;border-radius:50%;background:rgba(239,68,68,0.3);border:1.5px solid #EF4444;display:flex;align-items:center;justify-content:center;"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></div></div>`);
+                }
+
+                if (eventIcons.length > 0) {
+                    const iconsContainer = document.createElement('div');
+                    iconsContainer.className = 'player-events-container';
+                    iconsContainer.innerHTML = eventIcons.join('');
+                    el.appendChild(iconsContainer);
                 }
 
                 let x, y;
