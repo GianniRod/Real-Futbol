@@ -119,8 +119,8 @@ export const showTeamProfile = async (params) => {
         };
         const sortByPrice = (a, b) => parsePrice(b) - parsePrice(a);
 
-        const arrivals = recentTransfers.filter(t => t.teams.in.id === parseInt(teamId)).sort(sortByPrice).slice(0, 6);
-        const departures = recentTransfers.filter(t => t.teams.out.id === parseInt(teamId)).sort(sortByPrice).slice(0, 6);
+        const arrivals = recentTransfers.filter(t => t.teams.in.id === parseInt(teamId)).sort(sortByPrice);
+        const departures = recentTransfers.filter(t => t.teams.out.id === parseInt(teamId)).sort(sortByPrice);
 
         // Determine league for standings
         let leagueId = null;
@@ -196,22 +196,23 @@ export const showTeamProfile = async (params) => {
 
                 <!-- Right Column: Transfers + Standings -->
                 <div class="w-full lg:w-96 shrink-0 space-y-6">
-                    <!-- Fichajes -->
+                    <!-- Llegadas -->
                     <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
                         <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Fichajes</h3>
+                            <h3 class="text-xs font-bold text-green-500 uppercase tracking-widest">Llegadas</h3>
                         </div>
-                        <div class="p-3 space-y-4 max-h-[400px] overflow-y-auto">
-                            <!-- Llegadas -->
-                            <div>
-                                <div class="text-[10px] font-bold text-green-500 uppercase tracking-widest mb-2 px-1">Llegadas</div>
-                                ${arrivals.length > 0 ? `<div class="space-y-1">${arrivals.map(t => renderTransferRow(t, 'in')).join('')}</div>` : '<div class="text-gray-600 text-xs px-1">Sin fichajes recientes</div>'}
-                            </div>
-                            <!-- Salidas -->
-                            <div>
-                                <div class="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-2 px-1">Salidas</div>
-                                ${departures.length > 0 ? `<div class="space-y-1">${departures.map(t => renderTransferRow(t, 'out')).join('')}</div>` : '<div class="text-gray-600 text-xs px-1">Sin salidas recientes</div>'}
-                            </div>
+                        <div class="max-h-[270px] overflow-y-auto">
+                            ${arrivals.length > 0 ? `<div class="divide-y divide-[#1a1a1a]">${arrivals.map(t => renderTransferRow(t, 'in')).join('')}</div>` : '<div class="text-gray-600 text-xs p-4">Sin fichajes recientes</div>'}
+                        </div>
+                    </div>
+
+                    <!-- Salidas -->
+                    <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
+                        <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
+                            <h3 class="text-xs font-bold text-red-500 uppercase tracking-widest">Salidas</h3>
+                        </div>
+                        <div class="max-h-[270px] overflow-y-auto">
+                            ${departures.length > 0 ? `<div class="divide-y divide-[#1a1a1a]">${departures.map(t => renderTransferRow(t, 'out')).join('')}</div>` : '<div class="text-gray-600 text-xs p-4">Sin salidas recientes</div>'}
                         </div>
                     </div>
 
@@ -303,19 +304,30 @@ const renderUpcomingRow = (m, teamId) => {
  * Renderiza una fila de fichaje
  */
 const renderTransferRow = (t, direction) => {
-    const date = new Date(t.date);
-    const dateStr = date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
     const fromTo = direction === 'in' ? t.teams.out : t.teams.in;
-    const typeLabel = t.type === 'Free' ? 'Libre' : (t.type === 'Loan' ? 'Préstamo' : (t.type === 'N/A' ? '' : t.type));
+
+    // Determine price/type label
+    let priceLabel = '';
+    let priceClass = 'text-gray-600';
+    if (t.type === 'Free' || t.type === 'N/A') {
+        priceLabel = 'LIBRE';
+        priceClass = 'text-gray-500';
+    } else if (t.type === 'Loan') {
+        priceLabel = 'PRÉSTAMO';
+        priceClass = 'text-yellow-600';
+    } else if (t.type && t.type !== 'N/A') {
+        priceLabel = t.type;
+        priceClass = 'text-green-600';
+    }
 
     return `
-        <div class="flex items-center gap-2 px-1 py-1.5 rounded hover:bg-[#111] transition-colors">
-            <img src="${fromTo.logo || ''}" class="w-4 h-4 object-contain shrink-0 opacity-50" onerror="this.style.display='none'">
+        <div class="flex items-center gap-2 px-3 py-2.5 hover:bg-[#111] transition-colors">
+            <img src="${fromTo.logo || ''}" class="w-5 h-5 object-contain shrink-0 opacity-50" onerror="this.style.display='none'">
             <div class="min-w-0 flex-1">
                 <div class="text-xs font-bold text-gray-300 truncate">${t.player.name}</div>
-                <div class="text-[10px] text-gray-600 truncate">${direction === 'in' ? 'De' : 'A'} ${fromTo.name} ${typeLabel ? `· ${typeLabel}` : ''}</div>
+                <div class="text-[10px] text-gray-600 truncate">${direction === 'in' ? 'De' : 'A'} ${fromTo.name}</div>
             </div>
-            <div class="text-[10px] text-gray-600 font-mono shrink-0">${dateStr}</div>
+            <div class="text-[10px] font-bold ${priceClass} shrink-0 uppercase tracking-wider">${priceLabel}</div>
         </div>
     `;
 };
