@@ -85,10 +85,23 @@ export const showTeamProfile = async (params) => {
         const last5 = lastMatches.response || [];
         const next5 = nextMatches.response || [];
 
-        // Filter transfers from last year
+        // Flatten all transfers from all players in the response
+        // API returns: response = [{ player: {...}, transfers: [...] }, ...]
         const now = new Date();
         const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-        const allTransfers = transfersData.response?.[0]?.transfers || [];
+        const allTransfers = [];
+        if (transfersData.response && Array.isArray(transfersData.response)) {
+            for (const playerEntry of transfersData.response) {
+                if (playerEntry.transfers && Array.isArray(playerEntry.transfers)) {
+                    for (const transfer of playerEntry.transfers) {
+                        allTransfers.push({
+                            ...transfer,
+                            player: playerEntry.player
+                        });
+                    }
+                }
+            }
+        }
         const recentTransfers = allTransfers.filter(t => {
             const d = new Date(t.date);
             return d >= oneYearAgo;
