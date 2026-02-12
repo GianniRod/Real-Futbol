@@ -234,10 +234,94 @@ const renderFixtures = () => {
                         </div>
                         <span class="text-sm font-bold text-white font-mono">${scoreAway}</span>
                     </div>
+        </div>
+    `;
+    }).join('');
+};
+
+/**
+ * Renderiza TODOS los grupos verticalmente (para Mundial)
+ */
+const renderAllWorldCupGroups = () => {
+    const container = document.getElementById('standings-table-container');
+    if (!container || !state.standingsData) return;
+
+    let fullHtml = '<div class="space-y-8 pb-10">';
+
+    state.standingsData.forEach((groupData, index) => {
+        const table = groupData;
+        const rawName = table[0] && table[0].group ? table[0].group : 'GRUPO ' + (index + 1);
+        const groupMatch = rawName.match(/Group\s+([A-Z])/i);
+        const groupName = groupMatch ? `GRUPO ${groupMatch[1]}` : rawName.toUpperCase();
+
+        // reuse basic sorting logic (points -> diff -> goals)
+        table.sort((a, b) => {
+            if (a.points !== b.points) return b.points - a.points;
+            if (a.goalsDiff !== b.goalsDiff) return b.goalsDiff - a.goalsDiff;
+            return b.all.goals.for - a.all.goals.for;
+        });
+
+        // HTML construction (similar to renderTable but simpler/detached from live sort for now)
+        fullHtml += `
+            <div>
+                <div class="px-3 md:px-4 py-2 bg-[#111] border-y border-[#222] text-xs font-bold text-gray-300 tracking-widest uppercase sticky top-0 z-10">
+                    ${groupName}
+                </div>
+                <div class="bg-[#0a0a0a] border-x border-b border-[#222] overflow-hidden rounded-b-lg mx-2 md:mx-3 mb-3">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-gray-400">
+                            <thead class="text-[9px] md:text-[10px] text-gray-500 uppercase bg-[#0f0f0f] border-b border-[#222] tracking-widest">
+                                <tr>
+                                    <th class="px-2 py-2 md:px-3 md:py-3 text-center w-6 md:w-8">#</th>
+                                    <th class="px-2 py-2 md:px-3 md:py-3">Equipo</th>
+                                    <th class="px-1 py-2 md:px-2 md:py-3 text-center text-white">Pts</th>
+                                    <th class="px-1 py-2 md:px-2 md:py-3 text-center">PJ</th>
+                                    <th class="px-1 py-2 md:px-2 md:py-3 text-center font-mono">DG</th>
+                                    <th class="px-1 py-2 md:px-2 md:py-3 text-center hidden md:table-cell">Forma</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#1a1a1a]">
+                                ${table.map((t, i) => {
+            const rank = i + 1;
+            // World Cup Colors: Top 2 qualify
+            let indicatorClass = '';
+            if (rank <= 2) indicatorClass = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]';
+            else if (rank === 3) indicatorClass = 'bg-yellow-600/50'; // Possible best 3rd? (Current format is 12 groups of 4, top 2 + 8 best 3rd advance = 32 teams)
+            // 2026 Format: 48 teams, 12 groups of 4. Top 2 + 8 best 3rds = 32 -> R32. 
+            // So actually 1st and 2nd are Green. 3rd might be Yellow.
+
+            return `
+                                    <tr class="hover:bg-[#111] transition-colors relative">
+                                        <td class="px-2 py-2 md:px-3 md:py-3 text-center text-gray-500 border-r border-[#222] text-[10px] md:text-xs relative">
+                                            ${indicatorClass ? `<div class="absolute left-0 top-2 bottom-2 w-[3px] ${indicatorClass} rounded-r"></div>` : ''}
+                                            ${rank}
+                                        </td>
+                                        <td class="px-2 py-2 md:px-3 md:py-3 font-bold text-gray-300 flex items-center gap-2 md:gap-3 whitespace-nowrap uppercase text-[10px] md:text-xs cursor-pointer hover:text-white transition-colors" onclick="event.stopPropagation(); app.navigate('/equipo/${t.team.id}')">
+                                            <img src="${t.team.logo}" class="w-4 h-4 md:w-6 md:h-6 object-contain">
+                                            ${t.team.name}
+                                        </td>
+                                        <td class="px-1 py-2 md:px-2 md:py-3 text-center font-bold text-white bg-[#111]/50 text-[10px] md:text-xs">${t.points}</td>
+                                        <td class="px-1 py-2 md:px-2 md:py-3 text-center font-mono text-[10px] md:text-xs">${t.all.played}</td>
+                                        <td class="px-1 py-2 md:px-2 md:py-3 text-center font-mono text-[10px] md:text-xs ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff > 0 ? '+' : ''}${t.goalsDiff}</td>
+                                        <td class="px-2 py-3 text-center hidden md:table-cell">
+                                            <div class="flex justify-center gap-0.5">
+                                                ${t.form ? t.form.split('').slice(-5).map(f => `<div class="w-1.5 h-1.5 rounded-full ${f === 'W' ? 'bg-green-500' : (f === 'D' ? 'bg-gray-500' : 'bg-red-500')}"></div>`).join('') : '-'}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `}).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         `;
-    }).join('');
+    });
+
+    fullHtml += '</div>';
+    container.innerHTML = fullHtml;
+
+
 };
 
 /**
@@ -467,19 +551,26 @@ export const processStandings = (standingsData) => {
     }
 
     if (standingsData.length > 1) {
-        // Múltiples grupos
-        if (tabsContainer) {
-            tabsContainer.innerHTML = standingsData.map((g, i) => {
-                const rawName = g[0] && g[0].group ? g[0].group : 'GRUPO ' + (i + 1);
-                const displayName = getTabName(rawName);
-                return `
-                <button onclick="app.renderTable(${i})" class="px-3 py-1 bg-[#111] text-[10px] font-bold uppercase border border-[#333] text-gray-400 hover:text-white hover:border-white transition-all whitespace-nowrap rounded mr-2 last:mr-0">
-                    ${displayName}
-                </button>
-            `}).join('');
-        }
         state.standingsData = standingsData;
-        renderTable(0);
+
+        // Special case for World Cup: Stack all groups vertically
+        if (state.selectedLeague && WORLD_CUP_LEAGUES.includes(parseInt(state.selectedLeague.id))) {
+            if (tabsContainer) tabsContainer.innerHTML = ''; // No tabs
+            renderAllWorldCupGroups();
+        } else {
+            // Múltiples grupos (Tabs)
+            if (tabsContainer) {
+                tabsContainer.innerHTML = standingsData.map((g, i) => {
+                    const rawName = g[0] && g[0].group ? g[0].group : 'GRUPO ' + (i + 1);
+                    const displayName = getTabName(rawName);
+                    return `
+                    <button onclick="app.renderTable(${i})" class="px-3 py-1 bg-[#111] text-[10px] font-bold uppercase border border-[#333] text-gray-400 hover:text-white hover:border-white transition-all whitespace-nowrap rounded mr-2 last:mr-0">
+                        ${displayName}
+                    </button>
+                `}).join('');
+            }
+            renderTable(0);
+        }
     } else {
         // Un solo grupo
         if (tabsContainer) tabsContainer.innerHTML = '';
