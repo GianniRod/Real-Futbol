@@ -308,16 +308,21 @@ const renderTransferRow = (t, direction) => {
 
     // Determine price/type label
     let priceLabel = '';
-    let priceClass = 'text-gray-600';
-    if (t.type === 'Free' || t.type === 'N/A') {
+    let priceClass = 'text-gray-500';
+    const type = (t.type || '').trim();
+    if (!type || type === 'Free' || type === 'N/A') {
         priceLabel = 'LIBRE';
         priceClass = 'text-gray-500';
-    } else if (t.type === 'Loan') {
+    } else if (type === 'Loan') {
         priceLabel = 'PRÉSTAMO';
-        priceClass = 'text-yellow-600';
-    } else if (t.type && t.type !== 'N/A') {
-        priceLabel = t.type;
-        priceClass = 'text-green-600';
+        priceClass = 'text-yellow-500';
+    } else if (type === 'Return from loan') {
+        priceLabel = 'FIN PRÉSTAMO';
+        priceClass = 'text-yellow-500';
+    } else {
+        // Actual price like "€ 30M", "€ 500K", etc.
+        priceLabel = type;
+        priceClass = 'text-emerald-400';
     }
 
     return `
