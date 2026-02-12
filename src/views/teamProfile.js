@@ -107,20 +107,30 @@ export const showTeamProfile = async (params) => {
             return d >= oneYearAgo;
         });
 
+        // Deduplicate: keep only the most recent transfer per player (by player.id)
+        const dedupMap = new Map();
+        for (const t of recentTransfers) {
+            const key = `${t.player.id}-${t.teams.in.id === parseInt(teamId) ? 'in' : 'out'}`;
+            const existing = dedupMap.get(key);
+            if (!existing || new Date(t.date) > new Date(existing.date)) {
+                dedupMap.set(key, t);
+            }
+        }
+        const uniqueTransfers = Array.from(dedupMap.values());
+
         // Sort by price descending (most expensive first), free/unknown at bottom
         const parsePrice = (t) => {
             if (!t.type || t.type === 'Free' || t.type === 'N/A') return 0;
-            // type can be e.g. "€ 30M" or a numeric string
             const match = t.type?.match(/([\d.]+)\s*M/i);
             if (match) return parseFloat(match[1]) * 1000000;
             const match2 = t.type?.match(/([\d.]+)\s*K/i);
             if (match2) return parseFloat(match2[1]) * 1000;
-            return 1; // paid transfer without known amount → above free
+            return 1;
         };
         const sortByPrice = (a, b) => parsePrice(b) - parsePrice(a);
 
-        const arrivals = recentTransfers.filter(t => t.teams.in.id === parseInt(teamId)).sort(sortByPrice);
-        const departures = recentTransfers.filter(t => t.teams.out.id === parseInt(teamId)).sort(sortByPrice);
+        const arrivals = uniqueTransfers.filter(t => t.teams.in.id === parseInt(teamId)).sort(sortByPrice);
+        const departures = uniqueTransfers.filter(t => t.teams.out.id === parseInt(teamId)).sort(sortByPrice);
 
         // Determine league for standings
         let leagueId = null;
