@@ -803,6 +803,21 @@ export const openDetail = async (params) => {
     document.getElementById('detail-home-name').innerHTML = m.teams.home.name + homeRedCardsHTML;
     document.getElementById('detail-away-name').innerHTML = m.teams.away.name + awayRedCardsHTML;
 
+    // Make team logos and names clickable
+    const homeLogo = document.getElementById('detail-home-logo');
+    const awayLogo = document.getElementById('detail-away-logo');
+    const homeName = document.getElementById('detail-home-name');
+    const awayName = document.getElementById('detail-away-name');
+
+    [homeLogo, homeName].forEach(el => {
+        el.style.cursor = 'pointer';
+        el.onclick = (e) => { e.stopPropagation(); app.navigate(`/equipo/${m.teams.home.id}`); };
+    });
+    [awayLogo, awayName].forEach(el => {
+        el.style.cursor = 'pointer';
+        el.onclick = (e) => { e.stopPropagation(); app.navigate(`/equipo/${m.teams.away.id}`); };
+    });
+
     // Goleadores - Ocultos del header
     const hList = document.getElementById('detail-home-scorers-list');
     const aList = document.getElementById('detail-away-scorers-list');
