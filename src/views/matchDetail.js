@@ -1,384 +1,970 @@
 /**
- * Team Profile View Module
+ * Match Detail View Module
  * 
- * Propósito: Vista de perfil de equipo con info, partidos, fichajes y tabla
+ * Propósito: Vista detallada de partido con tabs (timeline, lineups, stats, forum)
  * 
  * Exports:
- * - showTeamProfile(params): Muestra perfil de un equipo
+ * - openDetail(params): Abre detalle de un partido desde router
+ * - openMatchDetailWithTab(params): Abre con tab específico
+ * - closeDetail(): Cierra vista de detalle
+ * - switchTab(btn, targetId): Cambia entre tabs
  */
 
 import { fetchAPI } from '../core/api.js';
-import { navigate } from '../core/router.js';
+import { getMatches, updateMatchEvents } from './matches.js';
+import { initForum } from './forum.js';
 
-// IDs de ligas europeas (para formato de temporada)
-const EUROPEAN_LEAGUES = [39, 140, 78, 135, 61, 2, 3, 143, 137];
+// State
+let selectedMatch = null;
 
 /**
- * Determina la temporada actual para una liga
+ * Cambia entre tabs del detalle
+ * @param {HTMLElement} btn - Botón clickeado
+ * @param {string} targetId - ID del tab a mostrar
  */
-const determineCurrentSeason = (leagueId) => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const month = now.getMonth() + 1;
+export const switchTab = (btn, targetId) => {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('text-white', 'border-b-2', 'border-white');
+        b.classList.add('text-gray-500');
+    });
+    btn.classList.add('text-white', 'border-b-2', 'border-white');
+    btn.classList.remove('text-gray-500');
 
-    if (EUROPEAN_LEAGUES.includes(parseInt(leagueId))) {
-        return month >= 7 ? currentYear : currentYear - 1;
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById(targetId).classList.remove('hidden');
+
+    // NO actualizar URL aquí para evitar bucle infinito
+    // La URL se actualiza solo cuando se navega directamente a una URL con tab
+
+    if (targetId === 'tab-forum' && selectedMatch) {
+        initForum(`match_${selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
     }
-    return currentYear;
 };
 
 /**
- * Muestra el perfil de un equipo
- * @param {Object|number} params - { id } desde router o ID directo
+ * Renderiza el timeline de eventos
  */
-export const showTeamProfile = async (params) => {
-    let teamId;
-    if (typeof params === 'object' && params !== null) {
-        teamId = params.id;
-    } else {
-        teamId = params;
+const renderTimeline = (m) => {
+    const c = document.getElementById('tab-timeline');
+    let ev = [...(m.events || [])];
+
+    // Separar penales de tiempo regular
+    const isPenalty = (e) => e.comments === "Penalty Shootout";
+    const regularEvents = ev.filter(e => !isPenalty(e));
+    const penaltyEvents = ev.filter(e => isPenalty(e));
+
+    // Ordenar eventos regulares por tiempo (descendente para mostrar lo último arriba)
+    regularEvents.sort((a, b) => {
+        const tA = a.time.elapsed + (a.time.extra || 0);
+        const tB = b.time.elapsed + (b.time.extra || 0);
+        if (tA === tB) return 0;
+        return tA > tB ? -1 : 1;
+    });
+
+    if (regularEvents.length === 0 && penaltyEvents.length === 0) {
+        c.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Sin eventos</div>';
+        return;
     }
 
-    // Setup layout: sidebar izq visible, sidebar der oculto
+    let html = '';
+
+    // Renderizar eventos regulares
+    html += regularEvents.map(e => {
+        const isHome = e.team.id === m.teams.home.id;
+        const sideClass = isHome ? 'flex-row' : 'flex-row-reverse';
+        const boxClass = isHome ? '' : 'flex-row-reverse text-right';
+
+        let content = '';
+        if (e.type === 'subst') {
+            content = `
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-xs font-bold text-green-400 uppercase">Entra: ${e.assist.name}</span>
+                    <span class="text-[10px] font-bold text-red-400 uppercase opacity-70">Sale: ${e.player.name}</span>
+                </div>
+            `;
+        } else {
+            let eventLabel = e.detail;
+            let eventClass = 'bg-[#333] text-gray-400';
+
+            if (e.type === 'Goal') {
+                eventLabel = 'GOL';
+                eventClass = 'bg-white text-black';
+            } else if (e.type === 'Card') {
+                const isYellow = e.detail === 'Yellow Card';
+                const isRed = e.detail === 'Red Card';
+
+                if (isYellow || isRed) {
+                    eventClass = 'bg-[#222] text-gray-300 border border-[#333]';
+                    const colorClass = isYellow ? 'bg-yellow-400' : 'bg-red-600';
+                    const text = isYellow ? 'TARJETA AMARILLA' : 'TARJETA ROJA';
+                    eventLabel = `<div class="w-2 h-3 ${colorClass} rounded-[1px] mr-1.5"></div>${text}`;
+                }
+            }
+
+            content = `
+                <span class="text-sm font-bold text-white">${e.player.name}</span>
+                <span class="text-[9px] px-2 py-1 uppercase font-bold tracking-wider ${eventClass} flex items-center h-6 rounded">${eventLabel}</span>
+            `;
+        }
+
+        return `
+            <div class="flex items-center gap-4 mb-4 ${sideClass}">
+                <div class="w-8 text-center text-xs font-bold text-gray-500 font-mono">${e.time.elapsed}'</div>
+                <div class="bg-[#111] border border-[#222] px-4 py-3 flex items-center gap-3 ${boxClass} min-w-[140px]">
+                    ${content}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Renderizar Tanda de Penales (si existen)
+    if (penaltyEvents.length > 0) {
+        html += `<div class="my-8 flex items-center justify-center">
+            <div class="h-[1px] bg-[#222] flex-1"></div>
+            <span class="px-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Tanda de Penales</span>
+            <div class="h-[1px] bg-[#222] flex-1"></div>
+        </div>`;
+
+        // Calcular score acumulado
+        let homeScore = m.goals.home; // Goles antes de penales (120 min)
+        let awayScore = m.goals.away;
+
+        // Pero para "running score" de penales, usualmente se muestra solo el conteo de penales
+        // O el score total acumulado. El usuario pidió: "despues de ese penal cuanto va la serie de penales"
+        // Entonces iniciamos conteo de penales en 0-0
+        let penHome = 0;
+        let penAway = 0;
+
+        // Necesitamos ordenar penales cronológicamente para el running score
+        // API-Football no siempre da orden perfecto por tiempo, pero confiemos en el array o detalle
+        // Asumamos que vienen en orden o intentemos ordenar si tienen secuencia
+        // Generalmente vienen mezclados, hay que tener cuidado.
+        // Pero para simplificar, iteraremos y asumiremos el orden del array (ajustar si es necesario)
+        // O mejor: NO reordenamos penaltyEvents si ya venían mezclados, el sort inicial los puso por tiempo.
+        // Pero el sort inicial ponía lo mas NUEVO arriba. Para penales queremos orden CRONOLOGICO (1o al ultimo)?
+        // El usuario dijo "cronologia". Normalmente timeline es Lo Nuevo Arriba.
+        // Pero "tanda de penales" suele leerse mejor penal 1, penal 2... 
+        // Si el timeline general es DESC (min 90 arriba, min 1 abajo), penales debería seguir esa logica invertida?
+        // O ser un bloque aparte?
+        // El usuario pidió "separes la cronologia". Haremos un bloque distinto.
+        // Probemos mostrar penales en orden de tiro (ascendente).
+
+        // Re-ordenar penales Ascendente para calcular score
+        // El usuario reportó que estaba invertido.
+        // Si API devuelve en orden cronológico (0->N), y ev (que usamos para filtrar) estaba ordenado DESC (N->0),
+        // entonces penaltyEvents estaba DESC.
+        // Mi fix anterior hacía reverse() para volver a ASC.
+        // Sin embargo, usuario dice que estaba al revés.
+        // Vamos a confiar en la lógica: penaltyEvents viene de 'ev' (DESC). Entonces penaltyEvents[0] es el ULTIMO penal.
+        // reverse() debería poner penaltyEvents[0] (ULTIMO) al final. 
+        // Tal vez el sort inicial mezcló los penales si tienen mismo timestamp.
+
+        // CORRECCION: Usar array original m.events para obtener orden correcto de API
+        // API suele mandar index 0 = primer evento.
+        const originalPenalties = (m.events || []).filter(e => isPenalty(e));
+        // Asumimos originalPenalties[0] es el primer tiro.
+
+        const penAsc = [...originalPenalties]; // Ya debería estar en orden correcto
+
+        html += `<div class="space-y-3">`;
+
+        html += penAsc.map(e => {
+            const isHome = e.team.id === m.teams.home.id;
+
+            // Detección de Gol o Fallo
+            // API-Football:
+            // Goal + Penalty = Gol
+            // Missed Penalty = Fallo
+            // Saved Penalty = Fallo (atajado)
+            // A veces type='Goal' pero detail='Missed Penalty' -> Fallo
+            // A veces type='Var' -> Fallo
+
+            const detail = (e.detail || '').toLowerCase();
+            const type = (e.type || '').toLowerCase();
+            const comments = (e.comments || '').toLowerCase();
+
+            let isGoal = false;
+
+            if (type === 'goal' && detail !== 'missed penalty' && detail !== 'saved penalty') {
+                isGoal = true;
+            }
+
+            if (detail.includes('missed') || detail.includes('saved')) {
+                isGoal = false;
+            }
+
+            if (isGoal) {
+                if (isHome) penHome++; else penAway++;
+            }
+            // Si es errado, marcador no cambia.
+
+            const checkIcon = `<div class="w-5 h-5 rounded-full bg-green-900/40 border border-green-500/50 flex items-center justify-center text-green-500"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>`;
+            const crossIcon = `<div class="w-5 h-5 rounded-full bg-red-900/40 border border-red-500/50 flex items-center justify-center text-red-500"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></div>`;
+
+            const icon = isGoal ? checkIcon : crossIcon;
+            const scoreDisplay = `${penHome}-${penAway}`;
+
+            // Alineación
+            // Izquierda Home, Derecha Away
+            const rowClass = isHome ? 'flex-row' : 'flex-row-reverse';
+            const textClass = isHome ? 'text-left' : 'text-right';
+            const scoreClass = isHome ? 'ml-auto' : 'mr-auto'; // Score en el medio aprox
+
+            // Diseño solicitado: Nombre Simbolo Score
+            // Ej: Messi (V) 1-0 ... 
+
+            // Ajustamos layout para que parezca una lista balanceada
+            /*
+              Home Player (V) 1-0
+                              1-0 (X) Away Player
+            */
+
+            // Contenedor principal de la fila
+            return `
+            <div class="flex items-center relative py-1">
+                <div class="absolute left-1/2 -translate-x-1/2 text-xs font-mono font-bold text-gray-600">${scoreDisplay}</div>
+                
+                <div class="w-1/2 flex items-center gap-3 ${isHome ? 'justify-end pr-8' : 'hidden'}">
+                    <span class="text-sm font-bold text-white text-right">${e.player.name}</span>
+                    ${icon}
+                </div>
+                
+                <div class="w-1/2 flex items-center gap-3 ${!isHome ? 'justify-start pl-8' : 'hidden'} ml-auto">
+                     ${icon}
+                    <span class="text-sm font-bold text-white text-left">${e.player.name}</span>
+                </div>
+            </div>
+           `;
+        }).join('');
+
+        html += `</div>`;
+    }
+
+    c.innerHTML = html;
+};
+
+/**
+ * Obtiene el color del borde del rating según la calificación
+ * @param {number} rating - Calificación del jugador
+ * @returns {object} { bg, text, border } - Colores CSS
+ */
+const getRatingColors = (rating) => {
+    if (rating >= 8.0) return { bg: '#87CEEB', text: '#000', border: '#87CEEB' }; // Celeste
+    if (rating >= 7.0) return { bg: '#4CAF50', text: '#fff', border: '#4CAF50' }; // Verde
+    if (rating >= 6.0) return { bg: '#FF9800', text: '#000', border: '#FF9800' }; // Naranja
+    return { bg: '#F44336', text: '#fff', border: '#F44336' }; // Rojo
+};
+
+/**
+ * Renderiza las alineaciones y cancha táctica
+ */
+const renderLineups = (m) => {
+    const pitch = document.getElementById('football-pitch');
+    pitch.querySelectorAll('.player-marker').forEach(el => el.remove());
+    const hList = document.getElementById('lineup-home-list');
+    const aList = document.getElementById('lineup-away-list');
+
+    if (!m.lineups || m.lineups.length === 0) {
+        hList.innerHTML = 'No disponible';
+        aList.innerHTML = 'No disponible';
+        return;
+    }
+
+    const homeL = m.lineups[0];
+    const awayL = m.lineups[1];
+    const events = m.events || [];
+    const isFinished = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
+
+    // Build player stats map from m.players if available
+    // m.players contains [{team: {id, name}, players: [{player: {id, name, photo}, statistics: [{games: {rating}, ...}]}]}]
+    const playerStatsMap = {};
+    let bestPlayerId = null;
+    let bestRating = -1;
+    if (m.players && m.players.length > 0) {
+        m.players.forEach(teamData => {
+            if (teamData.players) {
+                teamData.players.forEach(p => {
+                    const stats = p.statistics && p.statistics[0];
+                    const rating = stats && stats.games && stats.games.rating ? parseFloat(stats.games.rating) : null;
+                    playerStatsMap[String(p.player.id)] = {
+                        photo: p.player.photo || null,
+                        rating: rating
+                    };
+                    if (rating !== null && rating > bestRating) {
+                        bestRating = rating;
+                        bestPlayerId = String(p.player.id);
+                    }
+                });
+            }
+        });
+    }
+
+    const idsMatch = (id1, id2) => String(id1) === String(id2);
+
+    // Helper to build a player face thumbnail for the list
+    const buildListFace = (playerId, size = 'w-7 h-7') => {
+        const pStats = playerStatsMap[String(playerId)] || {};
+        const photo = pStats.photo || `https://media.api-sports.io/football/players/${playerId}.png`;
+        const rating = pStats.rating;
+        let borderColor = '#555';
+        if (rating !== null && rating !== undefined) {
+            const colors = getRatingColors(rating);
+            borderColor = colors.border;
+        }
+        return `<div class="${size} rounded-full overflow-hidden border-2 shrink-0" style="border-color:${borderColor}; background:#222;"><img src="${photo}" class="w-full h-full object-cover" onerror="this.style.display='none'"/></div>`;
+    };
+
+    const renderList = (lineup) => {
+        let html = '';
+
+        // === SUSTITUTOS (players who actually entered the game) ===
+        const substitutesWhoEntered = [];
+        if (lineup.substitutes && lineup.substitutes.length > 0) {
+            lineup.substitutes.forEach(p => {
+                // Check both e.player and e.assist for the substitute coming in
+                // API-Football: e.player = OUT, e.assist = IN (in some versions it's reversed)
+                const subInEvent = events.find(e => {
+                    const et = (e.type || '').toLowerCase();
+                    if (et !== 'subst' && et !== 'substitution') return false;
+                    // Check if this sub is referenced in the event
+                    if (e.player && idsMatch(e.player.id, p.player.id)) return true;
+                    if (e.assist && idsMatch(e.assist.id, p.player.id)) return true;
+                    return false;
+                });
+                if (subInEvent) {
+                    substitutesWhoEntered.push({ player: p, event: subInEvent });
+                }
+            });
+        }
+
+        if (substitutesWhoEntered.length > 0) {
+            html += `<div class="mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Sustitutos</div>`;
+            html += substitutesWhoEntered.map(({ player: p, event: subInEvent }) => {
+                const pStats = playerStatsMap[String(p.player.id)] || {};
+                const rating = pStats.rating;
+                let ratingHtml = '';
+                if (rating !== null && rating !== undefined) {
+                    const colors = getRatingColors(rating);
+                    ratingHtml = `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background:${colors.bg}; color:${colors.text}">${rating.toFixed(1).replace('.', ',')}</span>`;
+                }
+                const faceHtml = buildListFace(p.player.id);
+                const minute = subInEvent.time.elapsed;
+                const enteredIcon = `<div class="flex items-center gap-1.5 ml-auto shrink-0">
+                    <img src="https://i.postimg.cc/rsvxwJQj/Proyecto_nuevo_3.png" class="w-4 h-4 object-contain" alt="Ingresa" />
+                    <span class="text-green-400 text-[10px] font-bold font-mono">${minute}'</span>
+                </div>`;
+                return `<div class="flex items-center gap-2 border-b border-[#222] py-2">
+                    ${faceHtml}
+                    ${ratingHtml}
+                    <span class="text-gray-300 text-sm font-medium">${p.player.name}</span>
+                    ${enteredIcon}
+                </div>`;
+            }).join('');
+        }
+
+        // === SUPLENTES (players who didn't enter — just face + name) ===
+        const benchOnly = (lineup.substitutes || []).filter(p => {
+            return !substitutesWhoEntered.some(s => idsMatch(s.player.player.id, p.player.id));
+        });
+
+        if (benchOnly.length > 0) {
+            html += `<div class="mt-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Suplentes</div>`;
+            html += benchOnly.map(p => {
+                const faceHtml = buildListFace(p.player.id, 'w-6 h-6');
+                return `<div class="flex items-center gap-2 border-b border-[#222] py-1.5">
+                    ${faceHtml}
+                    <span class="text-gray-500 text-sm">${p.player.name}</span>
+                </div>`;
+            }).join('');
+        }
+
+        return html;
+    };
+
+    hList.innerHTML = renderList(homeL);
+    aList.innerHTML = renderList(awayL);
+
+    const addPlayers = (lineup, side) => {
+        const players = lineup.startXI;
+        const formation = lineup.formation;
+
+        let lines = {};
+        let hasGrid = players.every(p => p.player.grid);
+
+        if (hasGrid) {
+            players.forEach(p => {
+                const parts = p.player.grid.split(':');
+                const lineIdx = parseInt(parts[0]);
+                if (!lines[lineIdx]) lines[lineIdx] = [];
+                lines[lineIdx].push(p);
+            });
+        } else {
+            let formationParts = formation ? formation.split('-').map(Number) : [4, 4, 2];
+            formationParts.unshift(1);
+            let playerIdx = 0;
+            formationParts.forEach((count, i) => {
+                const lineIdx = i + 1;
+                lines[lineIdx] = [];
+                for (let k = 0; k < count; k++) {
+                    if (playerIdx < players.length) {
+                        lines[lineIdx].push(players[playerIdx]);
+                        playerIdx++;
+                    }
+                }
+            });
+        }
+
+        Object.keys(lines).forEach(lineKey => {
+            const lineIdx = parseInt(lineKey);
+            const linePlayers = lines[lineKey];
+            if (hasGrid) {
+                linePlayers.sort((a, b) => {
+                    const rowA = parseInt(a.player.grid.split(':')[1]);
+                    const rowB = parseInt(b.player.grid.split(':')[1]);
+                    return rowA - rowB;
+                });
+            }
+
+            const count = linePlayers.length;
+            linePlayers.forEach((p, index) => {
+                const el = document.createElement('div');
+                el.className = `player-marker ${side === 'home' ? 'home-player' : 'away-player'}`;
+
+                let displayNumber = p.player.number;
+                let displayName = p.player.name;
+                let isSubbed = false;
+                let subInName = '';
+                let currentPlayerId = p.player.id; // ID del jugador actual en posición
+
+                const subOutEvent = events.find(e => {
+                    const et = (e.type || '').toLowerCase();
+                    return (et === 'subst' || et === 'substitution') && e.assist && idsMatch(e.assist.id, p.player.id);
+                });
+
+                if (subOutEvent) {
+                    isSubbed = true;
+                    const subInPlayer = lineup.substitutes.find(s => idsMatch(s.player.id, subOutEvent.player.id));
+                    if (subInPlayer) {
+                        displayNumber = subInPlayer.player.number;
+                        subInName = subInPlayer.player.name;
+                        currentPlayerId = subInPlayer.player.id;
+                    } else {
+                        subInName = subOutEvent.player.name;
+                        displayNumber = "⇄";
+                        currentPlayerId = subOutEvent.player.id;
+                    }
+                }
+
+                // Get player stats (photo & rating)
+                const pStats = playerStatsMap[String(currentPlayerId)] || playerStatsMap[String(p.player.id)] || {};
+                const playerPhoto = pStats.photo || `https://media.api-sports.io/football/players/${currentPlayerId}.png`;
+                const playerRating = pStats.rating;
+                const isBestPlayer = isFinished && String(currentPlayerId) === bestPlayerId;
+
+                // Determine border color based on rating
+                let borderColor = '#555'; // Default gray when no rating
+                if (playerRating !== null && playerRating !== undefined) {
+                    const colors = getRatingColors(playerRating);
+                    borderColor = colors.border;
+                }
+
+                // Build player circle with face photo
+                el.innerHTML = `
+                    <div class="player-face-circle" style="border-color: ${borderColor}">
+                        <img src="${playerPhoto}" alt="${displayName}" 
+                             class="player-face-img" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                        />
+                        <div class="player-face-fallback" style="display:none;">${displayNumber}</div>
+                    </div>
+                `;
+
+                // Rating badge (top-right)
+                if (playerRating !== null && playerRating !== undefined) {
+                    const colors = getRatingColors(playerRating);
+                    const ratingBadge = document.createElement('div');
+                    ratingBadge.className = 'player-rating-badge';
+                    ratingBadge.style.backgroundColor = colors.bg;
+                    ratingBadge.style.color = colors.text;
+
+                    // Show star for best player when match is finished
+                    if (isBestPlayer) {
+                        ratingBadge.innerHTML = `${playerRating.toFixed(1).replace('.', ',')} <span class="player-star">★</span>`;
+                    } else {
+                        ratingBadge.textContent = playerRating.toFixed(1).replace('.', ',');
+                    }
+                    el.appendChild(ratingBadge);
+                }
+
+                // === EVENT ICONS around the player face ===
+                const checkId = isSubbed ? currentPlayerId : p.player.id;
+                const originalId = p.player.id;
+                const eventIcons = [];
+
+                // Goal → custom ball image
+                const goals = events.filter(e => e.type === 'Goal' && e.detail !== 'Own Goal' && e.player && (idsMatch(e.player.id, checkId) || idsMatch(e.player.id, originalId)));
+                goals.forEach(() => {
+                    eventIcons.push(`<div class="player-event-icon" title="Gol"><img src="https://i.postimg.cc/R0XtH9g4/Proyecto_nuevo_6.png" class="w-3 h-3 object-contain" /></div>`);
+                });
+
+                // Assist → custom boot image
+                const playerAssists = events.filter(e => e.type === 'Goal' && e.assist && (idsMatch(e.assist.id, checkId) || idsMatch(e.assist.id, originalId)));
+                playerAssists.forEach(() => {
+                    eventIcons.push(`<div class="player-event-icon" title="Asistencia"><img src="https://i.postimg.cc/QCR1db0b/Proyecto_nuevo_2.png" class="w-3 h-3 object-contain" /></div>`);
+                });
+
+                // Yellow Card
+                const yellows = events.filter(e => e.type === 'Card' && e.detail === 'Yellow Card' && e.player && (idsMatch(e.player.id, checkId) || idsMatch(e.player.id, originalId)));
+                yellows.forEach(() => {
+                    eventIcons.push(`<div class="player-event-icon" title="Tarjeta Amarilla"><div style="width:9px;height:12px;background:#FACC15;border-radius:1.5px;border:1px solid #a38a00;"></div></div>`);
+                });
+
+                // Red Card
+                const reds = events.filter(e => e.type === 'Card' && e.detail === 'Red Card' && e.player && (idsMatch(e.player.id, checkId) || idsMatch(e.player.id, originalId)));
+                reds.forEach(() => {
+                    eventIcons.push(`<div class="player-event-icon" title="Tarjeta Roja"><div style="width:9px;height:12px;background:#EF4444;border-radius:1.5px;border:1px solid #991b1b;"></div></div>`);
+                });
+
+                // Substituted out → custom sub-out image + visible minute
+                if (isSubbed && subOutEvent) {
+                    const subMinute = subOutEvent.time.elapsed;
+                    eventIcons.push(`<div class="player-event-sub-out-container" title="Sust. ${subMinute}'"><img src="https://i.postimg.cc/fy6mRKB5/Proyecto_nuevo_4.png" class="w-3.5 h-3.5 object-contain" /><span class="sub-minute">${subMinute}'</span></div>`);
+                }
+
+                if (eventIcons.length > 0) {
+                    const iconsContainer = document.createElement('div');
+                    iconsContainer.className = 'player-events-container';
+                    iconsContainer.innerHTML = eventIcons.join('');
+                    el.appendChild(iconsContainer);
+                }
+
+                let x, y;
+                const isMobile = window.innerWidth < 768;
+
+                if (isMobile) {
+                    // En móvil: cancha vertical
+                    const totalLines = Object.keys(lines).length;
+
+                    if (side === 'away') {
+                        const availableSpace = 40;
+                        const spacing = availableSpace / Math.max(1, totalLines - 1);
+                        y = 5 + (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) y = 5;
+                    } else {
+                        const availableSpace = 37;
+                        const spacing = availableSpace / Math.max(1, totalLines - 1);
+                        y = 92 - (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) y = 92;
+                    }
+
+                    const segment = 100 / (count + 1);
+                    x = segment * (index + 1);
+                    if (x < 3) x = 3;
+                    if (x > 97) x = 97;
+                } else {
+                    // En desktop: cancha horizontal
+                    const totalLines = Object.keys(lines).length;
+
+                    if (side === 'home') {
+                        const availableSpace = 43;
+                        const spacing = availableSpace / Math.max(1, totalLines - 1);
+                        x = 3 + (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) x = 3;
+                    } else {
+                        const availableSpace = 43;
+                        const spacing = availableSpace / Math.max(1, totalLines - 1);
+                        x = 97 - (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) x = 97;
+                    }
+
+                    const segment = 100 / (count + 1);
+                    y = segment * (index + 1);
+                    if (y < 6) y = 6;
+                    if (y > 94) y = 94;
+                }
+
+                el.style.left = x + '%';
+                el.style.top = y + '%';
+
+                const nameEl = document.createElement('div');
+                nameEl.className = 'player-name-label';
+
+                // Función para formatear nombre como "L. Messi"
+                const formatPlayerName = (fullName) => {
+                    const parts = fullName.trim().split(' ');
+                    if (parts.length === 1) return parts[0];
+                    const firstName = parts[0];
+                    const lastName = parts[parts.length - 1];
+                    return `${firstName.charAt(0)}. ${lastName}`;
+                };
+
+                if (isSubbed) {
+                    const inNameFormatted = formatPlayerName(subInName);
+                    const outNameFormatted = formatPlayerName(displayName);
+                    nameEl.innerHTML = `<span class="text-white mb-0.5">${displayNumber} ${inNameFormatted}</span><span class="text-gray-400 opacity-50 text-[7px]">${outNameFormatted}</span>`;
+                } else {
+                    const formattedName = formatPlayerName(displayName);
+                    nameEl.innerHTML = `<span class="text-white">${displayNumber} ${formattedName}</span>`;
+                }
+                el.appendChild(nameEl);
+
+                el.onclick = () => {
+                    document.getElementById('modal-player-name').innerText = p.player.name;
+                    document.getElementById('player-modal').classList.remove('hidden');
+                };
+
+                pitch.appendChild(el);
+            });
+        });
+    };
+
+    addPlayers(homeL, 'home');
+    addPlayers(awayL, 'away');
+};
+
+/**
+ * Renderiza las estadísticas del partido
+ */
+const renderStats = (m) => {
+    const c = document.getElementById('tab-stats');
+    if (!m.statistics || m.statistics.length === 0) {
+        c.innerHTML = 'No disponible';
+        return;
+    }
+
+    const statsTypes = [
+        { api: 'Ball Possession', es: 'Posesión' },
+        { api: 'Total Shots', es: 'Tiros Totales' },
+        { api: 'Shots on Goal', es: 'Tiros al Arco' },
+        { api: 'Corner Kicks', es: 'Tiros de Esquina' },
+        { api: 'Fouls', es: 'Faltas' },
+        { api: 'Yellow Cards', es: 'Tarjetas Amarillas' },
+        { api: 'Red Cards', es: 'Tarjetas Rojas' }
+    ];
+
+    const hStats = m.statistics[0].statistics;
+    const aStats = m.statistics[1].statistics;
+
+    c.innerHTML = statsTypes.map(stat => {
+        const hVal = hStats.find(s => s.type === stat.api)?.value || 0;
+        const aVal = aStats.find(s => s.type === stat.api)?.value || 0;
+        const hNum = parseInt(hVal);
+        const aNum = parseInt(aVal);
+        const total = hNum + aNum || 1;
+        const hPerc = (hNum / total) * 100;
+
+        return `
+            <div class="bg-[#111] p-4 border border-[#222]">
+                <div class="flex justify-between text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest">
+                    <span>${hVal}</span><span>${stat.es}</span><span>${aVal}</span>
+                </div>
+                <div class="h-1 bg-[#333] flex overflow-hidden">
+                    <div class="h-full bg-white" style="width: ${hPerc}%"></div>
+                    <div class="h-full bg-[#555]" style="width: ${100 - hPerc}%"></div>
+                </div>
+            </div>`;
+    }).join('');
+};
+
+/**
+ * Abre el detalle de un partido desde el router
+ * @param {Object|number} params - { id, tab } desde URL o ID directo
+ */
+export const openDetail = async (params) => {
+    let id, initialTab;
+
+    // Manejar tanto params object como ID directo
+    if (typeof params === 'object' && params !== null) {
+        id = params.id;
+        initialTab = params.tab || 'timeline';
+    } else {
+        id = params;
+        initialTab = 'timeline';
+    }
+
+    const matches = getMatches();
+
+    let m = matches.find(x => String(x.fixture.id) === String(id));
+
+    // Si no está en el state local (ej: partido de otra fecha desde el calendario de standings),
+    // buscarlo directamente en la API
+    if (!m) {
+        try {
+            const data = await fetchAPI(`/fixtures?id=${id}`, true);
+            if (data.response && data.response.length > 0) {
+                m = data.response[0];
+            }
+        } catch (e) {
+            console.error('Error fetching match:', e);
+        }
+    }
+
+    if (!m) {
+        console.warn('Match not found:', id);
+        alert('Partido no encontrado. Intenta recargar la página.');
+        return;
+    }
+
+    selectedMatch = m;
+
+    const detailView = document.getElementById('view-match-detail');
+
+    // Resetear scroll del modal completamente antes de mostrarlo
+    detailView.scrollTo(0, 0);
+
+    // Mostrar el modal
+    detailView.classList.remove('hidden');
+
+    // Ocultar otras vistas para que no se solapen en Desktop
     document.getElementById('view-match-list').classList.add('hidden');
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-forum').classList.add('hidden');
-    document.getElementById('view-match-detail').classList.add('hidden');
-    document.getElementById('date-nav').classList.add('hidden');
 
-    const viewTeam = document.getElementById('view-team');
-    viewTeam.classList.remove('hidden');
-
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.remove('hidden');
-    sidebar.classList.add('lg:flex');
-
+    // Ocultar sidebar derecha (comunidad) para dar más espacio al detalle
     const rightSidebar = document.getElementById('right-sidebar');
-    rightSidebar.classList.add('hidden');
-    rightSidebar.classList.remove('lg:flex');
+    if (rightSidebar) {
+        rightSidebar.style.display = 'none';
+    }
 
-    document.querySelector('main').classList.remove('lg:w-auto');
+    // Ocultar fecha en mobile (en desktop ya está en sidebar/header o no molesta)
+    const dateNav = document.getElementById('date-nav');
+    if (dateNav) {
+        if (window.innerWidth < 1024) {
+            dateNav.style.display = 'none';
+        } else {
+            // En desktop ocultamos el date-nav porque el detalle ocupa su lugar
+            dateNav.classList.add('hidden');
+        }
+    }
 
-    // Scroll to top
-    document.getElementById('main-content').scrollTo(0, 0);
+    // Ocultar header principal SOLO en móvil
+    const header = document.querySelector('header');
+    if (header && window.innerWidth < 1024) {
+        header.style.display = 'none';
+    }
 
-    // Show loader
-    viewTeam.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
+    // Ocultar bottom nav en móvil
+    const bottomNav = document.querySelector('nav.fixed.bottom-0');
+    if (bottomNav) {
+        bottomNav.style.display = 'none';
+    }
+
+    // Prevenir scroll del fondo SOLO en móvil
+    if (window.innerWidth < 1024) {
+        document.body.style.overflow = 'hidden';
+    }
+
+    // Asegurar que el modal inicia desde arriba
+    detailView.scrollTop = 0;
+
+    document.getElementById('detail-content-wrapper').classList.add('hidden');
+    document.getElementById('detail-loader').classList.remove('hidden');
+
+    document.getElementById('detail-home-logo').src = m.teams.home.logo;
+    document.getElementById('detail-away-logo').src = m.teams.away.logo;
+    const homeScore = m.goals.home ?? 0;
+    const awayScore = m.goals.away ?? 0;
+
+    // Check for penalties logic
+    const hasPenalties = m.score && m.score.penalty && (m.score.penalty.home !== null || m.score.penalty.away !== null);
+
+    if (hasPenalties) {
+        // Format: (5) 1 - 1 (4)
+        document.getElementById('detail-home-score').innerHTML = `<span class="text-sm text-gray-400 font-normal mr-1">(${m.score.penalty.home})</span>${homeScore}`;
+        document.getElementById('detail-away-score').innerHTML = `${awayScore}<span class="text-sm text-gray-400 font-normal ml-1">(${m.score.penalty.away})</span>`;
+    } else {
+        document.getElementById('detail-home-score').innerText = homeScore;
+        document.getElementById('detail-away-score').innerText = awayScore;
+    }
+
+    const statusShort = m.fixture.status.short;
+    let statusText = m.fixture.status.long;
+
+    if (['1H', '2H', 'ET', 'P'].includes(statusShort)) {
+        statusText = m.fixture.status.elapsed + "'";
+    } else if (statusShort === 'HT') {
+        statusText = 'ENTRETIEMPO';
+    }
+
+    document.getElementById('detail-status').innerText = statusText;
+
+    // Red cards
+    let homeRedCardsHTML = '';
+    let awayRedCardsHTML = '';
+    if (m.events && m.events.length > 0) {
+        const redCards = m.events.filter(e => e.type === 'Card' && e.detail === 'Red Card');
+        const hReds = redCards.filter(e => e.team.id === m.teams.home.id).length;
+        const aReds = redCards.filter(e => e.team.id === m.teams.away.id).length;
+
+        if (hReds > 0) homeRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(hReds) + '</div>';
+        if (aReds > 0) awayRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(aReds) + '</div>';
+    }
+
+    document.getElementById('detail-home-name').innerHTML = m.teams.home.name + homeRedCardsHTML;
+    document.getElementById('detail-away-name').innerHTML = m.teams.away.name + awayRedCardsHTML;
+
+    // Make team logos and names clickable
+    const homeLogo = document.getElementById('detail-home-logo');
+    const awayLogo = document.getElementById('detail-away-logo');
+    const homeName = document.getElementById('detail-home-name');
+    const awayName = document.getElementById('detail-away-name');
+
+    [homeLogo, homeName].forEach(el => {
+        el.style.cursor = 'pointer';
+        el.onclick = (e) => { e.stopPropagation(); app.navigate(`/equipo/${m.teams.home.id}`); };
+    });
+    [awayLogo, awayName].forEach(el => {
+        el.style.cursor = 'pointer';
+        el.onclick = (e) => { e.stopPropagation(); app.navigate(`/equipo/${m.teams.away.id}`); };
+    });
+
+    // Goleadores - Ocultos del header
+    const hList = document.getElementById('detail-home-scorers-list');
+    const aList = document.getElementById('detail-away-scorers-list');
+    if (hList) hList.innerHTML = '';
+    if (aList) aList.innerHTML = '';
 
     try {
-        // Fetch team info + last 5 + next 5 in parallel
-        const [teamData, lastMatches, nextMatches, transfersData] = await Promise.all([
-            fetchAPI(`/teams?id=${teamId}`),
-            fetchAPI(`/fixtures?team=${teamId}&last=5&timezone=America/Argentina/Buenos_Aires`),
-            fetchAPI(`/fixtures?team=${teamId}&next=5&timezone=America/Argentina/Buenos_Aires`),
-            fetchAPI(`/transfers?team=${teamId}`)
-        ]);
+        const isFinished = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
+        const hasFullData = m.events && m.lineups && m.statistics;
 
-        const team = teamData.response?.[0]?.team;
-        const venue = teamData.response?.[0]?.venue;
-
-        if (!team) {
-            viewTeam.innerHTML = `<div class="text-center text-gray-500 py-20 text-xs uppercase tracking-widest">Equipo no encontrado.</div>`;
-            return;
-        }
-
-        const last5 = lastMatches.response || [];
-        const next5 = nextMatches.response || [];
-
-        // Flatten all transfers from all players in the response
-        // API returns: response = [{ player: {...}, transfers: [...] }, ...]
-        const now = new Date();
-        const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-        const allTransfers = [];
-        if (transfersData.response && Array.isArray(transfersData.response)) {
-            for (const playerEntry of transfersData.response) {
-                if (playerEntry.transfers && Array.isArray(playerEntry.transfers)) {
-                    for (const transfer of playerEntry.transfers) {
-                        allTransfers.push({
-                            ...transfer,
-                            player: playerEntry.player
-                        });
+        // Si el partido terminó y ya tenemos datos completos, no gastar un request
+        if (isFinished && hasFullData) {
+            // Fetch player stats (photos & ratings) if not already loaded
+            if (!m.players) {
+                try {
+                    const playersData = await fetchAPI(`/fixtures/players?fixture=${id}`, true);
+                    if (playersData && playersData.response) {
+                        m.players = playersData.response;
                     }
+                } catch (pe) {
+                    console.warn('Could not fetch player stats:', pe);
                 }
             }
-        }
-        const recentTransfers = allTransfers.filter(t => {
-            const d = new Date(t.date);
-            return d >= oneYearAgo;
-        }).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        const arrivals = recentTransfers.filter(t => t.teams.in.id === parseInt(teamId));
-        const departures = recentTransfers.filter(t => t.teams.out.id === parseInt(teamId));
-
-        // Determine league for standings
-        let leagueId = null;
-        let leagueName = '';
-        // Try to get from recent matches
-        const allMatches = [...last5, ...next5];
-        if (allMatches.length > 0) {
-            // Prefer a league match (not cup)
-            const leagueMatch = allMatches.find(m => {
-                const lid = m.league.id;
-                return [128, 1032, 129, 71, 39, 140, 78, 135, 61].includes(lid);
-            }) || allMatches[0];
-            leagueId = leagueMatch.league.id;
-            leagueName = leagueMatch.league.name;
-        }
-
-        // Render the profile
-        viewTeam.innerHTML = `
-            <!-- Header -->
-            <div class="sticky top-0 z-20 bg-black/95 backdrop-blur py-2 border-b border-[#222] mb-6">
-                <div class="flex items-center justify-between px-1">
-                    <div class="flex items-center gap-3">
-                        <button onclick="app.navigateToMatches()" class="lg:hidden p-1 text-white">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                        </button>
-                        <button onclick="history.back()" class="hidden lg:block bg-[#111] p-2 rounded hover:bg-[#222] border border-[#333] transition-colors group" title="Volver">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Team Info Card -->
-            <div class="bg-[#0a0a0a] border border-[#222] rounded-xl p-6 mb-6 flex flex-col items-center text-center">
-                <img src="${team.logo}" class="w-24 h-24 object-contain mb-4">
-                <h1 class="text-2xl font-bold text-white uppercase tracking-wider font-sport mb-2">${team.name}</h1>
-                ${venue ? `
-                    <div class="flex items-center gap-2 text-gray-400">
-                        <img src="https://i.postimg.cc/mrVjjgxJ/4905563-2.png" class="w-4 h-4 object-contain opacity-60">
-                        <span class="text-xs font-bold uppercase tracking-widest">${venue.name}</span>
-                    </div>
-                ` : ''}
-            </div>
-
-            <!-- Content Grid -->
-            <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Left Column: Matches -->
-                <div class="w-full lg:flex-1 space-y-6">
-                    <!-- Últimos 5 Partidos -->
-                    <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
-                        <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Últimos Partidos</h3>
-                        </div>
-                        <div class="divide-y divide-[#1a1a1a]">
-                            ${last5.length > 0 ? last5.map(m => renderMatchRow(m, parseInt(teamId))).join('') : '<div class="text-center text-gray-600 py-6 text-xs">Sin partidos recientes</div>'}
-                        </div>
-                    </div>
-
-                    <!-- Próximos 5 Partidos -->
-                    <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
-                        <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Próximos Partidos</h3>
-                        </div>
-                        <div class="divide-y divide-[#1a1a1a]">
-                            ${next5.length > 0 ? next5.map(m => renderUpcomingRow(m, parseInt(teamId))).join('') : '<div class="text-center text-gray-600 py-6 text-xs">Sin próximos partidos</div>'}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column: Transfers + Standings -->
-                <div class="w-full lg:w-96 shrink-0 space-y-6">
-                    <!-- Fichajes -->
-                    <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
-                        <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Fichajes</h3>
-                        </div>
-                        <div class="p-3 space-y-4">
-                            <!-- Llegadas -->
-                            <div>
-                                <div class="text-[10px] font-bold text-green-500 uppercase tracking-widest mb-2 px-1">Llegadas</div>
-                                ${arrivals.length > 0 ? `<div class="space-y-1">${arrivals.map(t => renderTransferRow(t, 'in')).join('')}</div>` : '<div class="text-gray-600 text-xs px-1">Sin fichajes recientes</div>'}
-                            </div>
-                            <!-- Salidas -->
-                            <div>
-                                <div class="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-2 px-1">Salidas</div>
-                                ${departures.length > 0 ? `<div class="space-y-1">${departures.map(t => renderTransferRow(t, 'out')).join('')}</div>` : '<div class="text-gray-600 text-xs px-1">Sin salidas recientes</div>'}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Mini Standings -->
-                    <div id="team-standings-container" class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
-                        <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Posiciones</h3>
-                        </div>
-                        <div id="team-standings-table" class="p-0">
-                            <div class="flex justify-center py-6"><div class="loader"></div></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Load standings async
-        if (leagueId) {
-            loadTeamStandings(leagueId, parseInt(teamId));
+            renderTimeline(m);
+            renderLineups(m);
+            renderStats(m);
         } else {
-            document.getElementById('team-standings-table').innerHTML = `<div class="text-center text-gray-600 py-6 text-xs">Sin datos de liga</div>`;
-        }
+            const data = await fetchAPI(`/fixtures?id=${id}`, true);
+            const fullMatch = data.response[0];
 
-    } catch (e) {
-        console.error('Error loading team profile:', e);
-        viewTeam.innerHTML = `<div class="text-center text-gray-500 py-20 text-xs uppercase tracking-widest">Error al cargar datos del equipo.</div>`;
-    }
-};
-
-/**
- * Renderiza una fila de partido jugado
- */
-const renderMatchRow = (m, teamId) => {
-    const isHome = m.teams.home.id === teamId;
-    const myScore = isHome ? m.goals.home : m.goals.away;
-    const oppScore = isHome ? m.goals.away : m.goals.home;
-    const opponent = isHome ? m.teams.away : m.teams.home;
-    const date = new Date(m.fixture.date);
-    const dateStr = date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }).toUpperCase();
-
-    let resultClass = 'text-gray-500'; // Draw
-    let resultText = 'E';
-    if (myScore > oppScore) { resultClass = 'text-green-500'; resultText = 'V'; }
-    else if (myScore < oppScore) { resultClass = 'text-red-500'; resultText = 'D'; }
-
-    const status = m.fixture.status.short;
-    const isFin = ['FT', 'AET', 'PEN'].includes(status);
-
-    return `
-        <div class="flex items-center justify-between px-4 py-3 hover:bg-[#111] transition-colors cursor-pointer" onclick="app.navigate('/partido/${m.fixture.id}')">
-            <div class="flex items-center gap-3 min-w-0 flex-1">
-                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${resultClass} bg-[#111] border border-[#222] shrink-0">${resultText}</div>
-                <img src="${opponent.logo}" class="w-5 h-5 object-contain shrink-0">
-                <div class="min-w-0">
-                    <div class="text-xs font-bold text-gray-200 truncate uppercase">${isHome ? 'vs' : '@'} ${opponent.name}</div>
-                    <div class="text-[10px] text-gray-600">${dateStr} · ${m.league.name}</div>
-                </div>
-            </div>
-            <div class="text-sm font-bold text-white font-mono shrink-0 ml-3">${m.goals.home} - ${m.goals.away}</div>
-        </div>
-    `;
-};
-
-/**
- * Renderiza una fila de próximo partido
- */
-const renderUpcomingRow = (m, teamId) => {
-    const isHome = m.teams.home.id === teamId;
-    const opponent = isHome ? m.teams.away : m.teams.home;
-    const date = new Date(m.fixture.date);
-    const dateStr = date.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
-    const timeStr = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-    return `
-        <div class="flex items-center justify-between px-4 py-3 hover:bg-[#111] transition-colors cursor-pointer" onclick="app.navigate('/partido/${m.fixture.id}')">
-            <div class="flex items-center gap-3 min-w-0 flex-1">
-                <img src="${opponent.logo}" class="w-5 h-5 object-contain shrink-0">
-                <div class="min-w-0">
-                    <div class="text-xs font-bold text-gray-200 truncate uppercase">${isHome ? 'vs' : '@'} ${opponent.name}</div>
-                    <div class="text-[10px] text-gray-600">${dateStr} · ${m.league.name}</div>
-                </div>
-            </div>
-            <div class="text-xs font-bold text-gray-400 font-mono shrink-0 ml-3">${timeStr}</div>
-        </div>
-    `;
-};
-
-/**
- * Renderiza una fila de fichaje
- */
-const renderTransferRow = (t, direction) => {
-    const date = new Date(t.date);
-    const dateStr = date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
-    const fromTo = direction === 'in' ? t.teams.out : t.teams.in;
-    const typeLabel = t.type === 'Free' ? 'Libre' : (t.type === 'Loan' ? 'Préstamo' : (t.type === 'N/A' ? '' : t.type));
-
-    return `
-        <div class="flex items-center gap-2 px-1 py-1.5 rounded hover:bg-[#111] transition-colors">
-            <img src="${fromTo.logo || ''}" class="w-4 h-4 object-contain shrink-0 opacity-50" onerror="this.style.display='none'">
-            <div class="min-w-0 flex-1">
-                <div class="text-xs font-bold text-gray-300 truncate">${t.player.name}</div>
-                <div class="text-[10px] text-gray-600 truncate">${direction === 'in' ? 'De' : 'A'} ${fromTo.name} ${typeLabel ? `· ${typeLabel}` : ''}</div>
-            </div>
-            <div class="text-[10px] text-gray-600 font-mono shrink-0">${dateStr}</div>
-        </div>
-    `;
-};
-
-/**
- * Carga y renderiza la mini tabla de posiciones
- */
-const loadTeamStandings = async (leagueId, teamId) => {
-    const container = document.getElementById('team-standings-table');
-    if (!container) return;
-
-    try {
-        const season = determineCurrentSeason(leagueId);
-        const data = await fetchAPI(`/standings?league=${leagueId}&season=${season}`);
-
-        if (!data.response || data.response.length === 0) {
-            container.innerHTML = `<div class="text-center text-gray-600 py-6 text-xs">Sin datos</div>`;
-            return;
-        }
-
-        const allGroups = data.response[0].league.standings;
-
-        // Find the group/table that contains this team
-        let targetTable = null;
-        for (const group of allGroups) {
-            if (group.some(t => t.team.id === teamId)) {
-                targetTable = group;
-                break;
+            // Actualizar eventos en el state de matches para mostrar tarjetas rojas en la lista
+            if (fullMatch && fullMatch.events) {
+                updateMatchEvents(id, fullMatch.events);
             }
+
+            // Guardar datos completos en el objeto del match para futuras visitas
+            if (fullMatch) {
+                m.lineups = fullMatch.lineups || m.lineups;
+                m.statistics = fullMatch.statistics || m.statistics;
+            }
+
+            // Fetch player stats (photos & ratings)
+            try {
+                const playersData = await fetchAPI(`/fixtures/players?fixture=${id}`, true);
+                if (playersData && playersData.response) {
+                    fullMatch.players = playersData.response;
+                    m.players = playersData.response;
+                }
+            } catch (pe) {
+                console.warn('Could not fetch player stats:', pe);
+            }
+
+            renderTimeline(fullMatch);
+            renderLineups(fullMatch);
+            renderStats(fullMatch);
         }
-
-        if (!targetTable) {
-            // Team not found in standings, try all groups
-            container.innerHTML = `<div class="text-center text-gray-600 py-6 text-xs">Equipo no encontrado en la tabla</div>`;
-            return;
-        }
-
-        // For Argentine league (128), only show the zone the team is in
-        // For other leagues, show the full table
-
-        container.innerHTML = `
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-gray-400">
-                    <thead class="text-[9px] text-gray-500 uppercase bg-[#111] border-b border-[#222] tracking-widest">
-                        <tr>
-                            <th class="px-2 py-2 text-center w-6">#</th>
-                            <th class="px-2 py-2">Equipo</th>
-                            <th class="px-1 py-2 text-center text-white">Pts</th>
-                            <th class="px-1 py-2 text-center">PJ</th>
-                            <th class="px-1 py-2 text-center font-mono">DG</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-[#1a1a1a]">
-                        ${targetTable.map(t => {
-            const isSelected = t.team.id === teamId;
-            return `
-                                <tr class="${isSelected ? 'bg-white/5 border-l-2 border-white' : 'hover:bg-[#111]'} transition-colors cursor-pointer" onclick="app.navigate('/equipo/${t.team.id}')">
-                                    <td class="px-2 py-1.5 text-center text-[10px] ${isSelected ? 'text-white font-bold' : 'text-gray-500'}">${t.rank}</td>
-                                    <td class="px-2 py-1.5 flex items-center gap-2 whitespace-nowrap">
-                                        <img src="${t.team.logo}" class="w-4 h-4 object-contain">
-                                        <span class="text-[10px] font-bold ${isSelected ? 'text-white' : 'text-gray-400'} uppercase truncate">${t.team.name}</span>
-                                    </td>
-                                    <td class="px-1 py-1.5 text-center font-bold ${isSelected ? 'text-white' : 'text-gray-400'} text-[10px]">${t.points}</td>
-                                    <td class="px-1 py-1.5 text-center text-[10px] font-mono text-gray-500">${t.all.played}</td>
-                                    <td class="px-1 py-1.5 text-center text-[10px] font-mono ${t.goalsDiff > 0 ? 'text-white' : 'text-gray-600'}">${t.goalsDiff > 0 ? '+' : ''}${t.goalsDiff}</td>
-                                </tr>
-                            `;
-        }).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-
     } catch (e) {
-        console.error('Error loading team standings:', e);
-        container.innerHTML = `<div class="text-center text-gray-600 py-6 text-xs">Error al cargar tabla</div>`;
+        console.error(e);
+    }
+
+    document.getElementById('detail-loader').classList.add('hidden');
+    document.getElementById('detail-content-wrapper').classList.remove('hidden');
+
+    // Asegurar que después de cargar, el scroll está arriba
+    setTimeout(() => {
+        detailView.scrollTo(0, 0);
+    }, 100);
+
+    // Determinar si el partido ha comenzado
+    const notStarted = ['NS', 'TBD', 'PST', 'CANC', 'ABD'].includes(m.fixture.status.short);
+
+    // Ocultar/mostrar tabs según el estado del partido
+    const timelineTab = document.querySelector('.tab-btn[data-target="tab-timeline"]');
+    const lineupsTab = document.querySelector('.tab-btn[data-target="tab-lineups"]');
+    const statsTab = document.querySelector('.tab-btn[data-target="tab-stats"]');
+    const forumTab = document.querySelector('.tab-btn[data-target="tab-forum"]');
+
+    if (notStarted) {
+        // Partido no iniciado: solo mostrar foro
+        if (timelineTab) timelineTab.style.display = 'none';
+        if (lineupsTab) lineupsTab.style.display = 'none';
+        if (statsTab) statsTab.style.display = 'none';
+        // Forzar ir al tab de foro si el partido no ha comenzado
+        if (forumTab) {
+            forumTab.click();
+        }
+    } else {
+        // Partido iniciado o finalizado: mostrar todos los tabs
+        if (timelineTab) timelineTab.style.display = '';
+        if (lineupsTab) lineupsTab.style.display = '';
+        if (statsTab) statsTab.style.display = '';
+
+        // Switch to requested tab
+        const tabId = initialTab.startsWith('tab-') ? initialTab : `tab-${initialTab}`;
+        const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
+        if (btn) {
+            btn.click();
+        }
     }
 };
+
+/**
+ * Wrapper para compatibilidad - abre detalle con tab específico
+ */
+export const openMatchDetailWithTab = (params) => {
+    openDetail(params);
+};
+
+/**
+* Cierra la vista de detalle
+*/
+export const closeDetail = () => {
+    const detailView = document.getElementById('view-match-detail');
+    detailView.classList.add('hidden');
+
+    // Restaurar scroll del body
+    document.body.style.overflow = '';
+
+    // Restaurar elementos ocultos al abrir el detalle
+    const dateNav = document.getElementById('date-nav');
+    if (dateNav) {
+        dateNav.style.display = '';
+        dateNav.classList.remove('hidden');
+    }
+
+    // Restaurar header principal
+    const header = document.querySelector('header');
+    if (header) {
+        header.style.display = '';
+    }
+
+    // Restaurar bottom nav
+    const bottomNav = document.querySelector('nav.fixed.bottom-0');
+    if (bottomNav) {
+        bottomNav.style.display = '';
+    }
+
+    // Restaurar sidebar derecha (comunidad)
+    const rightSidebar = document.getElementById('right-sidebar');
+    if (rightSidebar) {
+        rightSidebar.style.display = '';
+    }
+
+    // Navegar de vuelta a matches
+    if (window.app && window.app.navigate) {
+        window.app.navigate('/');
+    }
+};
+
+export const getSelectedMatch = () => selectedMatch;
