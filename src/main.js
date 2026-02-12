@@ -123,6 +123,10 @@ import {
     getFeaturedMatchId
 } from './views/featured_match.js';
 
+import {
+    showTeamProfile
+} from './views/teamProfile.js';
+
 /**
  * Navega a la vista de partidos
  */
@@ -137,6 +141,8 @@ const navigateToMatches = () => {
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-forum').classList.add('hidden');
     document.getElementById('view-match-detail').classList.add('hidden');
+    const viewTeam = document.getElementById('view-team');
+    if (viewTeam) viewTeam.classList.add('hidden');
     document.getElementById('view-match-list').classList.remove('hidden');
     document.getElementById('date-nav').classList.remove('hidden');
     document.getElementById('sidebar').classList.remove('hidden'); // Restore if it was hidden by league view
@@ -184,6 +190,13 @@ const showStandingsByIdAndName = (params) => {
  */
 const openMatchDetail = (params) => {
     openDetail(params);
+};
+
+/**
+ * Handler para mostrar perfil de equipo desde router
+ */
+const showTeamProfileHandler = (params) => {
+    showTeamProfile(params);
 };
 
 /**
@@ -692,7 +705,8 @@ const init = () => {
         navigateToForum: navigateToForumWrapper,
         openMatchDetail,
         showStandingsById,
-        showStandingsByIdAndName
+        showStandingsByIdAndName,
+        showTeamProfile: showTeamProfileHandler
     });
 };
 
@@ -727,6 +741,9 @@ window.app = {
     renderTable,
     changeRound,
     toggleSidebarInLeague,
+
+    // Team Profile
+    showTeamProfile,
 
     // Forum
     navigateToForum: navigateToForumWrapper,
