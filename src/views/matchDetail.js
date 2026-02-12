@@ -293,9 +293,12 @@ const showPlayerModal = (player) => {
     addStat('Asistencias', s.goals?.assists);
     addStat('Disparos', s.shots?.total);
     addStat('Al arco', s.shots?.on);
-    addStat('Pases', s.passes?.total);
+    if (s.passes?.total != null) {
+        const acc = s.passes.accuracy || 0;
+        const completed = Math.round(s.passes.total * acc / 100);
+        addStat('Pases acertados', `${completed}/${s.passes.total} (${acc}%)`);
+    }
     addStat('Pases clave', s.passes?.key);
-    addStat('Precisión', s.passes?.accuracy ? s.passes.accuracy + '%' : null);
     addStat('Tackles', s.tackles?.total);
     addStat('Intercepciones', s.tackles?.interceptions);
     addStat('Duelos ganados', s.duels?.won);
