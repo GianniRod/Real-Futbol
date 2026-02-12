@@ -392,7 +392,7 @@ export const renderTable = (groupIndex) => {
                                     ${indicatorClass ? `<div class="absolute left-0 top-2 bottom-2 w-[3px] ${indicatorClass} rounded-r"></div>` : ''}
                                     ${t.rank}
                                 </td>
-                                <td class="px-2 py-2 md:px-3 md:py-3 font-bold text-gray-300 flex items-center gap-2 md:gap-3 whitespace-nowrap uppercase text-[10px] md:text-xs">
+                                <td class="px-2 py-2 md:px-3 md:py-3 font-bold text-gray-300 flex items-center gap-2 md:gap-3 whitespace-nowrap uppercase text-[10px] md:text-xs cursor-pointer hover:text-white transition-colors" onclick="event.stopPropagation(); app.navigate('/equipo/${t.team.id}')">
                                     <img src="${t.team.logo}" class="w-4 h-4 md:w-6 md:h-6 object-contain">
                                     ${t.team.name}
                                     ${badgeHtml}
