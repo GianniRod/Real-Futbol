@@ -30,7 +30,8 @@ import {
     changeSeason,
     renderTable,
     changeRound,
-    toggleSidebarInLeague
+    toggleSidebarInLeague,
+    switchWorldCupTab
 } from './views/standings.js';
 
 import {
@@ -741,6 +742,7 @@ window.app = {
     renderTable,
     changeRound,
     toggleSidebarInLeague,
+    switchWorldCupTab,
 
     // Team Profile
     showTeamProfile,
