@@ -20,6 +20,7 @@ const routes = [
     { pattern: '/partido/:id', handler: 'openMatchDetail' },
     { pattern: '/liga/:id', handler: 'showStandingsById' },
     { pattern: '/liga/:id/:name', handler: 'showStandingsByIdAndName' },
+    { pattern: '/equipo/:id', handler: 'showTeamProfile' },
 ];
 
 /**
