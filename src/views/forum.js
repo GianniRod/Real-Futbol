@@ -91,8 +91,18 @@ export const initForum = (context, containerId, usernameInputId) => {
             const isMe = currentUserId && msg.userId === currentUserId;
             const date = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
-            // Ver si es el mismo usuario que el anterior
+            // Ver si es el mismo usuario que el anterior y calcular diferencia de tiempo
             const isSameUser = index > 0 && messagesData[index - 1].userId === msg.userId;
+            const prevTimestamp = index > 0 ? messagesData[index - 1].timestamp : 0;
+            const timeDiffMs = msg.timestamp - prevTimestamp;
+            const timeDiffMin = timeDiffMs / 60000;
+
+            // Grouping rules for consecutive messages from same user:
+            // < 5 min: fully grouped (no header, no time)
+            // 5-15 min: show time divider only
+            // > 15 min: show full header again (logo + name + time)
+            const showFullHeader = !isSameUser || timeDiffMin >= 15;
+            const showTimeDivider = isSameUser && timeDiffMin >= 5 && timeDiffMin < 15;
 
             // Badge según role del autor y badges especiales
             let badge = '';
@@ -107,8 +117,15 @@ export const initForum = (context, containerId, usernameInputId) => {
                 badge += '<span class="ml-2 px-2 py-0.5 bg-gradient-to-r from-cyan-400 to-sky-500 text-black text-[9px] font-black uppercase rounded">PRIMER USUARIO</span>';
             }
 
-            // Header content (only show if not same user)
-            const headerHtml = !isSameUser ? `
+            // Time divider for 5-15 min gaps from same user
+            const timeDividerHtml = showTimeDivider ? `
+                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} ${isMe ? 'pr-11' : 'pl-11'}">
+                    <span class="text-[9px] text-[#444] font-mono">${date}</span>
+                </div>
+            ` : '';
+
+            // Header content (full header with name, badge, time)
+            const headerHtml = showFullHeader ? `
                 <div class="flex items-center gap-2 mb-1 px-1 ${isMe ? 'flex-row-reverse' : ''}">
                     <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wide">${msg.user}</span>
                     ${badge}
@@ -125,11 +142,11 @@ export const initForum = (context, containerId, usernameInputId) => {
                 </div>
             ` : '';
 
-            // Logo content (invisible if same user to keep alignment)
-            const logoVisibilityClass = isSameUser ? 'invisible' : '';
+            // Logo content (invisible if grouped to keep alignment, visible for full header)
+            const logoVisibilityClass = showFullHeader ? '' : 'invisible';
 
-            // Top margin based on spacing: small if same user, large if new block
-            const marginTopClass = index === 0 ? 'mt-0' : (isSameUser ? 'mt-0.5' : 'mt-4');
+            // Top margin: large for new block, small-medium for time divider, tiny for grouped
+            const marginTopClass = index === 0 ? 'mt-0' : (showFullHeader ? 'mt-4' : (showTimeDivider ? 'mt-2' : 'mt-0.5'));
 
             return `
                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} ${marginTopClass} mb-0 animate-fade-in group relative message-container" 
@@ -137,6 +154,9 @@ export const initForum = (context, containerId, usernameInputId) => {
                      data-message-user="${msg.user.replace(/"/g, '&quot;')}"
                      data-message-text="${msg.text.substring(0, 100).replace(/"/g, '&quot;').replace(/\n/g, ' ')}">
                     
+                    <!-- Time Divider (5-15 min gap, same user) -->
+                    ${timeDividerHtml}
+
                     <!-- Header Row -->
                     ${headerHtml}
 
