@@ -105,10 +105,22 @@ export const showTeamProfile = async (params) => {
         const recentTransfers = allTransfers.filter(t => {
             const d = new Date(t.date);
             return d >= oneYearAgo;
-        }).sort((a, b) => new Date(b.date) - new Date(a.date));
+        });
 
-        const arrivals = recentTransfers.filter(t => t.teams.in.id === parseInt(teamId));
-        const departures = recentTransfers.filter(t => t.teams.out.id === parseInt(teamId));
+        // Sort by price descending (most expensive first), free/unknown at bottom
+        const parsePrice = (t) => {
+            if (!t.type || t.type === 'Free' || t.type === 'N/A') return 0;
+            // type can be e.g. "€ 30M" or a numeric string
+            const match = t.type?.match(/([\d.]+)\s*M/i);
+            if (match) return parseFloat(match[1]) * 1000000;
+            const match2 = t.type?.match(/([\d.]+)\s*K/i);
+            if (match2) return parseFloat(match2[1]) * 1000;
+            return 1; // paid transfer without known amount → above free
+        };
+        const sortByPrice = (a, b) => parsePrice(b) - parsePrice(a);
+
+        const arrivals = recentTransfers.filter(t => t.teams.in.id === parseInt(teamId)).sort(sortByPrice).slice(0, 6);
+        const departures = recentTransfers.filter(t => t.teams.out.id === parseInt(teamId)).sort(sortByPrice).slice(0, 6);
 
         // Determine league for standings
         let leagueId = null;
@@ -189,7 +201,7 @@ export const showTeamProfile = async (params) => {
                         <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
                             <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Fichajes</h3>
                         </div>
-                        <div class="p-3 space-y-4">
+                        <div class="p-3 space-y-4 max-h-[400px] overflow-y-auto">
                             <!-- Llegadas -->
                             <div>
                                 <div class="text-[10px] font-bold text-green-500 uppercase tracking-widest mb-2 px-1">Llegadas</div>
