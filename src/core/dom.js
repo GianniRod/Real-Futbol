@@ -14,7 +14,8 @@ const VIEW_IDS = [
     'view-match-list',
     'view-forum',
     'view-standings',
-    'view-match-detail'
+    'view-match-detail',
+    'view-team'
 ];
 
 /**
