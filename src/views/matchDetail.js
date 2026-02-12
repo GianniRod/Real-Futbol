@@ -256,6 +256,100 @@ const getRatingColors = (rating) => {
 };
 
 /**
+ * Shows a detailed player modal with match stats
+ */
+const showPlayerModal = (player) => {
+    const modal = document.getElementById('player-modal');
+    const photo = player.photo || `https://media.api-sports.io/football/players/${player.id}.png`;
+    const s = player.stats || {};
+
+    // Position label
+    const posLabels = {
+        'G': 'Arquero', 'D': 'Defensor', 'M': 'Mediocampista', 'F': 'Delantero',
+        'Goalkeeper': 'Arquero', 'Defender': 'Defensor', 'Midfielder': 'Mediocampista', 'Attacker': 'Delantero'
+    };
+    const posLabel = posLabels[player.position] || player.position || '';
+
+    // Rating colors
+    const rating = player.rating;
+    let ratingBg = '#333', ratingText = '#aaa';
+    if (rating) {
+        if (rating >= 8) { ratingBg = '#16a34a'; ratingText = '#fff'; }
+        else if (rating >= 7) { ratingBg = '#65a30d'; ratingText = '#fff'; }
+        else if (rating >= 6) { ratingBg = '#ca8a04'; ratingText = '#fff'; }
+        else { ratingBg = '#dc2626'; ratingText = '#fff'; }
+    }
+
+    // Build stat items from available data
+    const statItems = [];
+    const addStat = (label, value) => {
+        if (value !== null && value !== undefined && value !== '-') {
+            statItems.push({ label, value });
+        }
+    };
+
+    addStat('Minutos', s.games?.minutes);
+    addStat('Goles', s.goals?.total);
+    addStat('Asistencias', s.goals?.assists);
+    addStat('Disparos', s.shots?.total);
+    addStat('Al arco', s.shots?.on);
+    addStat('Pases', s.passes?.total);
+    addStat('Pases clave', s.passes?.key);
+    addStat('Precisión', s.passes?.accuracy ? s.passes.accuracy + '%' : null);
+    addStat('Tackles', s.tackles?.total);
+    addStat('Intercepciones', s.tackles?.interceptions);
+    addStat('Duelos ganados', s.duels?.won);
+    addStat('Duelos total', s.duels?.total);
+    addStat('Dribles', s.dribbles?.success != null ? `${s.dribbles.success}/${s.dribbles.attempts}` : null);
+    addStat('Faltas cometidas', s.fouls?.committed);
+    addStat('Faltas recibidas', s.fouls?.drawn);
+
+    // For goalkeepers
+    if (player.position === 'G' || player.position === 'Goalkeeper') {
+        addStat('Atajadas', s.goals?.saves);
+        addStat('Goles recibidos', s.goals?.conceded);
+    }
+
+    const statsGrid = statItems.length > 0 ? `
+        <div class="grid grid-cols-3 gap-px bg-[#222] rounded-lg overflow-hidden mt-4">
+            ${statItems.map(si => `
+                <div class="bg-[#111] p-2.5 text-center">
+                    <div class="text-sm font-bold text-white font-mono">${si.value}</div>
+                    <div class="text-[8px] text-gray-500 uppercase tracking-wider mt-0.5">${si.label}</div>
+                </div>
+            `).join('')}
+        </div>
+    ` : '<div class="text-center text-gray-600 text-xs mt-4 uppercase tracking-widest">Sin estadísticas disponibles</div>';
+
+    modal.innerHTML = `
+        <div class="bg-[#0a0a0a] border border-[#333] rounded-xl w-full max-w-sm overflow-hidden shadow-2xl">
+            <!-- Header -->
+            <div class="relative bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a] p-5 flex items-center gap-4">
+                <button onclick="document.getElementById('player-modal').classList.add('hidden')"
+                    class="absolute top-3 right-3 text-gray-500 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <div class="w-16 h-16 rounded-full overflow-hidden border-2 shrink-0" style="border-color:${ratingBg}; background:#222;">
+                    <img src="${photo}" class="w-full h-full object-cover" onerror="this.style.display='none'" />
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="text-white font-bold text-base uppercase tracking-tight leading-tight truncate">${player.name}</div>
+                    <div class="text-gray-500 text-[10px] uppercase tracking-widest mt-1">${player.number ? '#' + player.number + ' · ' : ''}${posLabel}</div>
+                    ${rating ? `<div class="mt-2 inline-block text-xs font-black px-2 py-0.5 rounded" style="background:${ratingBg};color:${ratingText}">${rating.toFixed(1)}</div>` : ''}
+                </div>
+            </div>
+            <!-- Stats -->
+            <div class="px-4 pb-5">
+                ${statsGrid}
+            </div>
+        </div>
+    `;
+    modal.classList.remove('hidden');
+};
+
+/**
  * Renderiza las alineaciones y cancha táctica
  */
 const renderLineups = (m) => {
@@ -288,7 +382,9 @@ const renderLineups = (m) => {
                     const rating = stats && stats.games && stats.games.rating ? parseFloat(stats.games.rating) : null;
                     playerStatsMap[String(p.player.id)] = {
                         photo: p.player.photo || null,
-                        rating: rating
+                        rating: rating,
+                        stats: stats || null,
+                        playerInfo: p.player || null
                     };
                     if (rating !== null && rating > bestRating) {
                         bestRating = rating;
@@ -353,7 +449,7 @@ const renderLineups = (m) => {
                     <img src="https://i.postimg.cc/rsvxwJQj/Proyecto_nuevo_3.png" class="w-4 h-4 object-contain" alt="Ingresa" />
                     <span class="text-green-400 text-[10px] font-bold font-mono">${minute}'</span>
                 </div>`;
-                return `<div class="flex items-center gap-2 border-b border-[#222] py-2">
+                return `<div class="flex items-center gap-2 border-b border-[#222] py-2 cursor-pointer hover:bg-[#111] transition-colors" data-player-id="${p.player.id}" data-player-name="${p.player.name}" data-player-pos="${p.player.pos || ''}">
                     ${faceHtml}
                     ${ratingHtml}
                     <span class="text-gray-300 text-sm font-medium">${p.player.name}</span>
@@ -371,7 +467,7 @@ const renderLineups = (m) => {
             html += `<div class="mt-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Suplentes</div>`;
             html += benchOnly.map(p => {
                 const faceHtml = buildListFace(p.player.id, 'w-6 h-6');
-                return `<div class="flex items-center gap-2 border-b border-[#222] py-1.5">
+                return `<div class="flex items-center gap-2 border-b border-[#222] py-1.5 cursor-pointer hover:bg-[#111] transition-colors" data-player-id="${p.player.id}" data-player-name="${p.player.name}" data-player-pos="${p.player.pos || ''}">
                     ${faceHtml}
                     <span class="text-gray-500 text-sm">${p.player.name}</span>
                 </div>`;
@@ -383,6 +479,25 @@ const renderLineups = (m) => {
 
     hList.innerHTML = renderList(homeL);
     aList.innerHTML = renderList(awayL);
+
+    // Add click handlers to list player rows
+    [hList, aList].forEach(list => {
+        list.querySelectorAll('[data-player-id]').forEach(row => {
+            row.addEventListener('click', () => {
+                const id = row.dataset.playerId;
+                const pData = playerStatsMap[String(id)] || {};
+                showPlayerModal({
+                    name: row.dataset.playerName,
+                    number: '',
+                    id: id,
+                    photo: pData.photo,
+                    rating: pData.rating,
+                    stats: pData.stats,
+                    position: row.dataset.playerPos || (pData.stats?.games?.position) || ''
+                });
+            });
+        });
+    });
 
     const addPlayers = (lineup, side) => {
         const players = lineup.startXI;
@@ -609,8 +724,17 @@ const renderLineups = (m) => {
                 el.appendChild(nameEl);
 
                 el.onclick = () => {
-                    document.getElementById('modal-player-name').innerText = p.player.name;
-                    document.getElementById('player-modal').classList.remove('hidden');
+                    const pId = isSubbed ? currentPlayerId : p.player.id;
+                    const pData = playerStatsMap[String(pId)] || playerStatsMap[String(p.player.id)] || {};
+                    showPlayerModal({
+                        name: isSubbed ? subInName : p.player.name,
+                        number: isSubbed ? '' : (p.player.number || ''),
+                        id: pId,
+                        photo: pData.photo,
+                        rating: pData.rating,
+                        stats: pData.stats,
+                        position: p.player.pos || (pData.stats?.games?.position) || ''
+                    });
                 };
 
                 pitch.appendChild(el);
