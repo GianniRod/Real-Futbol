@@ -235,6 +235,7 @@ const renderFixtures = () => {
                         <span class="text-sm font-bold text-white font-mono">${scoreAway}</span>
                     </div>
         </div>
+            </div>
     `;
     }).join('');
 };
