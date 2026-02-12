@@ -176,6 +176,7 @@ export const loadMatches = async (silent = false) => {
  * - UEFA: "Round of 16 - 2nd Leg" → "Round of 16 - 1st Leg"
  * - CONMEBOL: "Qualifying Round 2 - 2" → "Qualifying Round 2 - 1"
  * - Alt: "Phase 2 - Leg 2" → "Phase 2 - Leg 1"
+ * - Spanish: "Octavos de final - Vuelta" → "Octavos de final - Ida"
  */
 const loadAggregateScores = async (matches) => {
     // Find 2nd leg matches with multiple pattern detection
@@ -184,12 +185,11 @@ const loadAggregateScores = async (matches) => {
         const roundLower = round.toLowerCase();
         return roundLower.includes('2nd leg') ||
             roundLower.includes('leg 2') ||
-            /- 2$/.test(round.trim()); // Ends with "- 2" (CONMEBOL format)
+            /- 2$/.test(round.trim()) ||
+            roundLower.includes('vuelta'); // Spanish format
     });
 
     if (secondLegMatches.length === 0) return;
-
-    console.log(`Found ${secondLegMatches.length} 2nd leg matches, fetching 1st legs...`);
 
     // For each 2nd leg match, fetch the 1st leg
     const promises = secondLegMatches.map(async (m) => {
@@ -205,14 +205,15 @@ const loadAggregateScores = async (matches) => {
             } else if (/- 2$/.test(firstLegRound.trim())) {
                 // CONMEBOL format: "Qualifying Round 2 - 2" → "Qualifying Round 2 - 1"
                 firstLegRound = firstLegRound.trim().replace(/- 2$/, '- 1');
+            } else if (/Vuelta/i.test(firstLegRound)) {
+                // Spanish format: "Octavos de final - Vuelta" → "Octavos de final - Ida"
+                firstLegRound = firstLegRound.replace(/Vuelta/i, 'Ida');
             }
 
-            console.log(`Fetching 1st leg: round="${firstLegRound}" for ${m.teams.home.name} vs ${m.teams.away.name}`);
-
-            // Fetch 1st leg fixtures for same league, season, and round
+            // Fetch 1st leg fixtures for same league, season, and round (silent)
             const data = await fetchAPI(
                 `/fixtures?league=${m.league.id}&season=${m.league.season}&round=${encodeURIComponent(firstLegRound)}`,
-                true // silent
+                true
             );
 
             if (data.response && data.response.length > 0) {
