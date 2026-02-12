@@ -30,6 +30,8 @@ const state = {
 const EUROPEAN_LEAGUES = [39, 140, 78, 135, 61, 2, 3, 143, 137]; // PL, LaLiga, Bundesliga, SerieA, Ligue1, UCL, UEL, CopaRey, CoppaItalia
 // IDs de Copas (para vista de Bracket)
 const CUP_LEAGUES = [130, 137, 143]; // Copa Argentina, Coppa Italia, Copa del Rey
+// IDs de Mundiales (Grupos + Eliminatorias)
+const WORLD_CUP_LEAGUES = [1]; // FIFA World Cup
 
 /**
  * Determina la temporada actual para una liga
@@ -424,8 +426,9 @@ export const processStandings = (standingsData) => {
     // Custom Tab Names logic
     const getTabName = (rawName) => {
         if (!rawName) return 'TABLA';
-        if (rawName.includes('Group A')) return 'ZONA A';
-        if (rawName.includes('Group B')) return 'ZONA B';
+        // World Cup / multi-group: Group A → A, Group B → B, etc.
+        const groupMatch = rawName.match(/Group\s+([A-Z])/i);
+        if (groupMatch) return groupMatch[1];
         if (rawName.includes('Overall') || rawName.includes('Table') || rawName.includes('Anual')) return 'TABLA ANUAL';
         if (rawName.includes('Promedio')) return 'PROMEDIOS';
         return rawName.toUpperCase();
@@ -506,12 +509,45 @@ export const toggleSidebarInLeague = () => {
 };
 
 /**
+ * Cambia entre tabs de Grupos y Eliminatorias (World Cup)
+ * @param {string} tab - 'grupos' o 'eliminatorias'
+ */
+let wcKnockoutLoaded = false;
+export const switchWorldCupTab = (tab) => {
+    const gruposContent = document.getElementById('wc-grupos-content');
+    const eliminatoriasContent = document.getElementById('wc-eliminatorias-content');
+    const btnGrupos = document.getElementById('wc-tab-grupos');
+    const btnEliminatorias = document.getElementById('wc-tab-eliminatorias');
+
+    if (!gruposContent || !eliminatoriasContent) return;
+
+    if (tab === 'grupos') {
+        gruposContent.classList.remove('hidden');
+        eliminatoriasContent.classList.add('hidden');
+        btnGrupos.className = 'px-5 py-2 text-xs font-bold uppercase tracking-widest rounded-full border transition-all bg-white text-black border-white';
+        btnEliminatorias.className = 'px-5 py-2 text-xs font-bold uppercase tracking-widest rounded-full border transition-all bg-transparent text-gray-400 border-[#333] hover:border-white hover:text-white';
+    } else {
+        gruposContent.classList.add('hidden');
+        eliminatoriasContent.classList.remove('hidden');
+        btnGrupos.className = 'px-5 py-2 text-xs font-bold uppercase tracking-widest rounded-full border transition-all bg-transparent text-gray-400 border-[#333] hover:border-white hover:text-white';
+        btnEliminatorias.className = 'px-5 py-2 text-xs font-bold uppercase tracking-widest rounded-full border transition-all bg-white text-black border-white';
+
+        // Lazy load knockout bracket
+        if (!wcKnockoutLoaded) {
+            wcKnockoutLoaded = true;
+            renderCupView(state.selectedLeague.id, state.season, eliminatoriasContent);
+        }
+    }
+};
+
+/**
  * Muestra la tabla de posiciones de una liga en el nuevo layout
  * Puede recibir params del router o argumentos legacy
  * @param {Object|number} idOrParams - Params { id, name } o solo ID
  * @param {string} name - Nombre de la liga (opcional si params)
  */
 export const showStandings = async (idOrParams, name) => {
+    wcKnockoutLoaded = false; // Reset for fresh load
     let id, leagueName;
 
     if (typeof idOrParams === 'object') {
@@ -590,7 +626,6 @@ export const showStandings = async (idOrParams, name) => {
     if (oldTabs) oldTabs.classList.add('hidden');
 
     // Setup Split Views Layout
-    // Setup Split Views Layout
 
     // Check if Cup for Bracket View
     if (CUP_LEAGUES.includes(parseInt(id))) {
@@ -598,7 +633,24 @@ export const showStandings = async (idOrParams, name) => {
         return;
     }
 
+    // Check if World Cup (Groups + Knockout)
+    const isWorldCup = WORLD_CUP_LEAGUES.includes(parseInt(id));
+    const worldCupToggle = isWorldCup ? `
+        <div class="flex justify-center gap-2 mb-4">
+            <button id="wc-tab-grupos" onclick="app.switchWorldCupTab('grupos')" 
+                class="px-5 py-2 text-xs font-bold uppercase tracking-widest rounded-full border transition-all bg-white text-black border-white">
+                Grupos
+            </button>
+            <button id="wc-tab-eliminatorias" onclick="app.switchWorldCupTab('eliminatorias')" 
+                class="px-5 py-2 text-xs font-bold uppercase tracking-widest rounded-full border transition-all bg-transparent text-gray-400 border-[#333] hover:border-white hover:text-white">
+                Eliminatorias
+            </button>
+        </div>
+    ` : '';
+
     container.innerHTML = `
+        ${worldCupToggle}
+        <div id="wc-grupos-content">
         <div class="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-140px)] gap-6 lg:overflow-hidden pb-20 lg:pb-0">
             <!-- Left: Table (Scrollable) -->
             <div class="w-full lg:flex-1 flex flex-col min-h-[500px] lg:min-h-0 bg-[#050505] rounded-xl border border-[#222] overflow-hidden">
@@ -647,6 +699,11 @@ export const showStandings = async (idOrParams, name) => {
                     <div class="text-center py-10 text-gray-600 text-xs">Selecciona una fecha</div>
                 </div>
             </div>
+            </div>
+        </div>
+        </div>
+        <div id="wc-eliminatorias-content" class="hidden">
+            <div class="flex justify-center py-20"><div class="loader"></div></div>
         </div>
     `;
 
