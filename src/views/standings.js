@@ -519,9 +519,9 @@ export const processStandings = (standingsData) => {
         return rawName.toUpperCase();
     };
 
-    // Ensure we have Promedios if user wants it
+    // Ensure we have Promedios if user wants it (ONLY FOR ARGENTINA - ID 128)
     // If we have 3 tables (Zone A, Zone B, Annual), generate Promedios from Annual
-    if (standingsData.length > 0) {
+    if (standingsData.length > 0 && state.selectedLeague && parseInt(state.selectedLeague.id) === 128) {
         // Check if Promedios exists
         const hasPromedios = standingsData.some(g => g[0] && g[0].group && g[0].group.includes('Promedio'));
 
