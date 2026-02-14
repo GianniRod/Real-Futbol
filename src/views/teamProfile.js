@@ -476,7 +476,7 @@ export const loadHeadToHead = async (team1Id, team2Id, team2Name, team2Logo) => 
                     ${(() => {
                 const diff = stats.team1Wins - stats.team2Wins;
                 if (diff === 0) {
-                    return `<div class="flex items-center gap-2 bg-[#222] px-4 py-2 rounded-full border border-[#333]">
+                    return `<div class="flex items-center gap-2">
                                 <span class="text-xs font-bold text-gray-300 uppercase tracking-widest">Historial Empatado</span>
                             </div>`;
                 }
@@ -486,8 +486,8 @@ export const loadHeadToHead = async (team1Id, team2Id, team2Name, team2Logo) => 
                 const absDiff = Math.abs(diff);
 
                 return `
-                            <div class="flex items-center gap-3 bg-[#222] px-4 py-2 rounded-full border border-[#333]">
-                                <img src="${leaderLogo}" class="w-6 h-6 object-contain">
+                            <div class="flex items-center gap-3">
+                                <img src="${leaderLogo}" class="w-8 h-8 object-contain">
                                 <span class="text-xs text-gray-300 uppercase tracking-wide">
                                     <span class="font-bold text-white">${leaderName}</span> está arriba en el historial por <span class="font-bold text-white">${absDiff}</span> partidos
                                 </span>
