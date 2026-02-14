@@ -17,29 +17,6 @@ import { initForum } from './forum.js';
 // State
 let selectedMatch = null;
 
-/**
- * Cambia entre tabs del detalle
- * @param {HTMLElement} btn - Botón clickeado
- * @param {string} targetId - ID del tab a mostrar
- */
-export const switchTab = (btn, targetId) => {
-    document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('text-white', 'border-b-2', 'border-white');
-        b.classList.add('text-gray-500');
-    });
-    btn.classList.add('text-white', 'border-b-2', 'border-white');
-    btn.classList.remove('text-gray-500');
-
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-    document.getElementById(targetId).classList.remove('hidden');
-
-    // NO actualizar URL aquí para evitar bucle infinito
-    // La URL se actualiza solo cuando se navega directamente a una URL con tab
-
-    if (targetId === 'tab-forum' && selectedMatch) {
-        initForum(`match_${selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
-    }
-};
 
 /**
  * Renderiza el timeline de eventos
@@ -797,6 +774,79 @@ const renderStats = (m) => {
 };
 
 /**
+ * Renderiza el historial H2H (últimos 15 partidos)
+ */
+const renderHeadToHead = async (m) => {
+    const c = document.getElementById('tab-h2h');
+    c.innerHTML = `<div class="flex justify-center py-10"><div class="loader"></div></div>`;
+
+    const team1Id = m.teams.home.id;
+    const team2Id = m.teams.away.id;
+
+    try {
+        // Fetch H2H data (last 15 matches)
+        const data = await fetchAPI(`/fixtures/headtohead?h2h=${team1Id}-${team2Id}&last=15&timezone=America/Argentina/Buenos_Aires`);
+        const fixtures = data.response;
+
+        if (!fixtures || fixtures.length === 0) {
+            c.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Sin historial reciente</div>';
+            return;
+        }
+
+        c.innerHTML = fixtures.map(match => {
+            const date = new Date(match.fixture.date);
+            const dateStr = date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+            const isHome = match.teams.home.id === team1Id;
+            const homeScore = match.goals.home;
+            const awayScore = match.goals.away;
+
+            // Determine opacity for losing score
+            // If home won, away score is 50% opacity. If away won, home score is 50% opacity.
+            // If draw, both normal.
+            let homeOpacity = 'opacity-100';
+            let awayOpacity = 'opacity-100';
+
+            if (homeScore > awayScore) {
+                awayOpacity = 'opacity-50';
+            } else if (awayScore > homeScore) {
+                homeOpacity = 'opacity-50';
+            }
+
+            return `
+                <div class="flex items-center justify-between px-4 py-3 bg-[#111] border-b border-[#222] hover:bg-[#1a1a1a] transition-colors cursor-pointer" onclick="app.navigate('/partido/${match.fixture.id}')">
+                    <div class="flex items-center gap-4 min-w-0 flex-1">
+                        <span class="text-[10px] font-mono text-gray-600 shrink-0">${dateStr}</span>
+                        
+                        <div class="flex items-center justify-center flex-1 gap-4">
+                            <!-- Team 1 (Home in this match) -->
+                            <div class="flex items-center justify-end gap-2 flex-1">
+                                <span class="text-[10px] font-bold text-gray-400 truncate hidden sm:block">${match.teams.home.name}</span>
+                                <img src="${match.teams.home.logo}" class="w-5 h-5 object-contain">
+                                <span class="text-lg font-bold text-white font-mono ${homeOpacity}">${homeScore}</span>
+                            </div>
+
+                            <span class="text-gray-600 text-[10px]">-</span>
+
+                            <!-- Team 2 (Away in this match) -->
+                            <div class="flex items-center justify-start gap-2 flex-1">
+                                <span class="text-lg font-bold text-white font-mono ${awayOpacity}">${awayScore}</span>
+                                <img src="${match.teams.away.logo}" class="w-5 h-5 object-contain">
+                                <span class="text-[10px] font-bold text-gray-400 truncate hidden sm:block">${match.teams.away.name}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.error('Error fetching H2H:', e);
+        c.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Error al cargar historial</div>';
+    }
+};
+
+/**
  * Abre el detalle de un partido desde el router
  * @param {Object|number} params - { id, tab } desde URL o ID directo
  */
@@ -1023,22 +1073,31 @@ export const openDetail = async (params) => {
     const timelineTab = document.querySelector('.tab-btn[data-target="tab-timeline"]');
     const lineupsTab = document.querySelector('.tab-btn[data-target="tab-lineups"]');
     const statsTab = document.querySelector('.tab-btn[data-target="tab-stats"]');
+    const h2hTab = document.querySelector('.tab-btn[data-target="tab-h2h"]');
     const forumTab = document.querySelector('.tab-btn[data-target="tab-forum"]');
 
     if (notStarted) {
-        // Partido no iniciado: solo mostrar foro
+        // Partido no iniciado: solo mostrar foro y H2H
         if (timelineTab) timelineTab.style.display = 'none';
         if (lineupsTab) lineupsTab.style.display = 'none';
         if (statsTab) statsTab.style.display = 'none';
-        // Forzar ir al tab de foro si el partido no ha comenzado
-        if (forumTab) {
+        if (h2hTab) h2hTab.style.display = '';
+
+        // Forzar ir al tab de foro si el partido no ha comenzado (por defecto, pero usuario puede cambiar a H2H)
+        if (forumTab && initialTab === 'timeline') {
             forumTab.click();
+        } else if (initialTab !== 'timeline') {
+            // Si el usuario pidió un tab específico (ej: h2h), intentamos ir ahí
+            const tabId = initialTab.startsWith('tab-') ? initialTab : `tab-${initialTab}`;
+            const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
+            if (btn) btn.click();
         }
     } else {
         // Partido iniciado o finalizado: mostrar todos los tabs
         if (timelineTab) timelineTab.style.display = '';
         if (lineupsTab) lineupsTab.style.display = '';
         if (statsTab) statsTab.style.display = '';
+        if (h2hTab) h2hTab.style.display = '';
 
         // Switch to requested tab
         const tabId = initialTab.startsWith('tab-') ? initialTab : `tab-${initialTab}`;
@@ -1098,3 +1157,36 @@ export const closeDetail = () => {
 };
 
 export const getSelectedMatch = () => selectedMatch;
+
+export const switchTab = (btn, targetId) => {
+    // Update button states
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('text-white', 'border-b-2', 'border-white');
+        b.classList.add('text-gray-500');
+    });
+    btn.classList.remove('text-gray-500');
+    btn.classList.add('text-white', 'border-b-2', 'border-white');
+
+    // Update content visibility
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.add('hidden');
+        c.classList.remove('block');
+    });
+    const target = document.getElementById(targetId);
+    if (target) {
+        target.classList.remove('hidden');
+        target.classList.add('block');
+    }
+
+    if (targetId === 'tab-forum' && selectedMatch) {
+        // Assuming initForum is globally available or imported
+        // We need to check if it's imported. It seems standard.
+        if (window.initForum) window.initForum(`match_${selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
+        else if (typeof initForum === 'function') initForum(`match_${selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
+    }
+
+    if (targetId === 'tab-h2h' && selectedMatch) {
+        renderHeadToHead(selectedMatch);
+    }
+};
+
