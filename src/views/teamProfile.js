@@ -183,14 +183,6 @@ export const showTeamProfile = async (params) => {
                         <span class="text-xs font-bold uppercase tracking-widest">${venue.name}</span>
                     </div>
                 ` : ''}
-
-                <!-- Tabs/Botones -->
-                <div class="flex gap-2 justify-center w-full mt-2">
-                     <button onclick="app.showHistory(${team.id}, '${team.country}')" 
-                        class="px-4 py-2 bg-[#1a1a1a] hover:bg-[#222] border border-[#333] hover:border-white text-white text-xs font-bold uppercase tracking-widest rounded transition-all">
-                        HISTORIALES
-                    </button>
-                </div>
             </div>
 
             <!-- Main Content Container (Toggleable) -->
@@ -416,7 +408,9 @@ export const loadHeadToHead = async (team1Id, team2Id, team2Name, team2Logo) => 
     container.scrollIntoView({ behavior: 'smooth' });
 
     try {
-        const data = await fetchAPI(`/fixtures/headtohead?h2h=${team1Id}-${team2Id}&timezone=America/Argentina/Buenos_Aires`);
+        // Request the last 99 matches, which is a good proxy for "all available history"
+        // The API might still be limited by date range, but this maximizes the count.
+        const data = await fetchAPI(`/fixtures/headtohead?h2h=${team1Id}-${team2Id}&last=99&timezone=America/Argentina/Buenos_Aires`);
         const fixtures = data.response;
 
         if (!fixtures || fixtures.length === 0) {
