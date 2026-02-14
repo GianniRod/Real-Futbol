@@ -966,12 +966,20 @@
                                 data-target="tab-stats" onclick="app.switchTab(this, 'tab-stats')">Estadísticas</button>
                             <button
                                 class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
+                                data-target="tab-h2h" onclick="app.switchTab(this, 'tab-h2h')">H2H</button>
+                            <button
+                                class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
                                 data-target="tab-forum" onclick="app.switchTab(this, 'tab-forum')">Foro</button>
                         </div>
 
                         <div class="p-4 lg:p-8 space-y-6 min-h-[50vh]">
+                            <!-- Timeline View -->
                             <div id="tab-timeline" class="tab-content block space-y-4 max-w-2xl mx-auto"></div>
 
+                            <!-- H2H View -->
+                            <div id="tab-h2h" class="tab-content hidden space-y-4 max-w-2xl mx-auto"></div>
+
+                            <!-- Forum View -->
                             <div id="tab-forum" class="tab-content hidden h-[400px] flex flex-col max-w-2xl mx-auto">
                                 <div id="match-forum-messages"
                                     class="flex-1 overflow-y-auto space-y-3 pr-1 mb-4 pb-8 border border-[#222] rounded p-3 bg-[#0a0a0a]">
