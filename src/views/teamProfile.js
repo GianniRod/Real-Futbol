@@ -286,6 +286,14 @@ export const showHistory = async (teamId, country) => {
     historyContainer.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
 
     try {
+        // Ensure we have context, fetch if missing (though showTeamProfile should have set it)
+        if (!currentTeamContext || currentTeamContext.id !== parseInt(teamId)) {
+            const teamData = await fetchAPI(`/teams?id=${teamId}`);
+            if (teamData.response && teamData.response[0]) {
+                currentTeamContext = teamData.response[0].team;
+            }
+        }
+
         // Fetch teams from same country
         const data = await fetchAPI(`/teams?country=${country}`);
 
@@ -298,10 +306,45 @@ export const showHistory = async (teamId, country) => {
             return;
         }
 
+        // Determine if current team is National Team
+        const isCurrentNational = currentTeamContext && currentTeamContext.national;
+
+        // Keywords to identify Reserve/B teams
+        const reserveKeywords = ['Reserves', 'Reserva', ' II', ' B', 'U20', 'U23', 'U21', 'U19', 'Sub-20', 'Sub-21', 'Sub-23', 'Academy', 'Promesas'];
+
         // Filter out current team & sort alphabetically
         const teams = data.response
             .map(item => item.team)
-            .filter(t => t.id !== parseInt(teamId))
+            .filter(t => {
+                if (t.id === parseInt(teamId)) return false;
+
+                // RESERVE CHECK
+                const name = t.name.toLowerCase();
+                const isReserve =
+                    name.includes('reserve') ||
+                    name.includes('reserva') ||
+                    name.endsWith(' ii') ||
+                    name.endsWith(' b') ||
+                    name.includes('u23') ||
+                    name.includes('u21') ||
+                    name.includes('u20') ||
+                    name.includes('u19') ||
+                    name.includes('sub-23') ||
+                    name.includes('sub-20') ||
+                    name.includes('youth') ||
+                    name.includes('academy');
+
+                if (isReserve) return false;
+
+                // NATIONAL vs CLUB Check
+                if (currentTeamContext.national) {
+                    // Current is National Team -> Show ONLY other National Teams
+                    return t.national === true;
+                } else {
+                    // Current is Club -> Show ONLY other Clubs (NOT National)
+                    return t.national === false;
+                }
+            })
             .sort((a, b) => a.name.localeCompare(b.name));
 
         historyContainer.innerHTML = `
@@ -428,6 +471,29 @@ export const loadHeadToHead = async (team1Id, team2Id, team2Name, team2Logo) => 
                             <span class="text-xs lg:text-sm font-bold text-white text-center leading-tight font-sport">${team2Name}</span>
                         </div>
                     </div>
+                <!-- H2H Summary -->
+                <div class="bg-[#111] px-6 pb-6 border-b border-[#222] flex justify-center">
+                    ${(() => {
+                const diff = stats.team1Wins - stats.team2Wins;
+                if (diff === 0) {
+                    return `<div class="flex items-center gap-2 bg-[#222] px-4 py-2 rounded-full border border-[#333]">
+                                <span class="text-xs font-bold text-gray-300 uppercase tracking-widest">Historial Empatado</span>
+                            </div>`;
+                }
+
+                const leaderName = diff > 0 ? team1.name : team2Name;
+                const leaderLogo = diff > 0 ? team1.logo : team2Logo;
+                const absDiff = Math.abs(diff);
+
+                return `
+                            <div class="flex items-center gap-3 bg-[#222] px-4 py-2 rounded-full border border-[#333]">
+                                <img src="${leaderLogo}" class="w-6 h-6 object-contain">
+                                <span class="text-xs text-gray-300 uppercase tracking-wide">
+                                    <span class="font-bold text-white">${leaderName}</span> está arriba en el historial por <span class="font-bold text-white">${absDiff}</span> partidos
+                                </span>
+                            </div>
+                        `;
+            })()}
                 </div>
 
                 <!-- Stats Bar -->
@@ -477,20 +543,20 @@ export const loadHeadToHead = async (team1Id, team2Id, team2Name, team2Logo) => 
                     </div>
                     <div class="divide-y divide-[#1a1a1a]">
                         ${fixtures.slice(0, 15).map(m => {
-            const date = new Date(m.fixture.date);
-            const dateStr = date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                const date = new Date(m.fixture.date);
+                const dateStr = date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
-            // Determine Winner Color
-            const isHome = m.teams.home.id === parseInt(team1Id);
-            const t1Score = isHome ? m.goals.home : m.goals.away;
-            const t2Score = isHome ? m.goals.away : m.goals.home;
+                // Determine Winner Color
+                const isHome = m.teams.home.id === parseInt(team1Id);
+                const t1Score = isHome ? m.goals.home : m.goals.away;
+                const t2Score = isHome ? m.goals.away : m.goals.home;
 
-            let borderClass = 'border-l-4 border-transparent';
-            if (t1Score > t2Score) borderClass = 'border-l-4 border-l-green-500'; // Win
-            else if (t1Score < t2Score) borderClass = 'border-l-4 border-l-red-500'; // Loss
-            else borderClass = 'border-l-4 border-l-gray-500'; // Draw
+                let borderClass = 'border-l-4 border-transparent';
+                if (t1Score > t2Score) borderClass = 'border-l-4 border-l-green-500'; // Win
+                else if (t1Score < t2Score) borderClass = 'border-l-4 border-l-red-500'; // Loss
+                else borderClass = 'border-l-4 border-l-gray-500'; // Draw
 
-            return `
+                return `
                             <div class="flex items-center justify-between px-4 py-3 hover:bg-[#111] transition-colors cursor-pointer ${borderClass}" onclick="app.navigate('/partido/${m.fixture.id}')">
                                 <div class="flex items-center gap-4 min-w-0 flex-1">
                                     <span class="text-[10px] font-mono text-gray-600 shrink-0">${dateStr}</span>
@@ -514,7 +580,7 @@ export const loadHeadToHead = async (team1Id, team2Id, team2Name, team2Logo) => 
                                 <div class="hidden lg:block text-[9px] text-gray-600 uppercase tracking-widest ml-4 truncate w-24 text-right">${m.league.name}</div>
                             </div>
                             `;
-        }).join('')}
+            }).join('')}
                     </div>
                 </div>
             </div>
