@@ -125,7 +125,11 @@ import {
 } from './views/featured_match.js';
 
 import {
-    showTeamProfile
+    showTeamProfile,
+    showHistory,
+    closeHistory,
+    filterRivals,
+    loadHeadToHead
 } from './views/teamProfile.js';
 
 /**
@@ -746,6 +750,10 @@ window.app = {
 
     // Team Profile
     showTeamProfile,
+    showHistory,
+    closeHistory,
+    filterRivals,
+    loadHeadToHead,
 
     // Forum
     navigateToForum: navigateToForumWrapper,
