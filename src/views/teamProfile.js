@@ -1,10 +1,12 @@
 /**
  * Team Profile View Module
  * 
- * Propósito: Vista de perfil de equipo con info, partidos, fichajes y tabla
+ * Propósito: Vista de perfil de equipo con info, partidos, fichajes, tabla y HISTORIALES
  * 
  * Exports:
  * - showTeamProfile(params): Muestra perfil de un equipo
+ * - showHistory(teamId, country): Muestra la vista de selección de rival
+ * - loadHeadToHead(teamId1, teamId2): Carga y muestra el historial vs
  */
 
 import { fetchAPI } from '../core/api.js';
@@ -26,6 +28,8 @@ const determineCurrentSeason = (leagueId) => {
     }
     return currentYear;
 };
+
+let currentTeamContext = null;
 
 /**
  * Muestra el perfil de un equipo
@@ -81,6 +85,8 @@ export const showTeamProfile = async (params) => {
             viewTeam.innerHTML = `<div class="text-center text-gray-500 py-20 text-xs uppercase tracking-widest">Equipo no encontrado.</div>`;
             return;
         }
+
+        currentTeamContext = team; // Guardar info del equipo actual para el historial
 
         const last5 = lastMatches.response || [];
         const next5 = nextMatches.response || [];
@@ -168,75 +174,89 @@ export const showTeamProfile = async (params) => {
             </div>
 
             <!-- Team Info Card -->
-            <div class="bg-[#0a0a0a] border border-[#222] rounded-xl p-6 mb-6 flex flex-col items-center text-center">
+            <div class="bg-[#0a0a0a] border border-[#222] rounded-xl p-6 mb-6 flex flex-col items-center text-center relative">
                 <img src="${team.logo}" class="w-24 h-24 object-contain mb-4">
                 <h1 class="text-2xl font-bold text-white uppercase tracking-wider font-sport mb-2">${team.name}</h1>
                 ${venue ? `
-                    <div class="flex items-center gap-2 text-gray-400">
+                    <div class="flex items-center gap-2 text-gray-400 mb-4">
                         <img src="https://i.postimg.cc/mrVjjgxJ/4905563-2.png" class="w-4 h-4 object-contain opacity-60">
                         <span class="text-xs font-bold uppercase tracking-widest">${venue.name}</span>
                     </div>
                 ` : ''}
+
+                <!-- Tabs/Botones -->
+                <div class="flex gap-2 justify-center w-full mt-2">
+                     <button onclick="app.showHistory(${team.id}, '${team.country}')" 
+                        class="px-4 py-2 bg-[#1a1a1a] hover:bg-[#222] border border-[#333] hover:border-white text-white text-xs font-bold uppercase tracking-widest rounded transition-all">
+                        HISTORIALES
+                    </button>
+                </div>
             </div>
 
-            <!-- Content Grid -->
-            <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Left Column: Matches -->
-                <div class="w-full lg:flex-1 space-y-6">
-                    <!-- Últimos 5 Partidos -->
-                    <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
-                        <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Últimos Partidos</h3>
+            <!-- Main Content Container (Toggleable) -->
+            <div id="team-main-content">
+                <!-- Content Grid -->
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <!-- Left Column: Matches -->
+                    <div class="w-full lg:flex-1 space-y-6">
+                        <!-- Últimos 5 Partidos -->
+                        <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
+                             <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Últimos Partidos</h3>
+                            </div>
+                            <div class="divide-y divide-[#1a1a1a]">
+                                ${last5.length > 0 ? last5.map(m => renderMatchRow(m, parseInt(teamId))).join('') : '<div class="text-center text-gray-600 py-6 text-xs">Sin partidos recientes</div>'}
+                            </div>
                         </div>
-                        <div class="divide-y divide-[#1a1a1a]">
-                            ${last5.length > 0 ? last5.map(m => renderMatchRow(m, parseInt(teamId))).join('') : '<div class="text-center text-gray-600 py-6 text-xs">Sin partidos recientes</div>'}
+
+                        <!-- Próximos 5 Partidos -->
+                        <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
+                            <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Próximos Partidos</h3>
+                            </div>
+                            <div class="divide-y divide-[#1a1a1a]">
+                                ${next5.length > 0 ? next5.map(m => renderUpcomingRow(m, parseInt(teamId))).join('') : '<div class="text-center text-gray-600 py-6 text-xs">Sin próximos partidos</div>'}
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Próximos 5 Partidos -->
-                    <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
-                        <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Próximos Partidos</h3>
+                    <!-- Right Column: Transfers + Standings -->
+                    <div class="w-full lg:w-96 shrink-0 space-y-6">
+                        <!-- Llegadas -->
+                        <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
+                            <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
+                                <h3 class="text-xs font-bold text-green-500 uppercase tracking-widest">Llegadas</h3>
+                            </div>
+                             <div class="max-h-[270px] overflow-y-auto">
+                                ${arrivals.length > 0 ? `<div class="divide-y divide-[#1a1a1a]">${arrivals.map(t => renderTransferRow(t, 'in')).join('')}</div>` : '<div class="text-gray-600 text-xs p-4">Sin fichajes recientes</div>'}
+                            </div>
                         </div>
-                        <div class="divide-y divide-[#1a1a1a]">
-                            ${next5.length > 0 ? next5.map(m => renderUpcomingRow(m, parseInt(teamId))).join('') : '<div class="text-center text-gray-600 py-6 text-xs">Sin próximos partidos</div>'}
+
+                        <!-- Salidas -->
+                        <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
+                            <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
+                                <h3 class="text-xs font-bold text-red-500 uppercase tracking-widest">Salidas</h3>
+                            </div>
+                            <div class="max-h-[270px] overflow-y-auto">
+                                ${departures.length > 0 ? `<div class="divide-y divide-[#1a1a1a]">${departures.map(t => renderTransferRow(t, 'out')).join('')}</div>` : '<div class="text-gray-600 text-xs p-4">Sin salidas recientes</div>'}
+                            </div>
+                        </div>
+
+                        <!-- Mini Standings -->
+                        <div id="team-standings-container" class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
+                            <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Posiciones</h3>
+                            </div>
+                            <div id="team-standings-table" class="p-0">
+                                <div class="flex justify-center py-6"><div class="loader"></div></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Right Column: Transfers + Standings -->
-                <div class="w-full lg:w-96 shrink-0 space-y-6">
-                    <!-- Llegadas -->
-                    <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
-                        <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
-                            <h3 class="text-xs font-bold text-green-500 uppercase tracking-widest">Llegadas</h3>
-                        </div>
-                        <div class="max-h-[270px] overflow-y-auto">
-                            ${arrivals.length > 0 ? `<div class="divide-y divide-[#1a1a1a]">${arrivals.map(t => renderTransferRow(t, 'in')).join('')}</div>` : '<div class="text-gray-600 text-xs p-4">Sin fichajes recientes</div>'}
-                        </div>
-                    </div>
-
-                    <!-- Salidas -->
-                    <div class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
-                        <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
-                            <h3 class="text-xs font-bold text-red-500 uppercase tracking-widest">Salidas</h3>
-                        </div>
-                        <div class="max-h-[270px] overflow-y-auto">
-                            ${departures.length > 0 ? `<div class="divide-y divide-[#1a1a1a]">${departures.map(t => renderTransferRow(t, 'out')).join('')}</div>` : '<div class="text-gray-600 text-xs p-4">Sin salidas recientes</div>'}
-                        </div>
-                    </div>
-
-                    <!-- Mini Standings -->
-                    <div id="team-standings-container" class="bg-[#0a0a0a] border border-[#222] rounded-xl overflow-hidden">
-                        <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Posiciones</h3>
-                        </div>
-                        <div id="team-standings-table" class="p-0">
-                            <div class="flex justify-center py-6"><div class="loader"></div></div>
-                        </div>
-                    </div>
-                </div>
             </div>
+
+            <!-- History View Container (Hidden initially) -->
+            <div id="team-history-container" class="hidden"></div>
         `;
 
         // Load standings async
@@ -249,6 +269,260 @@ export const showTeamProfile = async (params) => {
     } catch (e) {
         console.error('Error loading team profile:', e);
         viewTeam.innerHTML = `<div class="text-center text-gray-500 py-20 text-xs uppercase tracking-widest">Error al cargar datos del equipo.</div>`;
+    }
+};
+
+/**
+ * Muestra la vista de selección de rival (equipos del mismo país)
+ */
+export const showHistory = async (teamId, country) => {
+    const mainContent = document.getElementById('team-main-content');
+    const historyContainer = document.getElementById('team-history-container');
+
+    // Toggle views
+    mainContent.classList.add('hidden');
+    historyContainer.classList.remove('hidden');
+
+    historyContainer.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
+
+    try {
+        // Fetch teams from same country
+        const data = await fetchAPI(`/teams?country=${country}`);
+
+        if (!data.response || data.response.length === 0) {
+            historyContainer.innerHTML = `
+                <div class="text-center py-10">
+                    <p class="text-gray-500 text-xs mb-4">No se encontraron equipos de ${country}</p>
+                    <button onclick="app.closeHistory()" class="text-white underline text-xs">Volver</button>
+                </div>`;
+            return;
+        }
+
+        // Filter out current team & sort alphabetically
+        const teams = data.response
+            .map(item => item.team)
+            .filter(t => t.id !== parseInt(teamId))
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        historyContainer.innerHTML = `
+            <div class="bg-[#0a0a0a] border border-[#222] rounded-xl p-4 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-white uppercase tracking-wider font-sport">Seleccionar Rival</h2>
+                     <button onclick="app.closeHistory()" class="text-gray-400 hover:text-white text-xs font-bold uppercase tracking-widest">
+                        Cancelar
+                    </button>
+                </div>
+                
+                <input type="text" id="rival-search" placeholder="Buscar equipo..." 
+                    class="w-full bg-[#111] border border-[#333] text-white p-3 rounded mb-4 focus:outline-none focus:border-white transition-colors"
+                    onkeyup="app.filterRivals(this.value)">
+
+                <div id="rivals-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[600px] overflow-y-auto pr-1">
+                    ${teams.map(t => `
+                        <div class="rival-card flex items-center gap-3 p-3 bg-[#111] border border-[#222] rounded hover:bg-[#222] hover:border-gray-500 cursor-pointer transition-all"
+                             onclick="app.loadHeadToHead(${teamId}, ${t.id}, '${t.name}', '${t.logo}')"
+                             data-name="${t.name.toLowerCase()}">
+                            <img src="${t.logo}" class="w-8 h-8 object-contain">
+                            <span class="text-xs font-bold text-gray-300 truncate">${t.name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div id="h2h-result-container"></div>
+        `;
+
+    } catch (e) {
+        console.error('Error fetching rivals:', e);
+        historyContainer.innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar rivales.</div>`;
+    }
+};
+
+/**
+ * Cierra la vista de historial y vuelve al perfil
+ */
+export const closeHistory = () => {
+    document.getElementById('team-main-content').classList.remove('hidden');
+    document.getElementById('team-history-container').classList.add('hidden');
+};
+
+/**
+ * Filtra la lista de rivales en cliente
+ */
+export const filterRivals = (query) => {
+    const term = query.toLowerCase();
+    const cards = document.querySelectorAll('.rival-card');
+    cards.forEach(card => {
+        const name = card.dataset.name;
+        if (name.includes(term)) {
+            card.classList.remove('hidden');
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+};
+
+/**
+ * Carga y muestra los datos del Head to Head
+ */
+export const loadHeadToHead = async (team1Id, team2Id, team2Name, team2Logo) => {
+    const container = document.getElementById('h2h-result-container');
+    container.innerHTML = `<div class="flex justify-center py-20"><div class="loader"></div></div>`;
+
+    // Scroll to container
+    container.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+        const data = await fetchAPI(`/fixtures/headtohead?h2h=${team1Id}-${team2Id}&timezone=America/Argentina/Buenos_Aires`);
+        const fixtures = data.response;
+
+        if (!fixtures || fixtures.length === 0) {
+            container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs uppercase tracking-widest">No hay historial registrado entre estos equipos.</div>`;
+            return;
+        }
+
+        // --- CALCULATE STATS ---
+        let stats = {
+            total: fixtures.length,
+            team1Wins: 0,
+            team2Wins: 0,
+            draws: 0,
+            team1Goals: 0,
+            team2Goals: 0
+        };
+
+        fixtures.forEach(m => {
+            const isTeam1Home = m.teams.home.id === parseInt(team1Id);
+            const team1Score = isTeam1Home ? m.goals.home : m.goals.away;
+            const team2Score = isTeam1Home ? m.goals.away : m.goals.home;
+
+            stats.team1Goals += team1Score;
+            stats.team2Goals += team2Score;
+
+            if (team1Score > team2Score) stats.team1Wins++;
+            else if (team2Score > team1Score) stats.team2Wins++;
+            else stats.draws++;
+        });
+
+        // Current Team Info (Stored in global context or extracted from first match)
+        const team1 = currentTeamContext;
+
+        // --- RENDER ---
+        container.innerHTML = `
+            <div class="bg-[#0a0a0a] border border-[#333] rounded-xl overflow-hidden mb-8">
+                <!-- Header VS -->
+                <div class="bg-[#111] p-6 border-b border-[#222]">
+                    <div class="flex justify-center items-center gap-4 lg:gap-12">
+                        <div class="flex flex-col items-center gap-2 w-24 lg:w-32">
+                            <img src="${team1.logo}" class="w-16 h-16 lg:w-20 lg:h-20 object-contain drop-shadow-lg">
+                            <span class="text-xs lg:text-sm font-bold text-white text-center leading-tight font-sport">${team1.name}</span>
+                        </div>
+                        
+                        <div class="flex flex-col items-center">
+                            <span class="text-3xl lg:text-5xl font-black text-white italic font-sport">VS</span>
+                            <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">${stats.total} PJ</span>
+                        </div>
+
+                        <div class="flex flex-col items-center gap-2 w-24 lg:w-32">
+                            <img src="${team2Logo}" class="w-16 h-16 lg:w-20 lg:h-20 object-contain drop-shadow-lg">
+                            <span class="text-xs lg:text-sm font-bold text-white text-center leading-tight font-sport">${team2Name}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Bar -->
+                <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Wins Chart -->
+                     <div class="flex flex-col items-center justify-center">
+                        <div class="flex gap-1 items-end h-32 w-full max-w-[200px] justify-center px-4">
+                             <!-- Team 1 Bar -->
+                            <div class="w-12 bg-white flex flex-col justify-end items-center relative group rounded-t" style="height: ${Math.max(10, (stats.team1Wins / stats.total) * 100)}%">
+                                <span class="absolute -top-6 text-xl font-bold text-white">${stats.team1Wins}</span>
+                            </div>
+                            <!-- Draws Bar -->
+                            <div class="w-12 bg-gray-600 flex flex-col justify-end items-center relative group rounded-t mx-1" style="height: ${Math.max(10, (stats.draws / stats.total) * 100)}%">
+                                <span class="absolute -top-6 text-xl font-bold text-gray-400">${stats.draws}</span>
+                            </div>
+                            <!-- Team 2 Bar -->
+                            <div class="w-12 bg-[#333] flex flex-col justify-end items-center relative group rounded-t" style="height: ${Math.max(10, (stats.team2Wins / stats.total) * 100)}%">
+                                <span class="absolute -top-6 text-xl font-bold text-gray-400">${stats.team2Wins}</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-4 mt-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                            <span class="text-white">Ganados</span>
+                            <span>Empates</span>
+                            <span>Perdidos</span>
+                        </div>
+                    </div>
+
+                    <!-- Goals Stats -->
+                    <div class="col-span-1 md:col-span-2 flex flex-col justify-center gap-4">
+                        <div class="bg-[#111] rounded p-4 border border-[#222]">
+                            <h4 class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-3">Goles a Favor</h4>
+                            <div class="flex items-center gap-4">
+                                <div class="text-2xl font-bold text-white font-mono w-12 text-center">${stats.team1Goals}</div>
+                                <div class="flex-1 h-2 bg-[#222] rounded-full overflow-hidden">
+                                     <div class="h-full bg-white" style="width: ${(stats.team1Goals / (stats.team1Goals + stats.team2Goals)) * 100}%"></div>
+                                </div>
+                                <div class="text-2xl font-bold text-gray-500 font-mono w-12 text-center">${stats.team2Goals}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Last 15 Matches List -->
+                <div class="border-t border-[#222]">
+                    <div class="px-4 py-3 bg-[#111] border-b border-[#222]">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Últimos 15 Enfrentamientos</h3>
+                    </div>
+                    <div class="divide-y divide-[#1a1a1a]">
+                        ${fixtures.slice(0, 15).map(m => {
+            const date = new Date(m.fixture.date);
+            const dateStr = date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+            // Determine Winner Color
+            const isHome = m.teams.home.id === parseInt(team1Id);
+            const t1Score = isHome ? m.goals.home : m.goals.away;
+            const t2Score = isHome ? m.goals.away : m.goals.home;
+
+            let borderClass = 'border-l-4 border-transparent';
+            if (t1Score > t2Score) borderClass = 'border-l-4 border-l-green-500'; // Win
+            else if (t1Score < t2Score) borderClass = 'border-l-4 border-l-red-500'; // Loss
+            else borderClass = 'border-l-4 border-l-gray-500'; // Draw
+
+            return `
+                            <div class="flex items-center justify-between px-4 py-3 hover:bg-[#111] transition-colors cursor-pointer ${borderClass}" onclick="app.navigate('/partido/${m.fixture.id}')">
+                                <div class="flex items-center gap-4 min-w-0 flex-1">
+                                    <span class="text-[10px] font-mono text-gray-600 shrink-0">${dateStr}</span>
+                                    
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex items-center gap-2 w-24 lg:w-32 justify-end">
+                                            <span class="text-[10px] font-bold ${m.teams.home.id === parseInt(team1Id) ? 'text-white' : 'text-gray-400'} truncate">${m.teams.home.name}</span>
+                                            <img src="${m.teams.home.logo}" class="w-5 h-5 object-contain">
+                                        </div>
+                                        
+                                        <div class="px-2 py-1 bg-[#222] rounded text-xs font-bold text-white font-mono tracking-widest whitespace-nowrap">
+                                            ${m.goals.home} - ${m.goals.away}
+                                        </div>
+                                        
+                                        <div class="flex items-center gap-2 w-24 lg:w-32">
+                                            <img src="${m.teams.away.logo}" class="w-5 h-5 object-contain">
+                                            <span class="text-[10px] font-bold ${m.teams.away.id === parseInt(team1Id) ? 'text-white' : 'text-gray-400'} truncate">${m.teams.away.name}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="hidden lg:block text-[9px] text-gray-600 uppercase tracking-widest ml-4 truncate w-24 text-right">${m.league.name}</div>
+                            </div>
+                            `;
+        }).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+    } catch (e) {
+        console.error('Error fetching h2h:', e);
+        container.innerHTML = `<div class="text-center text-gray-500 py-10">Error al cargar historial.</div>`;
     }
 };
 
