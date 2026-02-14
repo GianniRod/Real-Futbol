@@ -750,10 +750,6 @@ window.app = {
 
     // Team Profile
     showTeamProfile,
-    showHistory,
-    closeHistory,
-    filterRivals,
-    loadHeadToHead,
 
     // Forum
     navigateToForum: navigateToForumWrapper,
