@@ -58,9 +58,12 @@ export const clearFeaturedMatch = async () => {
         await deleteDoc(docRef);
         console.log('Featured match cleared');
 
-        // Limpiar widget del sidebar
-        const container = document.getElementById('featured-match-container');
-        if (container) container.innerHTML = '';
+        // Limpiar widgets
+        const desktopContainer = document.getElementById('featured-match-container');
+        const mobileContainer = document.getElementById('featured-match-mobile-container');
+
+        if (desktopContainer) desktopContainer.innerHTML = '';
+        if (mobileContainer) mobileContainer.innerHTML = '';
 
         // Recargar el picker del panel
         await loadFeaturedMatchPicker();
@@ -70,18 +73,21 @@ export const clearFeaturedMatch = async () => {
 };
 
 /**
- * Carga y renderiza el partido destacado en el sidebar
+ * Carga y renderiza el partido destacado en el sidebar y menu mobile
  */
 export const loadFeaturedMatch = async () => {
-    const container = document.getElementById('featured-match-container');
-    if (!container) return;
+    const desktopContainer = document.getElementById('featured-match-container');
+    const mobileContainer = document.getElementById('featured-match-mobile-container');
+
+    if (!desktopContainer && !mobileContainer) return;
 
     try {
         const docRef = doc(db, "app_config", "featured_match");
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
-            container.innerHTML = '';
+            if (desktopContainer) desktopContainer.innerHTML = '';
+            if (mobileContainer) mobileContainer.innerHTML = '';
             return;
         }
 
@@ -97,7 +103,8 @@ export const loadFeaturedMatch = async () => {
         if (!isSameDay) {
             console.log('Featured match is from a different day, auto-clearing.');
             await deleteDoc(docRef);
-            container.innerHTML = '';
+            if (desktopContainer) desktopContainer.innerHTML = '';
+            if (mobileContainer) mobileContainer.innerHTML = '';
             return;
         }
 
@@ -106,18 +113,21 @@ export const loadFeaturedMatch = async () => {
             const data = await fetchAPI(`/fixtures?id=${featured.fixtureId}`);
             if (data.response && data.response.length > 0) {
                 const match = data.response[0];
-                renderFeaturedWidget(container, match);
+                if (desktopContainer) renderFeaturedWidget(desktopContainer, match);
+                if (mobileContainer) renderFeaturedWidget(mobileContainer, match);
                 return;
             }
         } catch (e) {
             console.warn('Could not fetch fresh match data, using cached:', e);
         }
 
-        // Fallback: usar datos guardados en Firestore (sin score en vivo)
-        renderFeaturedWidgetFallback(container, featured);
+        // Fallback: usar datos guardados en Firestore
+        if (desktopContainer) renderFeaturedWidgetFallback(desktopContainer, featured);
+        if (mobileContainer) renderFeaturedWidgetFallback(mobileContainer, featured);
     } catch (error) {
         console.error('Error loading featured match:', error);
-        container.innerHTML = '';
+        if (desktopContainer) desktopContainer.innerHTML = '';
+        if (mobileContainer) mobileContainer.innerHTML = '';
     }
 };
 
