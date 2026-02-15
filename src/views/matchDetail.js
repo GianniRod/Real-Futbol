@@ -974,7 +974,7 @@ export const openDetail = async (params) => {
     const isFin = ['FT', 'AET', 'PEN', 'AWD', 'WO'].includes(statusShort);
     const notStarted = !isLive && !isHT && !isFin; // Catch-all for any other status (NS, TBD, PST, CANC, ABD, etc)
 
-    const scoreDiv = document.querySelector('.score-font');
+    const scoreDiv = document.getElementById('detail-score-container');
     const statusDiv = document.getElementById('detail-status');
 
     if (notStarted) {
