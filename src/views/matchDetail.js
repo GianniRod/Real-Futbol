@@ -38,12 +38,11 @@ const renderTimeline = (m) => {
         return tA > tB ? -1 : 1;
     });
 
-    if (regularEvents.length === 0 && penaltyEvents.length === 0) {
-        c.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Sin eventos</div>';
-        return;
-    }
-
     let html = '';
+
+    if (regularEvents.length === 0 && penaltyEvents.length === 0) {
+        html = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Sin eventos</div>';
+    }
 
     // Renderizar eventos regulares
     html += regularEvents.map(e => {
@@ -216,6 +215,39 @@ const renderTimeline = (m) => {
 
         html += `</div>`;
     }
+
+    c.innerHTML = html;
+
+    // Append Mobile-Only Match Info at the bottom of Timeline (Actually appending to innerHTML directly or modifying html string? Modifying html string BEFORE setting innerHTML is better, but I can also append to c.innerHTML if I want)
+    // Wait, the previous block ends with c.innerHTML = html;
+    // I should REPLACE "c.innerHTML = html;" with the logic to append to html AND THEN set innerHTML.
+
+    // Append Mobile-Only Match Info
+    const leagueLogo = m.league.logo;
+    const leagueName = m.league.name;
+    const leagueRound = m.league.round;
+    const referee = m.fixture.referee || 'Árbitro no asignado';
+    const venueName = m.fixture.venue.name || 'Estadio desconocido';
+    const venueCity = m.fixture.venue.city || '';
+    const whistleIcon = 'https://i.postimg.cc/LsXj3CWR/silbato.png';
+    const stadiumIcon = 'https://i.postimg.cc/mrVjjgxJ/4905563-2.png';
+
+    const createRow = (imgSrc, text, isRounded = false) => `
+        <div class="flex items-center gap-4">
+            <div class="w-8 flex justify-center">
+                <img src="${imgSrc}" class="w-6 h-6 object-contain ${isRounded ? '' : 'opacity-70'}">
+            </div>
+            <span class="text-base text-gray-300 font-medium">${text}</span>
+        </div>
+    `;
+
+    html += `
+        <div class="mt-8 pt-6 border-t border-[#222] lg:hidden space-y-4 pb-6 px-2">
+            ${createRow(leagueLogo, `${leagueName} - ${leagueRound}`, true)}
+            ${createRow(whistleIcon, referee)}
+            ${createRow(stadiumIcon, `${venueName}${venueCity ? `, ${venueCity}` : ''}`)}
+        </div>
+    `;
 
     c.innerHTML = html;
 };
