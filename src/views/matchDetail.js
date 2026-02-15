@@ -948,26 +948,7 @@ export const openDetail = async (params) => {
     // Check for penalties logic
     const hasPenalties = m.score && m.score.penalty && (m.score.penalty.home !== null || m.score.penalty.away !== null);
 
-    if (hasPenalties) {
-        // Format: (5) 1 - 1 (4)
-        document.getElementById('detail-home-score').innerHTML = `<span class="text-sm text-gray-400 font-normal mr-1">(${m.score.penalty.home})</span>${homeScore}`;
-        document.getElementById('detail-away-score').innerHTML = `${awayScore}<span class="text-sm text-gray-400 font-normal ml-1">(${m.score.penalty.away})</span>`;
-    } else {
-        document.getElementById('detail-home-score').innerText = homeScore;
-        document.getElementById('detail-away-score').innerText = awayScore;
-    }
-
-    const statusShort = m.fixture.status.short;
-    let statusText = m.fixture.status.long;
-
-    if (['1H', '2H', 'ET', 'P'].includes(statusShort)) {
-        statusText = m.fixture.status.elapsed + "'";
-    } else if (statusShort === 'HT') {
-        statusText = 'ENTRETIEMPO';
-    }
-
-    document.getElementById('detail-status').innerText = statusText;
-
+    // Headers
     // Red cards
     let homeRedCardsHTML = '';
     let awayRedCardsHTML = '';
@@ -982,6 +963,53 @@ export const openDetail = async (params) => {
 
     document.getElementById('detail-home-name').innerHTML = m.teams.home.name + homeRedCardsHTML;
     document.getElementById('detail-away-name').innerHTML = m.teams.away.name + awayRedCardsHTML;
+    document.getElementById('detail-home-logo').src = m.teams.home.logo;
+    document.getElementById('detail-away-logo').src = m.teams.away.logo;
+
+    // Score & Status Logic
+    const statusShort = m.fixture.status.short;
+    const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(statusShort);
+    const isHT = statusShort === 'HT';
+    const isFin = ['FT', 'AET', 'PEN'].includes(statusShort);
+    const notStarted = ['NS', 'TBD'].includes(statusShort);
+
+    const scoreDiv = document.querySelector('.score-font');
+    const statusDiv = document.getElementById('detail-status');
+
+    if (notStarted) {
+        // Pre-match: Hide score, show time in status
+        scoreDiv.classList.add('hidden'); // Hide the 0:0
+        const matchTime = new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+        statusDiv.innerHTML = `<span class="text-2xl text-white font-bold">${matchTime}</span>`;
+        statusDiv.classList.remove('text-gray-500', 'text-[10px]', 'uppercase', 'tracking-widest');
+    } else {
+        // Match started/finished: Show score
+        scoreDiv.classList.remove('hidden');
+
+        // Handle Penalties
+        const hasPenalties = m.score.penalty.home !== null && m.score.penalty.away !== null;
+        if (hasPenalties) {
+            document.getElementById('detail-home-score').innerHTML = `<span class="text-sm text-gray-400 font-normal mr-1">(${m.score.penalty.home})</span>${m.goals.home ?? 0}`;
+            document.getElementById('detail-away-score').innerHTML = `${m.goals.away ?? 0}<span class="text-sm text-gray-400 font-normal ml-1">(${m.score.penalty.away})</span>`;
+        } else {
+            document.getElementById('detail-home-score').innerText = m.goals.home ?? 0;
+            document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
+        }
+
+        // Status Text
+        if (isLive) {
+            statusDiv.innerHTML = `<span class="text-red-500 animate-pulse">${m.fixture.status.elapsed}'</span>`;
+        } else if (isHT) {
+            statusDiv.innerText = 'ET';
+        } else if (isFin) {
+            statusDiv.innerText = 'FINALIZADO';
+        } else {
+            statusDiv.innerText = m.fixture.status.long;
+        }
+
+        statusDiv.className = "mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest";
+        if (isLive) statusDiv.classList.add('text-red-500');
+    }
 
     // Make team logos and names clickable
     const homeLogo = document.getElementById('detail-home-logo');
@@ -998,18 +1026,33 @@ export const openDetail = async (params) => {
         el.onclick = (e) => { e.stopPropagation(); app.navigate(`/equipo/${m.teams.away.id}`); };
     });
 
-    // Goleadores - Ocultos del header
+    // Goleadores - Render in the new row
     const hList = document.getElementById('detail-home-scorers-list');
     const aList = document.getElementById('detail-away-scorers-list');
     if (hList) hList.innerHTML = '';
-    if (aList) aList.innerHTML = '';
+    if (aList) aList.innerHTML = ''; // Bug in original code? Checking if aList exists but clearing hList? Fixed below.
+
+    if (m.events) {
+        const goals = m.events.filter(e => e.type === 'Goal');
+        goals.forEach(g => {
+            const isHome = g.team.id === m.teams.home.id;
+            const container = isHome ? hList : aList;
+            if (container) {
+                const min = g.time.elapsed + (g.time.extra ? `+${g.time.extra}` : '');
+                const player = g.player.name;
+                const div = document.createElement('div');
+                // Style for scorers: simplified
+                div.innerHTML = `${player} (${min}')`;
+                container.appendChild(div);
+            }
+        });
+    }
 
     try {
-        const isFinished = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
         const hasFullData = m.events && m.lineups && m.statistics;
 
         // Si el partido terminó y ya tenemos datos completos, no gastar un request
-        if (isFinished && hasFullData) {
+        if (isFin && hasFullData) {
             // Fetch player stats (photos & ratings) if not already loaded
             if (!m.players) {
                 try {
@@ -1030,6 +1073,22 @@ export const openDetail = async (params) => {
 
             // Actualizar eventos en el state de matches para mostrar tarjetas rojas en la lista
             if (fullMatch && fullMatch.events) {
+                // Also re-render scorers with fresh data
+                if (hList) hList.innerHTML = '';
+                if (aList) aList.innerHTML = '';
+                const freshGoals = fullMatch.events.filter(e => e.type === 'Goal');
+                freshGoals.forEach(g => {
+                    const isHome = g.team.id === fullMatch.teams.home.id;
+                    const container = isHome ? hList : aList;
+                    if (container) {
+                        const min = g.time.elapsed + (g.time.extra ? `+${g.time.extra}` : '');
+                        const player = g.player.name;
+                        const div = document.createElement('div');
+                        div.innerHTML = `${player} (${min}')`;
+                        container.appendChild(div);
+                    }
+                });
+
                 updateMatchEvents(id, fullMatch.events);
             }
 
@@ -1037,6 +1096,7 @@ export const openDetail = async (params) => {
             if (fullMatch) {
                 m.lineups = fullMatch.lineups || m.lineups;
                 m.statistics = fullMatch.statistics || m.statistics;
+                m.events = fullMatch.events || m.events; // Update events too
             }
 
             // Fetch player stats (photos & ratings)
@@ -1066,8 +1126,8 @@ export const openDetail = async (params) => {
         detailView.scrollTo(0, 0);
     }, 100);
 
-    // Determinar si el partido ha comenzado
-    const notStarted = ['NS', 'TBD', 'PST', 'CANC', 'ABD'].includes(m.fixture.status.short);
+    // Determinar si el partido ha comenzado (para tabs)
+    const tabNotStarted = ['NS', 'TBD', 'PST', 'CANC', 'ABD'].includes(m.fixture.status.short);
 
     // Ocultar/mostrar tabs según el estado del partido
     const timelineTab = document.querySelector('.tab-btn[data-target="tab-timeline"]');
@@ -1076,7 +1136,7 @@ export const openDetail = async (params) => {
     const h2hTab = document.querySelector('.tab-btn[data-target="tab-h2h"]');
     const forumTab = document.querySelector('.tab-btn[data-target="tab-forum"]');
 
-    if (notStarted) {
+    if (tabNotStarted) {
         // Partido no iniciado: solo mostrar foro y H2H
         if (timelineTab) timelineTab.style.display = 'none';
         if (lineupsTab) lineupsTab.style.display = 'none';
