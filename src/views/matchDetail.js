@@ -948,6 +948,42 @@ export const openDetail = async (params) => {
     // Check for penalties logic
     const hasPenalties = m.score && m.score.penalty && (m.score.penalty.home !== null || m.score.penalty.away !== null);
 
+    // Populate Match Info Header (League, Ref, Stadium)
+    const infoContainer = document.getElementById('detail-match-info');
+    if (infoContainer) {
+        const leagueName = m.league.name;
+        const leagueLogo = m.league.logo;
+        const leagueRound = m.league.round; // e.g., "Regular Season - 1"
+        const referee = m.fixture.referee || 'Árbitro no asignado';
+        const venueName = m.fixture.venue.name || 'Estadio desconocido';
+        const venueCity = m.fixture.venue.city || '';
+
+        // Custom Whistle Icon
+        const whistleIcon = 'https://i.postimg.cc/LsXj3CWR/silbato.png';
+
+        // Generic Stadium Icon (SVG)
+        const stadiumIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M2 20h20v2H2v-2zm2-8h16v6H4v-6zm2 2v2h12v-2H6zm14-8H4l2 4h12l2-4zM6 8l-1.5-3h15L18 8H6z"/></svg>`;
+
+        infoContainer.innerHTML = `
+            <div class="flex flex-col items-center gap-1">
+                <div class="flex items-center gap-2 mb-1">
+                    <img src="${leagueLogo}" class="w-4 h-4 object-contain">
+                    <span class="text-[10px] uppercase font-bold text-gray-300 tracking-wider">${leagueName} - ${leagueRound}</span>
+                </div>
+                <div class="flex items-center gap-3 text-[10px] text-gray-500 font-mono">
+                    <div class="flex items-center gap-1">
+                        <img src="${whistleIcon}" class="w-3 h-3 opacity-70">
+                        <span>${referee}</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        ${stadiumIcon}
+                        <span>${venueName}${venueCity ? `, ${venueCity}` : ''}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     // Headers
     // Red cards
     let homeRedCardsHTML = '';
