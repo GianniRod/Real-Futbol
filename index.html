@@ -664,7 +664,7 @@
 
 
             <!-- Date Navigation -->
-            <div id="date-nav" class="border-b border-[#222] p-3 z-10 bg-black/95 backdrop-blur shrink-0 relative">
+            <div id="date-nav" class="border-b border-[#222] p-3 z-30 bg-black/95 backdrop-blur shrink-0 relative">
                 <div class="flex items-center justify-center gap-6 mb-3 max-w-lg mx-auto">
                     <button onclick="app.changeDate(-1)"
                         class="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded transition-colors"><svg
@@ -672,7 +672,7 @@
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg></button>
-                    <div class="text-center cursor-pointer" onclick="app.toggleCalendar()">
+                    <div class="text-center cursor-pointer relative z-40" onclick="app.toggleCalendar()">
                         <h2 id="current-month"
                             class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">MES</h2>
                         <div id="current-day-text" class="text-lg font-bold text-white leading-none font-sport">HOY
