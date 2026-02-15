@@ -901,13 +901,21 @@
                 style="touch-action: pan-y; -webkit-overflow-scrolling: touch;">
                 <div class="max-w-[95%] mx-auto bg-[#050505] relative">
 
-                    <!-- Botón Volver Flotante -->
-                    <button onclick="app.closeDetail()" class="btn-float-back hover:bg-[#222] transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                    </button>
+                    <!-- Header Container (Back Button + Match Info) -->
+                    <div
+                        class="pointer-events-none lg:pointer-events-auto lg:absolute lg:top-6 lg:left-6 lg:z-50 lg:flex lg:items-center lg:gap-4 w-full lg:w-auto">
+                        <!-- Botón Volver (Fixed on Mobile, Static in Flex on Desktop) -->
+                        <button onclick="app.closeDetail()"
+                            class="btn-float-back hover:bg-[#222] transition-all pointer-events-auto lg:static lg:translate-x-0 lg:translate-y-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </button>
+
+                        <!-- Match Info (Desktop Only - Next to Back Button) -->
+                        <div id="detail-match-info" class="hidden lg:block pointer-events-auto"></div>
+                    </div>
 
                     <div id="detail-loader" class="hidden py-40 text-center">
                         <div class="loader"></div>
@@ -919,10 +927,7 @@
                         <!-- Scoreboard -->
                         <div
                             class="relative pt-12 px-6 pb-6 text-center border-b border-[#222] bg-[#0a0a0a] flex flex-col">
-                            <!-- Match Info (League, Ref, Stadium) -->
-                            <div id="detail-match-info"
-                                class="hidden lg:block lg:order-1 mb-4 w-full border-b border-[#222] pb-3 empty:hidden">
-                            </div>
+
 
                             <!-- Teams/Score Row -->
                             <div
