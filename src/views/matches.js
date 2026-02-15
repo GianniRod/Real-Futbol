@@ -511,10 +511,10 @@ const renderFullCalendar = () => {
         const isToday = currentDate.toDateString() === new Date().toDateString();
 
         const btn = document.createElement('button');
-        btn.className = `p - 2 rounded text - sm font - bold transition - colors ${isSelected
+        btn.className = `p-2 rounded text-sm font-bold transition-colors ${isSelected
             ? 'bg-white text-black'
             : (isToday ? 'text-yellow-500 hover:bg-[#222]' : 'text-gray-300 hover:bg-[#222]')
-            } `;
+            }`;
         btn.innerText = i;
         btn.onclick = () => {
             state.date = currentDate;
