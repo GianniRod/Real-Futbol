@@ -997,20 +997,24 @@ export const openDetail = async (params) => {
         const stadiumIcon = 'https://i.postimg.cc/mrVjjgxJ/4905563-2.png';
 
         infoContainer.innerHTML = `
-            <div class="flex justify-between items-center w-full px-2">
-                <div class="flex items-center gap-3">
-                    <img src="${leagueLogo}" class="w-6 h-6 object-contain">
-                    <span class="text-sm uppercase font-bold text-gray-300 tracking-wider">${leagueName} - ${leagueRound}</span>
+            <div class="flex items-center gap-6 text-xs text-gray-400 font-medium">
+                <div class="flex items-center gap-2">
+                    <img src="${leagueLogo}" class="w-4 h-4 object-contain opacity-80">
+                    <span class="uppercase tracking-wider hover:text-white transition-colors cursor-default">${leagueName} - ${leagueRound}</span>
                 </div>
-                <div class="flex items-center gap-6 text-xs text-gray-400 font-mono">
-                    <div class="flex items-center gap-2">
-                        <img src="${whistleIcon}" class="h-4 w-auto object-contain opacity-70">
-                        <span>${referee}</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <img src="${stadiumIcon}" class="h-4 w-auto object-contain opacity-60">
-                        <span>${venueName}${venueCity ? `, ${venueCity}` : ''}</span>
-                    </div>
+                
+                <div class="w-[1px] h-3 bg-[#333]"></div>
+
+                <div class="flex items-center gap-2">
+                    <img src="${whistleIcon}" class="h-3 w-auto object-contain opacity-60">
+                    <span>${referee}</span>
+                </div>
+
+                <div class="w-[1px] h-3 bg-[#333]"></div>
+
+                <div class="flex items-center gap-2">
+                    <img src="${stadiumIcon}" class="h-3 w-auto object-contain opacity-50">
+                    <span>${venueName}${venueCity ? `, ${venueCity}` : ''}</span>
                 </div>
             </div>
         `;
