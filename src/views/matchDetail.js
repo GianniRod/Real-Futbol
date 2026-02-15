@@ -965,18 +965,18 @@ export const openDetail = async (params) => {
         const stadiumIcon = 'https://i.postimg.cc/mrVjjgxJ/4905563-2.png';
 
         infoContainer.innerHTML = `
-            <div class="flex flex-col items-center gap-1">
-                <div class="flex items-center gap-2 mb-0.5">
+            <div class="flex flex-col items-center gap-0.5">
+                <div class="flex items-center gap-2 mb-0">
                     <img src="${leagueLogo}" class="w-5 h-5 object-contain">
                     <span class="text-xs uppercase font-bold text-gray-300 tracking-wider">${leagueName} - ${leagueRound}</span>
                 </div>
                 <div class="flex items-center gap-4 text-xs text-gray-400 font-mono">
                     <div class="flex items-center gap-1.5">
-                        <img src="${whistleIcon}" class="w-4 h-4 opacity-70">
+                        <img src="${whistleIcon}" class="h-4 w-auto object-contain opacity-70">
                         <span>${referee}</span>
                     </div>
                     <div class="flex items-center gap-1.5">
-                        <img src="${stadiumIcon}" class="w-4 h-4 opacity-60">
+                        <img src="${stadiumIcon}" class="h-4 w-auto object-contain opacity-60">
                         <span>${venueName}${venueCity ? `, ${venueCity}` : ''}</span>
                     </div>
                 </div>
