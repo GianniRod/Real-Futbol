@@ -328,8 +328,8 @@ export const renderMatches = () => {
                 if (aReds > 0) aRedCards = `<div class="absolute -top-1 -right-2 flex gap-0.5 z-10">${'<div class="w-1.5 h-2 bg-red-600 rounded-[1px]"></div>'.repeat(aReds)}</div>`;
             }
 
-            const clickableClass = notStarted ? 'not-clickable' : 'clickable';
-            const clickAttr = notStarted ? '' : `onclick="app.navigate('/partido/${m.fixture.id}'); event.preventDefault();"`;
+            const clickableClass = 'clickable';
+            const clickAttr = `onclick="app.navigate('/partido/${m.fixture.id}'); event.preventDefault();"`;
             const isLast = index === g.matches.length - 1;
             const borderClass = isLast ? '' : 'border-b border-[#222]';
 
