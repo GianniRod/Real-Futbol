@@ -977,14 +977,28 @@ export const openDetail = async (params) => {
     const statusDiv = document.getElementById('detail-status');
 
     if (notStarted) {
-        // Pre-match: Hide score, show time in status
-        scoreDiv.classList.add('hidden'); // Hide the 0:0
-        const matchTime = new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-        statusDiv.innerHTML = `<span class="text-2xl text-white font-bold">${matchTime}</span>`;
-        statusDiv.classList.remove('text-gray-500', 'text-[10px]', 'uppercase', 'tracking-widest');
-    } else {
-        // Match started/finished: Show score
+        // Pre-match: Show ONLY time in the big score slot, no colon.
         scoreDiv.classList.remove('hidden');
+        const matchTime = new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+        scoreDiv.innerHTML = `<span class="text-4xl text-white font-bold">${matchTime}</span>`;
+
+        // Clear status div (or show date if needed, but user asked for "solo eso")
+        // Maybe show date? Or keep it clean. Let's keep it empty or just "VS" small if desired, 
+        // but user effectively replaced "Not Started" with Time in the main slot.
+        // Let's clear status div to be safe as per "que solo este eso".
+        statusDiv.innerHTML = '';
+    } else {
+        // Match started/finished: Restore standard scoreboard structure
+        scoreDiv.classList.remove('hidden');
+
+        // Rebuild structure if it was overwritten by time
+        if (!scoreDiv.querySelector('#detail-home-score')) {
+            scoreDiv.innerHTML = `
+                <span id="detail-home-score">-</span>
+                <span class="text-gray-600 text-2xl">:</span>
+                <span id="detail-away-score">-</span>
+            `;
+        }
 
         // Handle Penalties
         const hasPenalties = m.score.penalty.home !== null && m.score.penalty.away !== null;
