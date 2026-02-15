@@ -917,8 +917,14 @@
                         <!-- Scoreboard -->
                         <!-- Scoreboard -->
                         <!-- Scoreboard -->
-                        <div class="relative pt-14 px-6 pb-6 text-center border-b border-[#222] bg-[#0a0a0a]">
-                            <div class="flex justify-between items-center w-full mx-auto">
+                        <div
+                            class="relative pt-14 px-6 pb-6 text-center border-b border-[#222] bg-[#0a0a0a] flex flex-col">
+                            <!-- Match Info (League, Ref, Stadium) -->
+                            <div id="detail-match-info" class="order-2 lg:order-1 mb-4 lg:mb-2 w-full"></div>
+
+                            <!-- Teams/Score Row -->
+                            <div
+                                class="flex justify-between items-center w-full mx-auto order-1 lg:order-2 mb-4 lg:mb-0">
                                 <div class="flex-1 flex flex-col items-center min-w-0">
                                     <img id="detail-home-logo" src="" class="w-16 h-16 object-contain mb-3">
                                     <h3 id="detail-home-name"
@@ -945,7 +951,7 @@
                             </div>
 
                             <!-- Scorers Row -->
-                            <div class="flex justify-between items-start w-full mx-auto mt-4">
+                            <div class="flex justify-between items-start w-full mx-auto mt-0 order-3">
                                 <div id="detail-home-scorers-list"
                                     class="flex-1 text-xs text-gray-500 font-mono space-y-0.5 flex flex-col items-center">
                                 </div>
