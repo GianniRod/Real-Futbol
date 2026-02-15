@@ -967,11 +967,12 @@ export const openDetail = async (params) => {
     document.getElementById('detail-away-logo').src = m.teams.away.logo;
 
     // Score & Status Logic
+    // Score & Status Logic
     const statusShort = m.fixture.status.short;
-    const isLive = ['1H', '2H', 'ET', 'P', 'LIVE'].includes(statusShort);
+    const isLive = ['1H', '2H', 'ET', 'P', 'LIVE', 'BT', 'INT'].includes(statusShort);
     const isHT = statusShort === 'HT';
-    const isFin = ['FT', 'AET', 'PEN'].includes(statusShort);
-    const notStarted = ['NS', 'TBD'].includes(statusShort);
+    const isFin = ['FT', 'AET', 'PEN', 'AWD', 'WO'].includes(statusShort);
+    const notStarted = !isLive && !isHT && !isFin; // Catch-all for any other status (NS, TBD, PST, CANC, ABD, etc)
 
     const scoreDiv = document.querySelector('.score-font');
     const statusDiv = document.getElementById('detail-status');
@@ -979,13 +980,19 @@ export const openDetail = async (params) => {
     if (notStarted) {
         // Pre-match: Show ONLY time in the big score slot, no colon.
         scoreDiv.classList.remove('hidden');
-        const matchTime = new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-        scoreDiv.innerHTML = `<span class="text-4xl text-white font-bold">${matchTime}</span>`;
 
-        // Clear status div (or show date if needed, but user asked for "solo eso")
-        // Maybe show date? Or keep it clean. Let's keep it empty or just "VS" small if desired, 
-        // but user effectively replaced "Not Started" with Time in the main slot.
-        // Let's clear status div to be safe as per "que solo este eso".
+        let displayTime = '';
+        if (statusShort === 'TBD') {
+            displayTime = 'TBD';
+        } else if (['PST', 'CANC', 'ABD'].includes(statusShort)) {
+            displayTime = m.fixture.status.short; // Show PST/CANC code or long text if preferred
+        } else {
+            displayTime = new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        scoreDiv.innerHTML = `<span class="text-4xl text-white font-bold">${displayTime}</span>`;
+
+        // Clear status div
         statusDiv.innerHTML = '';
     } else {
         // Match started/finished: Restore standard scoreboard structure
