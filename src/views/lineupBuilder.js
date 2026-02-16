@@ -84,24 +84,19 @@ export const renderBuilder = () => {
                     </div>
                 </div>
 
-                <!-- Moved formation dropdown logic to standard location -->
-            </div>
-            
-            <div class="flex items-center gap-2">
-                 <!-- Download Button -->
-                 <button class="flex items-center gap-2 bg-[#222] border border-[#333] hover:bg-[#333] text-white text-xs font-bold px-4 py-2 rounded-full transition-colors" onclick="app.downloadLineup()">
+                <!-- Download Button (Right Aligned) -->
+                <button class="flex items-center gap-2 bg-[#222] border border-[#333] hover:bg-[#333] text-white text-xs font-bold px-4 py-2 rounded-full transition-colors" onclick="app.downloadLineup()">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
                     <span>Descargar</span>
-                 </button>
+                </button>
             </div>
         </div>
 
         <!-- Pitch Container - Responsive Height -->
-        <!-- Added calc(100vh - 180px) to fit screen, keeping aspect ratio -->
         <div class="relative w-full mx-auto px-4 pb-10 flex justify-center items-start" style="height: calc(100vh - 140px); min-height: 500px;">
             <div class="football-pitch" id="builder-pitch" style="height: 100%; width: auto; aspect-ratio: 68/105;">
                 <div class="penalty-box top-box"></div>
@@ -117,9 +112,9 @@ export const renderBuilder = () => {
                 <div class="corner-arc corner-bottom-left"></div>
                 <div class="corner-arc corner-bottom-right"></div>
 
-                <!-- Branding / Logo Overlay -->
+                <!-- Branding / Logo Overlay (Updated) -->
                 <div class="absolute bottom-4 right-4 flex items-center gap-2 opacity-90 z-10 pointer-events-none">
-                    <img src="https://i.postimg.cc/vBgSB9tn/favicon.jpg" class="w-6 h-6 rounded-full border border-white/20 shadow-sm">
+                    <img src="https://i.postimg.cc/W1r2HSKQ/YLOYlu4H-400x400.jpg" class="w-8 h-8 rounded-full border border-white/20 shadow-sm">
                     <span class="text-white font-sport font-bold text-sm tracking-widest drop-shadow-md">REALFUTBOL</span>
                 </div>
 
