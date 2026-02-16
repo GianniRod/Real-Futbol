@@ -796,9 +796,9 @@ window.app = {
         const { selectBuilderPlayer } = await import('./views/lineupBuilder.js');
         selectBuilderPlayer(id, name, photo);
     },
-    shareLineup: async () => {
-        const { shareLineup } = await import('./views/lineupBuilder.js');
-        shareLineup();
+    downloadLineup: async () => {
+        const { downloadLineup } = await import('./views/lineupBuilder.js');
+        downloadLineup();
     },
 
     // Authentication
