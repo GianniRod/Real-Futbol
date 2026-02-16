@@ -709,17 +709,18 @@ const renderLineups = (m) => {
 
                     if (side === 'home') {
                         // Home GK (line 1) at Left (e.g. 5%) -> Forwards near center
-                        // Available space approx 45% width
-                        const availableSpace = 42;
+                        // Available space: Increased spread (Home starts 3%, ends 48%)
+                        const availableSpace = 45;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        x = 4 + (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) x = 4; // GK fixed near goal line
+                        x = 3 + (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) x = 3; // GK fixed near goal line
                     } else {
                         // Away GK (line 1) at Right (e.g. 95%) -> Forwards near center
-                        const availableSpace = 42;
+                        // Available space: Increased spread (Away starts 97%, ends 52%)
+                        const availableSpace = 45;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        x = 96 - (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) x = 96; // GK fixed near goal line
+                        x = 97 - (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) x = 97; // GK fixed near goal line
                     }
 
                     // Vertical Spacing (Y-axis) within the line
