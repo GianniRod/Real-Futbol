@@ -267,17 +267,19 @@ export const handleBuilderSearch = (query) => {
             // "Global" Search Strategy:
             // API-Football often requires 'league' + 'season' for player search.
             // To support "no competition selection", we search across major leagues in parallel.
+            // UPDATED: Using 2025/2026 seasons as current date is Feb 2026.
 
             const leaguesToSearch = [
-                { id: 1, season: 2022 },   // World Cup (2022 safest for players)
-                { id: 39, season: 2023 },  // Premier League
-                { id: 140, season: 2023 }, // La Liga
-                { id: 135, season: 2023 }, // Serie A
-                { id: 78, season: 2023 },  // Bundesliga
-                { id: 61, season: 2023 },  // Ligue 1
-                { id: 2, season: 2023 },   // UCL
-                { id: 128, season: 2024 }, // Liga Profesional ARG (2024 active)
-                { id: 71, season: 2023 }   // Brasileirao
+                { id: 1, season: 2022 },   // World Cup (Keep 2022 until 2026 squad lists are out/populated)
+                { id: 39, season: 2025 },  // Premier League (25/26)
+                { id: 140, season: 2025 }, // La Liga (25/26)
+                { id: 135, season: 2025 }, // Serie A (25/26)
+                { id: 78, season: 2025 },  // Bundesliga (25/26)
+                { id: 61, season: 2025 },  // Ligue 1 (25/26)
+                { id: 2, season: 2025 },   // UCL (25/26)
+                { id: 128, season: 2026 }, // Liga Profesional ARG (2026 active)
+                { id: 71, season: 2025 },  // Brasileirao (2025)
+                { id: 253, season: 2025 }  // MLS (2025)
             ];
 
             // Trigger all fetches in parallel
