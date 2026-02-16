@@ -264,39 +264,51 @@ export const handleBuilderSearch = (query) => {
 
     searchTimeout = setTimeout(async () => {
         try {
-            // Global search logic - API Football allows search by name + season
-            // We use 2024 or 2023 as default "current" season for broad search
-            // If API supports searching all leagues, this will return mixed results.
+            // "Global" Search Strategy:
+            // API-Football often requires 'league' + 'season' for player search.
+            // To support "no competition selection", we search across major leagues in parallel.
 
-            const season = 2024; // Generic season fallbacks
+            const leaguesToSearch = [
+                { id: 1, season: 2022 },   // World Cup (2022 safest for players)
+                { id: 39, season: 2023 },  // Premier League
+                { id: 140, season: 2023 }, // La Liga
+                { id: 135, season: 2023 }, // Serie A
+                { id: 78, season: 2023 },  // Bundesliga
+                { id: 61, season: 2023 },  // Ligue 1
+                { id: 2, season: 2023 },   // UCL
+                { id: 128, season: 2024 }, // Liga Profesional ARG (2024 active)
+                { id: 71, season: 2023 }   // Brasileirao
+            ];
 
-            // Note: Some endpoints require league, but /players?search=X&season=Y usually works globally or we might need to iterate.
-            // If it fails, we might need to default to a popular league or handle error.
-            // Recent docs say: "requires league" for some plans, but let's try.
-            // Actually, if league is removed, we might need to hardcode a default popular league (e.g. PL or WC) or use a "World" context?
-            // User requested "only write name". 
-            // Let's try searching without league first.
-            let data = await fetchAPI(`/players?search=${query}&season=${season}`);
+            // Trigger all fetches in parallel
+            const promises = leaguesToSearch.map(l =>
+                fetchAPI(`/players?search=${query}&season=${l.season}&league=${l.id}`)
+                    .then(res => res.response || [])
+                    .catch(() => []) // Ignore errors per league
+            );
 
-            // If that fails or returns empty because league is mandatory (common in free tier), 
-            // we might default to WC (1) or PL (39).
-            if (!data.response || data.response.length === 0) {
-                // Retry with PL ID (39) just in case? Or maybe API works but no results.
-                // let's try with PL just to be safe if global fails? 
-                // actually let's stick to global attempt.
-            }
+            const resultsArrays = await Promise.all(promises);
 
-            if (!data.response || data.response.length === 0) {
-                resultsContainer.innerHTML = '<div class="text-center text-gray-600 mt-10 text-sm">No se encontraron jugadores. Pruba con el nombre completo.</div>';
+            // Flatten results
+            const allResults = resultsArrays.flat();
+
+            if (allResults.length === 0) {
+                resultsContainer.innerHTML = '<div class="text-center text-gray-600 mt-10 text-sm">No se encontraron jugadores. Prueba con el nombre completo.</div>';
                 return;
             }
 
-            const results = data.response; // Array of { player, statistics }
+            // Deduplicate by Player ID (keep first occurrence)
+            const seenIds = new Set();
+            const uniqueResults = [];
 
-            // Filter duplicates if any (same player, diff leagues)
-            // ...
+            for (const item of allResults) {
+                if (!seenIds.has(item.player.id)) {
+                    seenIds.add(item.player.id);
+                    uniqueResults.push(item);
+                }
+            }
 
-            resultsContainer.innerHTML = results.map(item => {
+            resultsContainer.innerHTML = uniqueResults.map(item => {
                 const p = item.player;
                 const stats = item.statistics[0];
                 const team = stats?.team;
@@ -304,7 +316,7 @@ export const handleBuilderSearch = (query) => {
 
                 return `
                     <div class="flex items-center gap-3 p-3 bg-[#111] border border-[#222] rounded-lg hover:bg-[#222] cursor-pointer transition-colors"
-                         onclick="app.selectBuilderPlayer(${p.id}, '${p.name.replace(/'/g, "\\'")}', '${p.photo}')">
+                         onclick="app.selectBuilderPlayer(${p.id}, '${p.name.replace(/'/g, "\\\'")}', '${p.photo}')">
                         <img src="${p.photo}" class="w-10 h-10 rounded-full object-cover bg-black border border-[#333]">
                         <div class="flex-1 min-w-0">
                             <div class="text-sm font-bold text-white truncate">${p.name}</div>
