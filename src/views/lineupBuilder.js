@@ -114,7 +114,7 @@ export const renderBuilder = () => {
 
                 <!-- Branding / Logo Overlay (Updated) -->
                 <div class="absolute bottom-4 right-4 flex items-center gap-2 opacity-90 z-10 pointer-events-none">
-                    <img src="https://i.postimg.cc/W1r2HSKQ/YLOYlu4H-400x400.jpg" class="w-8 h-8 rounded-full border border-white/20 shadow-sm">
+                    <img src="https://i.postimg.cc/66d3tKSB/Captura-de-pantalla-2026-02-16-a-la-s-5-14-29-a-m-removebg-preview.png" class="h-10 w-auto object-contain drop-shadow-md">
                     <span class="text-white font-sport font-bold text-sm tracking-widest drop-shadow-md">REALFUTBOL</span>
                 </div>
 
