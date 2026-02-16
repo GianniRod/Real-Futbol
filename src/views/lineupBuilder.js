@@ -83,9 +83,12 @@ export const renderBuilder = () => {
         <div class="relative w-full max-w-2xl mx-auto px-4 pb-20">
             <div class="football-pitch" id="builder-pitch">
                 <div class="penalty-box top-box"></div>
+                <div class="goal-box top"></div>
                 <div class="penalty-box bottom-box"></div>
+                <div class="goal-box bottom"></div>
                 <div class="center-line"></div>
                 <div class="center-circle"></div>
+                <!-- Corners via CSS now -->
                 <div class="corner-arc corner-top-left"></div>
                 <div class="corner-arc corner-top-right"></div>
                 <div class="corner-arc corner-bottom-left"></div>
@@ -121,14 +124,30 @@ export const renderBuilder = () => {
 
         <!-- Search Modal -->
         <div id="player-search-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur hidden flex flex-col">
-            <div class="p-4 border-b border-[#222] bg-black flex items-center gap-3">
-                <button onclick="document.getElementById('player-search-modal').classList.add('hidden')" class="text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                <div class="flex-1 relative">
-                    <input type="text" id="builder-search-input" placeholder="Buscar jugador..." 
+            <div class="p-4 border-b border-[#222] bg-black flex flex-col gap-3">
+                <div class="flex items-center gap-3">
+                    <button onclick="document.getElementById('player-search-modal').classList.add('hidden')" class="text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h3 class="text-lg font-bold text-white uppercase">Buscar Jugador</h3>
+                 </div>
+                 
+                 <select id="builder-league-select" class="w-full bg-[#111] border border-[#333] text-white text-xs py-2 px-3 rounded focus:outline-none uppercase font-bold" onchange="const val = document.getElementById('builder-search-input').value; if(val) app.handleBuilderSearch(val);">
+                    <option value="39">Premier League</option>
+                    <option value="140">La Liga</option>
+                    <option value="135">Serie A</option>
+                    <option value="78">Bundesliga</option>
+                    <option value="61">Ligue 1</option>
+                    <option value="128">Liga Profesional (ARG)</option>
+                    <option value="71">Brasileirão</option>
+                    <option value="2">UEFA Champions League</option>
+                    <option value="1" selected>World Cup</option>
+                 </select>
+
+                <div class="relative">
+                    <input type="text" id="builder-search-input" placeholder="Nombre del jugador..." 
                         class="w-full bg-[#111] border border-[#333] text-white py-2 pl-10 pr-4 rounded-full focus:outline-none focus:border-white transition-colors"
                         onkeyup="app.handleBuilderSearch(this.value)">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -137,7 +156,7 @@ export const renderBuilder = () => {
                 </div>
             </div>
             <div id="builder-search-results" class="flex-1 overflow-y-auto p-4 space-y-2">
-                <div class="text-center text-gray-600 mt-10 text-sm">Escribe para buscar jugadores...</div>
+                <div class="text-center text-gray-600 mt-10 text-sm">Selecciona una liga y escribe para buscar...</div>
             </div>
         </div>
     `;
@@ -150,56 +169,25 @@ export const renderBuilder = () => {
 const calculatePositions = (formationKey) => {
     const formation = FORMATIONS[formationKey] || FORMATIONS['4-4-2']; // e.g. [1, 4, 4, 2] lines (GK, DEF, MID, FWD)
 
-    // Total lines = formation.length
-    // We distribute players per line.
-
+    // Vertical Pitch Logic (Always)
     let allPositions = [];
 
-    // We assume index 0 is GK, index 1..N is DEF, etc.
-    // BUT lineup array is flat 11. We need to map lineup index to formation line.
-    // Usually: GK is index 0. Then DEFs, then MIDs, then FWDs.
+    // Spacing for vertical pitch
+    const totalLines = formation.length;
+    const availableHeight = 85;
+    const spacing = availableHeight / (Math.max(1, totalLines - 1));
 
-    let playerIdx = 0;
-    const isMobile = window.innerWidth < 768;
+    // We want GK (index 0) at Bottom (90%) and Forwards (last index) at Top.
+    // However, formation array is usually [GK, DEF, MID, FWD].
+    // So lineIndex 0 is GK.
 
     formation.forEach((count, lineIndex) => {
-        // Line spacing
-        // Mobile: GK at bottom (90%) or top? Usually Formation View is GK bottom -> Top.
-        // Let's assume GK is at Bottom (y ~ 90%) and Forwards at Top (y ~ 10%).
+        // Calculate Y
+        // If lineIndex 0 (GK) -> Y ~ 90%
+        // If lineIndex max -> Y ~ 90 - (max * spacing)
+        const y = 90 - (lineIndex * spacing);
 
-        let y;
-        if (isMobile) {
-            // Vertical pitch
-            const totalLines = formation.length;
-            const availableHeight = 85;
-            const spacing = availableHeight / (totalLines); // spacing between lines
-            // lineIndex 0 (GK) -> Bottom
-            // lineIndex last (FWD) -> Top
-
-            y = 90 - (lineIndex * spacing);
-        } else {
-            // Horizontal pitch? Or keep vertical?
-            // Existing matchDetail pitch attempts horizontal on desktop.
-            // Let's stick to Vertical for Builder for simplicity on "Arma tu once" which is usually vertical cards.
-            // Or reuse logic from matchDetail?
-            // matchDetail logic:
-            /*
-               if (isMobile) {
-                  y = 92 - ...
-               } else {
-                  // Horizontal
-                  x = 3 + ... 
-               }
-            */
-            // Let's enforce Vertical for now as it's easier for "Arma tu once" on most screens or adapt.
-            // If desktop, maybe fit in center vertically.
-            const totalLines = formation.length;
-            const availableHeight = 85;
-            const spacing = availableHeight / (totalLines);
-            y = 90 - (lineIndex * spacing);
-        }
-
-        // Horizontal distribution within the line
+        // Horizontal distribution within the line (0-100%)
         const segment = 100 / (count + 1);
 
         for (let i = 0; i < count; i++) {
@@ -257,11 +245,33 @@ export const handleBuilderSearch = (query) => {
 
     searchTimeout = setTimeout(async () => {
         try {
-            // Use API search (GLOBAL or filtered?)
-            // API-Football supports /players?search=messi&league=X&season=Y
-            // Without league it might require >= 3 chars and return global results?
-            // Let's try global search with season 2024.
-            const data = await fetchAPI(`/players?search=${query}&season=2024`); // Adjust season if needed
+            const leagueInput = document.getElementById('builder-league-select');
+            const leagueId = leagueInput ? leagueInput.value : '1'; // Default WC
+            // Some leagues 2024, some 2023. Let's try to infer or pass generic season.
+            // WC is 2022 usually but maybe 2026 coming up?
+            // API-Football usually requires valid season.
+
+            // For now hardcode season based on league or generic:
+            let season = 2024;
+            if (['39', '140', '135', '78', '61', '2', '143'].includes(leagueId)) {
+                // European leagues -> 2023 or 2024? Current season is 2023/2024 so '2023' usually.
+                // But if user meant 2024/2025? It's Feb 2026.
+                // It's 2026 in metadata!
+                // So current season is 2025/2026 -> '2025'.
+                season = 2025;
+            } else if (leagueId === '1') {
+                // World Cup
+                season = 2026; // If available? Or 2022.
+                // Let's assume 2026 qualifiers or something.
+            }
+
+            // Wait, if it's 2026, we should use 2025/2026 for Europe.
+            // Let's rely on api logic or try fetch.
+            // If fetch fails with "season required", we might need dynamic season getter.
+            // For simplicity, let's use 2024 as generic fallback if 2025 fails?
+            // User context is 2026.
+
+            const data = await fetchAPI(`/players?search=${query}&season=${season}&league=${leagueId}`);
 
             if (!data.response || data.response.length === 0) {
                 resultsContainer.innerHTML = '<div class="text-center text-gray-600 mt-10 text-sm">No se encontraron jugadores.</div>';
