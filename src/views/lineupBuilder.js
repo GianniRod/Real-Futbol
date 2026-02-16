@@ -53,29 +53,47 @@ export const renderBuilder = () => {
 
     container.innerHTML = `
         <!-- Header -->
-        <div class="sticky top-0 z-20 bg-black/95 backdrop-blur py-2 border-b border-[#222] mb-4">
-            <div class="flex items-center justify-between px-4">
+        <div class="sticky top-0 z-20 bg-[#111] py-3 border-b border-[#222] mb-4">
+            <div class="flex items-center justify-between px-4 max-w-2xl mx-auto">
                 <div class="flex items-center gap-3">
                     <button onclick="app.navigateToForum()" class="text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h2 class="text-xl font-bold text-white uppercase tracking-wider font-sport">Arma tu 11</h2>
+                    
+                    <!-- Formation Dropdown -->
+                    <div class="relative group">
+                        <button class="flex items-center gap-2 bg-[#222] border border-[#333] text-white text-sm font-bold px-4 py-2 rounded-full hover:bg-[#333] transition-colors">
+                            ${currentFormation}
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <!-- Dropdown Menu -->
+                        <div class="absolute top-full left-0 mt-2 w-48 bg-[#222] border border-[#333] rounded-lg shadow-xl overflow-hidden hidden group-hover:block z-50">
+                            <div class="max-h-60 overflow-y-auto">
+                                ${Object.keys(FORMATIONS).map(f => `
+                                    <button onclick="app.selectFormation('${f}')" 
+                                        class="w-full text-left px-4 py-3 text-sm font-bold text-gray-300 hover:bg-[#333] hover:text-white border-b border-[#333] last:border-0 ${currentFormation === f ? 'bg-[#333] text-white' : ''}">
+                                        ${f}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <button class="bg-white text-black text-xs font-bold uppercase px-3 py-1.5 rounded hover:bg-gray-200 transaction-colors" onclick="app.shareLineup()">
-                    Compartir
+
+                <div class="flex gap-2">
+                     <button class="bg-[#222] text-gray-300 text-xs font-bold px-3 py-1.5 rounded-full border border-[#333]" onclick="alert('Coming soon')">Club</button>
+                     <button class="bg-[#222] text-gray-300 text-xs font-bold px-3 py-1.5 rounded-full border border-[#333]" onclick="alert('Coming soon')">País</button>
+                </div>
+
+                <button class="text-white" onclick="app.shareLineup()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
                 </button>
-            </div>
-            
-            <!-- Formation Selector -->
-            <div class="flex overflow-x-auto gap-2 px-4 py-2 mt-2 no-scrollbar">
-                ${Object.keys(FORMATIONS).map(f => `
-                    <button onclick="app.selectFormation('${f}')" 
-                        class="px-3 py-1 text-xs font-bold border rounded whitespace-nowrap transition-colors ${currentFormation === f ? 'bg-white text-black border-white' : 'bg-[#111] text-gray-400 border-[#333] hover:border-gray-500'}">
-                        ${f}
-                    </button>
-                `).join('')}
             </div>
         </div>
 
@@ -106,14 +124,24 @@ export const renderBuilder = () => {
                                 <div class="player-name-label">
                                     <span class="text-white">${formatName(player.name)}</span>
                                 </div>
-                                <div class="absolute -top-1 -right-1 bg-[#111] rounded-full p-0.5 border border-[#333]">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                <div class="absolute -bottom-2 -right-2 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center border border-black z-20" onclick="event.stopPropagation(); app.removeBuilderPlayer(${index})">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
                                 </div>
                             ` : `
-                                <div class="w-full h-full rounded-full border-2 border-dashed border-gray-600 bg-black/50 flex items-center justify-center hover:border-white transition-colors group">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-500 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                    </svg>
+                                <!-- Empty State: Silhouette + Plus Button -->
+                                <div class="relative w-full h-full flex items-center justify-center group">
+                                    <!-- Silhouette -->
+                                    <div class="w-[45px] h-[45px] rounded-full bg-[#333] flex items-end justify-center overflow-hidden border border-[#444]">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-[#555]" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                                        </svg>
+                                    </div>
+                                    <!-- Plus Button -->
+                                    <div class="absolute -bottom-1 bg-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg z-10">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 5v14M5 12h14" />
+                                        </svg>
+                                    </div>
                                 </div>
                             `}
                         </div>
