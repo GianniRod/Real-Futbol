@@ -617,16 +617,17 @@
                 /* More visible border */
             }
 
-            .football-pitch.horizontal .penalty-box.top-box {
+            .football-pitch.horizontal .penalty-box.home-box {
                 /* Left Box (Home) */
                 left: 0;
+                right: auto;
                 border-left: none;
                 border-right: 1px solid #444;
                 border-top: 1px solid #444;
                 border-bottom: 1px solid #444;
             }
 
-            .football-pitch.horizontal .penalty-box.bottom-box {
+            .football-pitch.horizontal .penalty-box.away-box {
                 /* Right Box (Away) */
                 right: 0;
                 left: auto;
@@ -645,16 +646,17 @@
                 border: 1px solid #444;
             }
 
-            .football-pitch.horizontal .goal-box.top {
+            .football-pitch.horizontal .goal-box.home-box {
                 /* Left Box */
                 left: 0;
+                right: auto;
                 border-left: none;
                 border-right: 1px solid #444;
                 border-top: 1px solid #444;
                 border-bottom: 1px solid #444;
             }
 
-            .football-pitch.horizontal .goal-box.bottom {
+            .football-pitch.horizontal .goal-box.away-box {
                 /* Right Box */
                 right: 0;
                 left: auto;
@@ -665,25 +667,30 @@
             }
 
             /* Corners */
+            .football-pitch.horizontal .corner-arc {
+                width: 60px;
+                height: 60px;
+            }
+
             .football-pitch.horizontal .corner-top-left {
-                top: -22px;
-                left: -22px;
+                top: -30px;
+                left: -30px;
             }
 
             .football-pitch.horizontal .corner-top-right {
-                top: -22px;
-                right: -22px;
+                top: -30px;
+                right: -30px;
                 left: auto;
             }
 
             .football-pitch.horizontal .corner-bottom-left {
-                bottom: -22px;
-                left: -22px;
+                bottom: -30px;
+                left: -30px;
             }
 
             .football-pitch.horizontal .corner-bottom-right {
-                bottom: -22px;
-                right: -22px;
+                bottom: -30px;
+                right: -30px;
             }
         }
     </style>
@@ -1273,6 +1280,8 @@
                                     <div class="center-circle"></div>
                                     <div class="penalty-box home-box"></div>
                                     <div class="penalty-box away-box"></div>
+                                    <div class="goal-box home-box"></div>
+                                    <div class="goal-box away-box"></div>
                                     <!-- Corner Arcs -->
                                     <div class="corner-arc corner-top-left"></div>
                                     <div class="corner-arc corner-top-right"></div>
