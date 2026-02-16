@@ -188,7 +188,8 @@ const calculatePositions = (formationKey) => {
 
     // Spacing for vertical pitch
     const totalLines = formation.length;
-    const availableHeight = 90; // Use more height (was 85)
+    // UPDATED: Reduced available height to 75 to bring players down from the top edge
+    const availableHeight = 75;
     const spacing = availableHeight / (Math.max(1, totalLines - 1));
 
     // We want GK (index 0) at Bottom (90%) and Forwards (last index) at Top.
@@ -197,15 +198,18 @@ const calculatePositions = (formationKey) => {
 
     formation.forEach((count, lineIndex) => {
         // Calculate Y
-        // If lineIndex 0 (GK) -> Y ~ 92% (was 90)
+        // If lineIndex 0 (GK) -> Y ~ 92%
         // If lineIndex max -> Y ~ 92 - (max * spacing)
         const y = 92 - (lineIndex * spacing);
 
-        // Horizontal distribution within the line (0-100%)
-        const segment = 100 / (count + 1);
+        // Horizontal distribution:
+        // UPDATED: Spread players wider using full width (0-100)
+        // Formula: Center in their segment. Segment width = 100 / count.
+        const segmentWidth = 100 / count;
 
         for (let i = 0; i < count; i++) {
-            let x = segment * (i + 1);
+            // x = (start of segment) + (half segment)
+            let x = (i * segmentWidth) + (segmentWidth / 2);
             allPositions.push({ x, y });
         }
     });
