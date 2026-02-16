@@ -148,6 +148,8 @@ const navigateToMatches = () => {
     document.getElementById('view-match-detail').classList.add('hidden');
     const viewTeam = document.getElementById('view-team');
     if (viewTeam) viewTeam.classList.add('hidden');
+    const viewLineup = document.getElementById('view-lineup-builder');
+    if (viewLineup) viewLineup.classList.add('hidden');
     document.getElementById('view-match-list').classList.remove('hidden');
     document.getElementById('date-nav').classList.remove('hidden');
     document.getElementById('sidebar').classList.remove('hidden'); // Restore if it was hidden by league view
@@ -758,6 +760,46 @@ window.app = {
     deleteMessage,
     startReply,
     cancelReply,
+
+    // Lineup Builder
+    navigateToLineupBuilder: async () => {
+        const { initLineupBuilder } = await import('./views/lineupBuilder.js');
+        // Logic to switch view
+        document.getElementById('view-match-list').classList.add('hidden');
+        document.getElementById('view-standings').classList.add('hidden');
+        document.getElementById('view-match-detail').classList.add('hidden');
+        document.getElementById('view-forum').classList.add('hidden');
+        document.getElementById('view-team').classList.add('hidden');
+        document.getElementById('date-nav').classList.add('hidden');
+        document.getElementById('view-lineup-builder').classList.remove('hidden');
+
+        // Hide sidebar on mobile to maximize space? Or keep it?
+        // Let's keep sidebar behavior consistent (hidden on mobile unless toggled)
+        document.getElementById('sidebar').classList.add('-translate-x-full');
+        document.getElementById('mobile-backdrop').classList.add('hidden');
+
+        initLineupBuilder();
+    },
+    selectFormation: async (f) => {
+        const { selectFormation } = await import('./views/lineupBuilder.js');
+        selectFormation(f);
+    },
+    openPlayerSearch: async (idx) => {
+        const { openPlayerSearch } = await import('./views/lineupBuilder.js');
+        openPlayerSearch(idx);
+    },
+    handleBuilderSearch: async (q) => {
+        const { handleBuilderSearch } = await import('./views/lineupBuilder.js');
+        handleBuilderSearch(q);
+    },
+    selectBuilderPlayer: async (id, name, photo) => {
+        const { selectBuilderPlayer } = await import('./views/lineupBuilder.js');
+        selectBuilderPlayer(id, name, photo);
+    },
+    shareLineup: async () => {
+        const { shareLineup } = await import('./views/lineupBuilder.js');
+        shareLineup();
+    },
 
     // Authentication
     loginWithGoogle,
