@@ -931,6 +931,10 @@ export const openDetail = async (params) => {
     document.getElementById('view-match-list').classList.add('hidden');
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-forum').classList.add('hidden');
+    const viewTeam = document.getElementById('view-team');
+    if (viewTeam) viewTeam.classList.add('hidden');
+    const viewLineup = document.getElementById('view-lineup-builder');
+    if (viewLineup) viewLineup.classList.add('hidden');
 
     // Ocultar sidebar derecha (comunidad) para dar más espacio al detalle
     const rightSidebar = document.getElementById('right-sidebar');
