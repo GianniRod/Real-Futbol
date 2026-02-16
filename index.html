@@ -92,69 +92,98 @@
             border: 1px solid #444;
         }
 
-        /* Cancha Táctica - Estilo Negro */
+        /* Cancha Táctica - Estilo Negro (Vertical por defecto para Lineup Builder) */
         .football-pitch {
             background-color: #151515;
             border: 1px solid #333;
             position: relative;
             width: 100%;
-            aspect-ratio: 5 / 4;
+            /* Aspect Ratio 68 (ancho) / 105 (alto) ≈ 0.647 */
+            aspect-ratio: 68 / 105;
             border-radius: 0 !important;
             overflow: hidden;
+            margin: 0 auto;
         }
 
-        /* Cancha vertical en móvil */
-        @media (max-width: 768px) {
-            .football-pitch {
-                aspect-ratio: 2 / 4.4;
-            }
-
-            /* Línea central horizontal en móvil */
-            .center-line {
-                top: 50% !important;
-                bottom: auto !important;
-                left: 0 !important;
-                right: 0 !important;
-                width: 100% !important;
-                height: 1px !important;
-                transform: translateY(-50%) !important;
-            }
-
-            /* Círculo central en móvil - mantener proporción circular */
-            .center-circle {
-                width: 30% !important;
-                height: 12% !important;
-            }
-        }
-
-        /* Línea central (vertical en desktop, horizontal en móvil) */
+        /* Línea central horizontal (para cancha vertical) */
         .center-line {
             position: absolute;
             background-color: #333;
-            top: 0;
-            bottom: 0;
-            left: 50%;
-            width: 1px;
-            height: 100%;
-            transform: translateX(-50%);
+            top: 50%;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 1px;
+            transform: translateY(-50%);
         }
 
-        /* Círculo central */
+        /* Círculo central - Proporción real */
+        /* Radio 9.15m. Ancho 68m => Diametro 18.3m => 18.3/68 = ~27% width */
         .center-circle {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 18%;
-            height: 26%;
+            width: 27%;
+            /* En vertical, el height relativo al container debe ser igual al width en px. 
+               Como aspect-ratio es 68/105, height% = width% * (68/105) 
+               27% * 0.647 = ~17.5% */
+            height: 0;
+            padding-bottom: 27%;
+            /* Make it square relative to width */
+            /* Wait, padding-bottom creates height based on width. Perfect for circle. */
             border: 1px solid #333;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             background: transparent;
+            height: auto;
+            /* Override previous */
         }
 
-        /* Ocultar penalty boxes - no solicitados */
+        /* Areas */
+        /* Area grande: 40.3m ancho, 16.5m largo. 
+           Width: 40.3/68 = ~59%
+           Height: 16.5/105 = ~15.7% */
         .penalty-box {
-            display: none;
+            display: block;
+            position: absolute;
+            border: 1px solid #333;
+            width: 59%;
+            height: 15.7%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: transparent;
+        }
+
+        .penalty-box.top-box {
+            top: 0;
+            border-top: none;
+        }
+
+        .penalty-box.bottom-box {
+            bottom: 0;
+            border-bottom: none;
+        }
+
+        /* Area chica: 18.3m ancho, 5.5m largo
+           Width: 18.3/68 = ~27%
+           Height: 5.5/105 = ~5.2% */
+        .goal-box {
+            position: absolute;
+            border: 1px solid #333;
+            width: 27%;
+            height: 5.2%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .goal-box.top {
+            top: 0;
+            border-top: none;
+        }
+
+        .goal-box.bottom {
+            bottom: 0;
+            border-bottom: none;
         }
 
         /* Corner Arcs - 4 cuartos de círculo iguales (80% más grandes) */
@@ -1119,6 +1148,22 @@
                     </div>
                 </div>
             </div>
+            <!-- Footer -->
+            <footer class="mt-auto border-t border-[#222] py-8 px-4 bg-[#0a0a0a]">
+                <div
+                    class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+                    <div>
+                        <div class="text-white font-bold text-sm uppercase tracking-wider mb-1">Real Futbol App</div>
+                        <div class="text-gray-500 text-xs">Todos los derechos reservados</div>
+                    </div>
+                    <div class="flex gap-4 text-xs font-bold uppercase tracking-wider text-gray-400">
+                        <button onclick="document.getElementById('about-us-modal').classList.remove('hidden')"
+                            class="hover:text-white transition-colors">Sobre Nosotros</button>
+                        <a href="/politica-de-privacidad.html" class="hover:text-white transition-colors">Privacidad</a>
+                        <a href="/terminos-y-condiciones.html" class="hover:text-white transition-colors">Términos</a>
+                    </div>
+                </div>
+            </footer>
         </main>
 
         <!-- Right Sidebar (Desktop only) -->
@@ -1224,20 +1269,7 @@
                     </div>
                 </button>
 
-                <!-- Sobre Nosotros -->
-                <button onclick="document.getElementById('about-us-modal').classList.remove('hidden')"
-                    class="w-full block rounded-xl border border-[#222] bg-gradient-to-br from-[#0a0a0a] to-[#111] p-3 hover:border-[#555] hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-300 group mt-3 text-left">
-                    <div
-                        class="flex items-center justify-center gap-2 text-gray-400 group-hover:text-white transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
-                        <span class="text-xs font-bold uppercase tracking-wider">Sobre Nosotros</span>
-                    </div>
-                </button>
+                <!-- About Us moved to Footer -->
             </div>
         </aside>
     </div>
@@ -1374,17 +1406,7 @@
                     <span class="text-sm font-bold uppercase tracking-wider">Apoyar el proyecto</span>
                 </button>
 
-                <button
-                    onclick="document.getElementById('about-us-modal').classList.remove('hidden');document.getElementById('mobile-menu-drawer').classList.add('hidden');document.getElementById('mobile-menu-drawer').classList.remove('flex')"
-                    class="w-full flex items-center gap-4 px-5 py-3.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                    <span class="text-sm font-bold uppercase tracking-wider">Sobre Nosotros</span>
-                </button>
+                <!-- About Us moved to Footer -->
                 <div class="my-1 border-t border-[#222] mx-5"></div>
                 <a href="/politica-de-privacidad.html"
                     class="flex items-center gap-4 px-5 py-3.5 text-gray-500 hover:bg-[#1a1a1a] hover:text-gray-300 transition-all">
