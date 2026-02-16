@@ -125,19 +125,14 @@ export const renderBuilder = () => {
                                 <div class="player-name-label">
                                     <span class="text-white" style="font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px black;">${formatName(player.name)}</span>
                                 </div>
-                                <div class="absolute -bottom-2 -right-2 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center border border-black z-20" onclick="event.stopPropagation(); app.removeBuilderPlayer(${index})">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
-                                </div>
                             ` : `
                                 <!-- Empty State: Silhouette + Plus Button -->
                                 <div class="relative w-full h-full flex items-center justify-center group">
-                                    <!-- Silhouette -->
                                     <div class="w-[45px] h-[45px] rounded-full bg-[#333] flex items-end justify-center overflow-hidden border border-[#444]">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-[#555]" viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                                         </svg>
                                     </div>
-                                    <!-- Plus Button -->
                                     <div class="absolute -bottom-1 bg-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg z-10">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M12 5v14M5 12h14" />
@@ -193,7 +188,7 @@ const calculatePositions = (formationKey) => {
 
     // Spacing for vertical pitch
     const totalLines = formation.length;
-    const availableHeight = 85;
+    const availableHeight = 90; // Use more height (was 85)
     const spacing = availableHeight / (Math.max(1, totalLines - 1));
 
     // We want GK (index 0) at Bottom (90%) and Forwards (last index) at Top.
@@ -202,9 +197,9 @@ const calculatePositions = (formationKey) => {
 
     formation.forEach((count, lineIndex) => {
         // Calculate Y
-        // If lineIndex 0 (GK) -> Y ~ 90%
-        // If lineIndex max -> Y ~ 90 - (max * spacing)
-        const y = 90 - (lineIndex * spacing);
+        // If lineIndex 0 (GK) -> Y ~ 92% (was 90)
+        // If lineIndex max -> Y ~ 92 - (max * spacing)
+        const y = 92 - (lineIndex * spacing);
 
         // Horizontal distribution within the line (0-100%)
         const segment = 100 / (count + 1);
