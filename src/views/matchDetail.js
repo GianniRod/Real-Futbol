@@ -669,10 +669,17 @@ const renderLineups = (m) => {
                 }
 
                 let x, y;
-                const isMobile = window.innerWidth < 768;
+                const isMobile = window.innerWidth < 1024; // Use 1024px as breakpoint for desktop layout
+
+                // Add or remove horizontal class based on device
+                if (!isMobile) {
+                    pitch.classList.add('horizontal');
+                } else {
+                    pitch.classList.remove('horizontal');
+                }
 
                 if (isMobile) {
-                    // En móvil: cancha vertical
+                    // === MOBILE: VERTICAL PITCH ===
                     const totalLines = Object.keys(lines).length;
 
                     if (side === 'away') {
@@ -689,28 +696,39 @@ const renderLineups = (m) => {
 
                     const segment = 100 / (count + 1);
                     x = segment * (index + 1);
+                    // Constrain x to keep players inside
                     if (x < 3) x = 3;
                     if (x > 97) x = 97;
+
                 } else {
-                    // En desktop: cancha horizontal
+                    // === DESKTOP: HORIZONTAL PITCH ===
                     const totalLines = Object.keys(lines).length;
 
+                    // Horizontal Spacing (X-axis)
+                    // Home: Left (0-50%), Away: Right (50-100%)
+
                     if (side === 'home') {
-                        const availableSpace = 43;
+                        // Home GK (line 1) at Left (e.g. 5%) -> Forwards near center
+                        // Available space approx 45% width
+                        const availableSpace = 42;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        x = 3 + (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) x = 3;
+                        x = 4 + (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) x = 4; // GK fixed near goal line
                     } else {
-                        const availableSpace = 43;
+                        // Away GK (line 1) at Right (e.g. 95%) -> Forwards near center
+                        const availableSpace = 42;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        x = 97 - (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) x = 97;
+                        x = 96 - (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) x = 96; // GK fixed near goal line
                     }
 
+                    // Vertical Spacing (Y-axis) within the line
                     const segment = 100 / (count + 1);
                     y = segment * (index + 1);
-                    if (y < 6) y = 6;
-                    if (y > 94) y = 94;
+
+                    // Constrain Y to keep players inside vertical bounds
+                    if (y < 8) y = 8;
+                    if (y > 92) y = 92;
                 }
 
                 el.style.left = x + '%';
