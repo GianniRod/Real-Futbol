@@ -84,16 +84,19 @@ export const renderBuilder = () => {
                     </div>
                 </div>
 
-                <div class="flex gap-2">
-                     <button class="bg-[#222] text-gray-300 text-xs font-bold px-3 py-1.5 rounded-full border border-[#333]" onclick="alert('Coming soon')">Club</button>
-                     <button class="bg-[#222] text-gray-300 text-xs font-bold px-3 py-1.5 rounded-full border border-[#333]" onclick="alert('Coming soon')">País</button>
-                </div>
-
-                <button class="text-white" onclick="app.shareLineup()">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                <!-- Moved formation dropdown logic to standard location -->
+            </div>
+            
+            <div class="flex items-center gap-2">
+                 <!-- Download Button -->
+                 <button class="flex items-center gap-2 bg-[#222] border border-[#333] hover:bg-[#333] text-white text-xs font-bold px-4 py-2 rounded-full transition-colors" onclick="app.downloadLineup()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                </button>
+                    <span>Descargar</span>
+                 </button>
             </div>
         </div>
 
@@ -107,11 +110,18 @@ export const renderBuilder = () => {
                 <div class="goal-box bottom"></div>
                 <div class="center-line"></div>
                 <div class="center-circle"></div>
-                <!-- Corners via CSS now -->
+                
+                <!-- Corners via CSS -->
                 <div class="corner-arc corner-top-left"></div>
                 <div class="corner-arc corner-top-right"></div>
                 <div class="corner-arc corner-bottom-left"></div>
                 <div class="corner-arc corner-bottom-right"></div>
+
+                <!-- Branding / Logo Overlay -->
+                <div class="absolute bottom-4 right-4 flex items-center gap-2 opacity-90 z-10 pointer-events-none">
+                    <img src="https://i.postimg.cc/vBgSB9tn/favicon.jpg" class="w-6 h-6 rounded-full border border-white/20 shadow-sm">
+                    <span class="text-white font-sport font-bold text-sm tracking-widest drop-shadow-md">REALFUTBOL</span>
+                </div>
 
                 <!-- Players -->
                 ${positions.map((pos, index) => {
@@ -353,9 +363,29 @@ export const selectBuilderPlayer = (id, name, photo) => {
 };
 
 /**
- * (Placeholder) Compartir lineup
+ * Descarga la formación como imagen PNG
  */
-export const shareLineup = () => {
-    alert('Función de compartir próximamente.');
-    // Here we could generate an image or a link
+export const downloadLineup = () => {
+    const element = document.getElementById('builder-pitch');
+
+    if (typeof html2canvas === 'undefined') {
+        alert('Error: Librería de imagen no cargada. Recarga la página.');
+        return;
+    }
+
+    // Capture the pitch with high quality
+    html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'realfutbol-11.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }).catch(err => {
+        console.error('Error generando imagen:', err);
+        alert('Hubo un error al generar la imagen. Intenta nuevamente.');
+    });
 };
