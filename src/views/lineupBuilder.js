@@ -113,8 +113,8 @@ export const renderBuilder = () => {
                 <div class="corner-arc corner-bottom-right"></div>
 
                 <!-- Branding / Logo Overlay (Updated) -->
-                <div class="absolute bottom-6 right-6 z-10 pointer-events-none opacity-90">
-                    <img src="https://i.postimg.cc/66d3tKSB/Captura-de-pantalla-2026-02-16-a-la-s-5-14-29-a-m-removebg-preview.png" class="h-16 w-auto object-contain drop-shadow-md">
+                <div class="absolute bottom-3 right-3 z-10 pointer-events-none opacity-90">
+                    <img src="https://i.postimg.cc/66d3tKSB/Captura-de-pantalla-2026-02-16-a-la-s-5-14-29-a-m-removebg-preview.png" class="h-5 w-auto object-contain drop-shadow-md">
                 </div>
 
                 <!-- Players -->
