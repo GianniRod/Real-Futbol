@@ -124,7 +124,7 @@ export const renderBuilder = () => {
                         <div class="player-marker builder-player" style="left: ${pos.x}%; top: ${pos.y}%;" onclick="app.openPlayerSearch(${index})">
                             ${player ? `
                                 <div class="player-face-circle" style="border-color: #fff">
-                                    <img src="${player.photo}" class="player-face-img" onerror="this.style.display='none'">
+                                    <img src="${player.photo}" class="player-face-img" crossorigin="anonymous" onerror="this.style.display='none'">
                                 </div>
                                 <div class="player-name-label">
                                     <span class="text-white" style="font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px black;">${formatName(player.name)}</span>
@@ -363,23 +363,38 @@ export const downloadLineup = () => {
     const element = document.getElementById('builder-pitch');
 
     if (typeof html2canvas === 'undefined') {
-        alert('Error: Librería de imagen no cargada. Recarga la página.');
+        alert('Error: Librería de imagen no cargada. Por favor recarga la página.');
         return;
     }
+
+    const btn = document.querySelector('button[onclick="app.downloadLineup()"]');
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) btn.innerHTML = '<span>Generando...</span>';
 
     // Capture the pitch with high quality
     html2canvas(element, {
         scale: 2,
         useCORS: true,
-        allowTaint: true,
-        backgroundColor: null
+        allowTaint: false, // Must be false to allow toDataURL
+        backgroundColor: '#1a1a1a', // Force a background color in case transparency fails
+        logging: true,
+        imageTimeout: 0 // Wait for images
     }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = 'realfutbol-11.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        try {
+            const link = document.createElement('a');
+            link.download = `realfutbol-11-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            alert('Error al guardar la imagen (problema de seguridad/CORS). Intenta con otros jugadores o recarga.');
+            console.error(err);
+        }
+        if (btn) btn.innerHTML = originalText;
     }).catch(err => {
         console.error('Error generando imagen:', err);
-        alert('Hubo un error al generar la imagen. Intenta nuevamente.');
+        alert('Hubo un error al generar la imagen. Revisa la consola para más detalles.');
+        if (btn) btn.innerHTML = originalText;
     });
 };
