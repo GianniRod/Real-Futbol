@@ -48,6 +48,8 @@ export const showTeamProfile = async (params) => {
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-forum').classList.add('hidden');
     document.getElementById('view-match-detail').classList.add('hidden');
+    const viewLineup = document.getElementById('view-lineup-builder');
+    if (viewLineup) viewLineup.classList.add('hidden');
     document.getElementById('date-nav').classList.add('hidden');
 
     const viewTeam = document.getElementById('view-team');
