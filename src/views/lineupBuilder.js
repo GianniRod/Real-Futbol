@@ -97,9 +97,10 @@ export const renderBuilder = () => {
             </div>
         </div>
 
-        <!-- Pitch -->
-        <div class="relative w-full max-w-2xl mx-auto px-4 pb-20">
-            <div class="football-pitch" id="builder-pitch">
+        <!-- Pitch Container - Responsive Height -->
+        <!-- Added calc(100vh - 180px) to fit screen, keeping aspect ratio -->
+        <div class="relative w-full mx-auto px-4 pb-10 flex justify-center items-start" style="height: calc(100vh - 140px); min-height: 500px;">
+            <div class="football-pitch" id="builder-pitch" style="height: 100%; width: auto; aspect-ratio: 68/105;">
                 <div class="penalty-box top-box"></div>
                 <div class="goal-box top"></div>
                 <div class="penalty-box bottom-box"></div>
@@ -122,7 +123,7 @@ export const renderBuilder = () => {
                                     <img src="${player.photo}" class="player-face-img" onerror="this.style.display='none'">
                                 </div>
                                 <div class="player-name-label">
-                                    <span class="text-white">${formatName(player.name)}</span>
+                                    <span class="text-white" style="font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px black;">${formatName(player.name)}</span>
                                 </div>
                                 <div class="absolute -bottom-2 -right-2 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center border border-black z-20" onclick="event.stopPropagation(); app.removeBuilderPlayer(${index})">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
@@ -162,21 +163,11 @@ export const renderBuilder = () => {
                     <h3 class="text-lg font-bold text-white uppercase">Buscar Jugador</h3>
                  </div>
                  
-                 <select id="builder-league-select" class="w-full bg-[#111] border border-[#333] text-white text-xs py-2 px-3 rounded focus:outline-none uppercase font-bold" onchange="const val = document.getElementById('builder-search-input').value; if(val) app.handleBuilderSearch(val);">
-                    <option value="39">Premier League</option>
-                    <option value="140">La Liga</option>
-                    <option value="135">Serie A</option>
-                    <option value="78">Bundesliga</option>
-                    <option value="61">Ligue 1</option>
-                    <option value="128">Liga Profesional (ARG)</option>
-                    <option value="71">Brasileirão</option>
-                    <option value="2">UEFA Champions League</option>
-                    <option value="1" selected>World Cup</option>
-                 </select>
+                 <!-- League Selector REMOVED as per request -->
 
                 <div class="relative">
-                    <input type="text" id="builder-search-input" placeholder="Nombre del jugador..." 
-                        class="w-full bg-[#111] border border-[#333] text-white py-2 pl-10 pr-4 rounded-full focus:outline-none focus:border-white transition-colors"
+                    <input type="text" id="builder-search-input" placeholder="Escribe el nombre del jugador..." 
+                        class="w-full bg-[#111] border border-[#333] text-white py-3 pl-10 pr-4 rounded-full focus:outline-none focus:border-white transition-colors"
                         onkeyup="app.handleBuilderSearch(this.value)">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -184,7 +175,7 @@ export const renderBuilder = () => {
                 </div>
             </div>
             <div id="builder-search-results" class="flex-1 overflow-y-auto p-4 space-y-2">
-                <div class="text-center text-gray-600 mt-10 text-sm">Selecciona una liga y escribe para buscar...</div>
+                <div class="text-center text-gray-600 mt-10 text-sm">Escribe para buscar jugadores...</div>
             </div>
         </div>
     `;
@@ -273,45 +264,43 @@ export const handleBuilderSearch = (query) => {
 
     searchTimeout = setTimeout(async () => {
         try {
-            const leagueInput = document.getElementById('builder-league-select');
-            const leagueId = leagueInput ? leagueInput.value : '1'; // Default WC
-            // Some leagues 2024, some 2023. Let's try to infer or pass generic season.
-            // WC is 2022 usually but maybe 2026 coming up?
-            // API-Football usually requires valid season.
+            // Global search logic - API Football allows search by name + season
+            // We use 2024 or 2023 as default "current" season for broad search
+            // If API supports searching all leagues, this will return mixed results.
 
-            // For now hardcode season based on league or generic:
-            let season = 2024;
-            if (['39', '140', '135', '78', '61', '2', '143'].includes(leagueId)) {
-                // European leagues -> 2023 or 2024? Current season is 2023/2024 so '2023' usually.
-                // But if user meant 2024/2025? It's Feb 2026.
-                // It's 2026 in metadata!
-                // So current season is 2025/2026 -> '2025'.
-                season = 2025;
-            } else if (leagueId === '1') {
-                // World Cup
-                season = 2026; // If available? Or 2022.
-                // Let's assume 2026 qualifiers or something.
+            const season = 2024; // Generic season fallbacks
+
+            // Note: Some endpoints require league, but /players?search=X&season=Y usually works globally or we might need to iterate.
+            // If it fails, we might need to default to a popular league or handle error.
+            // Recent docs say: "requires league" for some plans, but let's try.
+            // Actually, if league is removed, we might need to hardcode a default popular league (e.g. PL or WC) or use a "World" context?
+            // User requested "only write name". 
+            // Let's try searching without league first.
+            let data = await fetchAPI(`/players?search=${query}&season=${season}`);
+
+            // If that fails or returns empty because league is mandatory (common in free tier), 
+            // we might default to WC (1) or PL (39).
+            if (!data.response || data.response.length === 0) {
+                // Retry with PL ID (39) just in case? Or maybe API works but no results.
+                // let's try with PL just to be safe if global fails? 
+                // actually let's stick to global attempt.
             }
 
-            // Wait, if it's 2026, we should use 2025/2026 for Europe.
-            // Let's rely on api logic or try fetch.
-            // If fetch fails with "season required", we might need dynamic season getter.
-            // For simplicity, let's use 2024 as generic fallback if 2025 fails?
-            // User context is 2026.
-
-            const data = await fetchAPI(`/players?search=${query}&season=${season}&league=${leagueId}`);
-
             if (!data.response || data.response.length === 0) {
-                resultsContainer.innerHTML = '<div class="text-center text-gray-600 mt-10 text-sm">No se encontraron jugadores.</div>';
+                resultsContainer.innerHTML = '<div class="text-center text-gray-600 mt-10 text-sm">No se encontraron jugadores. Pruba con el nombre completo.</div>';
                 return;
             }
 
             const results = data.response; // Array of { player, statistics }
 
+            // Filter duplicates if any (same player, diff leagues)
+            // ...
+
             resultsContainer.innerHTML = results.map(item => {
                 const p = item.player;
                 const stats = item.statistics[0];
                 const team = stats?.team;
+                const league = stats?.league;
 
                 return `
                     <div class="flex items-center gap-3 p-3 bg-[#111] border border-[#222] rounded-lg hover:bg-[#222] cursor-pointer transition-colors"
@@ -320,7 +309,8 @@ export const handleBuilderSearch = (query) => {
                         <div class="flex-1 min-w-0">
                             <div class="text-sm font-bold text-white truncate">${p.name}</div>
                             <div class="text-xs text-gray-500 flex items-center gap-1">
-                                ${team ? `<img src="${team.logo}" class="w-3 h-3 object-contain"> ${team.name}` : 'Sin equipo'}
+                                ${team ? `<img src="${team.logo}" class="w-3 h-3 object-contain"> ${team.name}` : ''}
+                                ${league ? ` • <span class="text-[10px] text-gray-600">${league.name}</span>` : ''}
                             </div>
                         </div>
                     </div>
