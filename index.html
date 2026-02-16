@@ -535,10 +535,9 @@
             animation: slideUp 0.25s ease-out;
         }
 
-        /* Fix for Giant Match Lineup */
+        /* Fix for Giant Match Lineup - Mobile Only constraint */
         #tab-lineups .football-pitch {
             max-width: 350px !important;
-            /* Restrict width on large screens */
             margin: 0 auto;
         }
 
@@ -556,6 +555,103 @@
         #tab-lineups .player-name-label {
             font-size: 8px;
             bottom: -18px;
+        }
+
+        /* === HORIZONTAL PITCH (DESKTOP) === */
+        @media (min-width: 1024px) {
+            #tab-lineups .football-pitch.horizontal {
+                max-width: none !important;
+                width: 100%;
+                aspect-ratio: 105 / 68;
+                /* Landscape aspect ratio */
+            }
+
+            /* Rotate/Position Markings for Horizontal View */
+            .football-pitch.horizontal .center-line {
+                width: 1px;
+                height: 100%;
+                left: 50%;
+                top: 0;
+                transform: translateX(-50%);
+            }
+
+            /* Penalty Areas (Large) */
+            .football-pitch.horizontal .penalty-box {
+                width: 15.7%;
+                height: 59%;
+                top: 50%;
+                transform: translateY(-50%);
+                border: 1px solid #333;
+            }
+
+            .football-pitch.horizontal .penalty-box.top-box {
+                /* Left Box (Home) */
+                left: 0;
+                border-left: none;
+                border-right: 1px solid #333;
+                border-top: 1px solid #333;
+                border-bottom: 1px solid #333;
+            }
+
+            .football-pitch.horizontal .penalty-box.bottom-box {
+                /* Right Box (Away) */
+                right: 0;
+                left: auto;
+                border-right: none;
+                border-left: 1px solid #333;
+                border-top: 1px solid #333;
+                border-bottom: 1px solid #333;
+            }
+
+            /* Goal Areas (Small) */
+            .football-pitch.horizontal .goal-box {
+                width: 5.2%;
+                height: 27%;
+                top: 50%;
+                transform: translateY(-50%);
+                border: 1px solid #333;
+            }
+
+            .football-pitch.horizontal .goal-box.top {
+                /* Left Box */
+                left: 0;
+                border-left: none;
+                border-right: 1px solid #333;
+                border-top: 1px solid #333;
+                border-bottom: 1px solid #333;
+            }
+
+            .football-pitch.horizontal .goal-box.bottom {
+                /* Right Box */
+                right: 0;
+                left: auto;
+                border-right: none;
+                border-left: 1px solid #333;
+                border-top: 1px solid #333;
+                border-bottom: 1px solid #333;
+            }
+
+            /* Corners */
+            .football-pitch.horizontal .corner-top-left {
+                top: -22px;
+                left: -22px;
+            }
+
+            .football-pitch.horizontal .corner-top-right {
+                top: -22px;
+                right: -22px;
+                left: auto;
+            }
+
+            .football-pitch.horizontal .corner-bottom-left {
+                bottom: -22px;
+                left: -22px;
+            }
+
+            .football-pitch.horizontal .corner-bottom-right {
+                bottom: -22px;
+                right: -22px;
+            }
         }
     </style>
 </head>
