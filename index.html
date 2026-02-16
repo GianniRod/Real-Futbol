@@ -575,22 +575,55 @@
                 transform: translateX(-50%);
             }
 
+            /* Fix Center Circle Geometry for Horizontal */
+            .football-pitch.horizontal .center-circle {
+                width: 17.4%;
+                /* 18.3m / 105m */
+                height: 26.9%;
+                /* 18.3m / 68m */
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                padding-bottom: 0;
+                /* Remove vertical aspect ratio hack */
+                border-radius: 50%;
+            }
+
+            /* Larger Players on Desktop Match Detail */
+            #tab-lineups .football-pitch.horizontal .player-marker {
+                width: 60px;
+                height: 60px;
+            }
+
+            #tab-lineups .football-pitch.horizontal .player-name-label {
+                font-size: 11px;
+                bottom: -20px;
+                font-weight: 700;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            }
+
+            #tab-lineups .football-pitch.horizontal .player-rating-badge {
+                font-size: 10px;
+                padding: 2px 5px;
+            }
+
             /* Penalty Areas (Large) */
             .football-pitch.horizontal .penalty-box {
                 width: 15.7%;
                 height: 59%;
                 top: 50%;
                 transform: translateY(-50%);
-                border: 1px solid #333;
+                border: 1px solid #444;
+                /* More visible border */
             }
 
             .football-pitch.horizontal .penalty-box.top-box {
                 /* Left Box (Home) */
                 left: 0;
                 border-left: none;
-                border-right: 1px solid #333;
-                border-top: 1px solid #333;
-                border-bottom: 1px solid #333;
+                border-right: 1px solid #444;
+                border-top: 1px solid #444;
+                border-bottom: 1px solid #444;
             }
 
             .football-pitch.horizontal .penalty-box.bottom-box {
@@ -598,9 +631,9 @@
                 right: 0;
                 left: auto;
                 border-right: none;
-                border-left: 1px solid #333;
-                border-top: 1px solid #333;
-                border-bottom: 1px solid #333;
+                border-left: 1px solid #444;
+                border-top: 1px solid #444;
+                border-bottom: 1px solid #444;
             }
 
             /* Goal Areas (Small) */
@@ -609,16 +642,16 @@
                 height: 27%;
                 top: 50%;
                 transform: translateY(-50%);
-                border: 1px solid #333;
+                border: 1px solid #444;
             }
 
             .football-pitch.horizontal .goal-box.top {
                 /* Left Box */
                 left: 0;
                 border-left: none;
-                border-right: 1px solid #333;
-                border-top: 1px solid #333;
-                border-bottom: 1px solid #333;
+                border-right: 1px solid #444;
+                border-top: 1px solid #444;
+                border-bottom: 1px solid #444;
             }
 
             .football-pitch.horizontal .goal-box.bottom {
@@ -626,9 +659,9 @@
                 right: 0;
                 left: auto;
                 border-right: none;
-                border-left: 1px solid #333;
-                border-top: 1px solid #333;
-                border-bottom: 1px solid #333;
+                border-left: 1px solid #444;
+                border-top: 1px solid #444;
+                border-bottom: 1px solid #444;
             }
 
             /* Corners */
