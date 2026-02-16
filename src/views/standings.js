@@ -665,6 +665,13 @@ export const showStandings = async (idOrParams, name) => {
     // Update UI Visibility
     document.getElementById('view-match-list').classList.add('hidden');
     document.getElementById('date-nav').classList.add('hidden');
+    document.getElementById('view-match-detail').classList.add('hidden');
+    document.getElementById('view-forum').classList.add('hidden');
+    const viewTeam = document.getElementById('view-team');
+    if (viewTeam) viewTeam.classList.add('hidden'); // Ensure Team view is hidden
+    const viewLineup = document.getElementById('view-lineup-builder');
+    if (viewLineup) viewLineup.classList.add('hidden');
+
     viewStandings.classList.remove('hidden');
 
     // START: Layout Modification
