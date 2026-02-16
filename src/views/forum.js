@@ -407,6 +407,8 @@ export const navigateToForum = () => {
     document.getElementById('view-match-list').classList.add('hidden');
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-match-detail').classList.add('hidden');
+    const viewLineup = document.getElementById('view-lineup-builder');
+    if (viewLineup) viewLineup.classList.add('hidden');
     document.getElementById('date-nav').classList.add('hidden');
     document.getElementById('view-forum').classList.remove('hidden');
 
