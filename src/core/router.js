@@ -21,6 +21,7 @@ const routes = [
     { pattern: '/liga/:id', handler: 'showStandingsById' },
     { pattern: '/liga/:id/:name', handler: 'showStandingsByIdAndName' },
     { pattern: '/equipo/:id', handler: 'showTeamProfile' },
+    { pattern: '/lineup-builder', handler: 'openLineupBuilder' },
 ];
 
 /**
