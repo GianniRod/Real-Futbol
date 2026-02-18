@@ -142,6 +142,8 @@ const navigateToMatches = () => {
         return;
     }
 
+    document.title = 'Real Futbol';
+
     // Cambiar vistas
     document.getElementById('view-standings').classList.add('hidden');
     document.getElementById('view-forum').classList.add('hidden');
@@ -713,8 +715,34 @@ const init = () => {
         openMatchDetail,
         showStandingsById,
         showStandingsByIdAndName,
-        showTeamProfile: showTeamProfileHandler
+        showTeamProfile: showTeamProfileHandler,
+        openLineupBuilder // Registered handler
     });
+};
+
+/**
+ * Handler para abrir el Lineup Builder via URL o navegación
+ */
+const openLineupBuilder = async () => {
+    const { initLineupBuilder } = await import('./views/lineupBuilder.js');
+
+    // Logic to switch view
+    document.getElementById('view-match-list').classList.add('hidden');
+    document.getElementById('view-standings').classList.add('hidden');
+    document.getElementById('view-match-detail').classList.add('hidden');
+    document.getElementById('view-forum').classList.add('hidden');
+    document.getElementById('view-team').classList.add('hidden');
+    document.getElementById('date-nav').classList.add('hidden');
+    document.getElementById('view-lineup-builder').classList.remove('hidden');
+
+    // Hide sidebar on mobile
+    document.getElementById('sidebar').classList.add('-translate-x-full');
+    document.getElementById('mobile-backdrop').classList.add('hidden');
+
+    // Update Title for SEO
+    document.title = 'Arma tu 11 - Real Futbol';
+
+    initLineupBuilder();
 };
 
 // Exportar todo a window.app para compatibilidad con onclick
@@ -762,23 +790,8 @@ window.app = {
     cancelReply,
 
     // Lineup Builder
-    navigateToLineupBuilder: async () => {
-        const { initLineupBuilder } = await import('./views/lineupBuilder.js');
-        // Logic to switch view
-        document.getElementById('view-match-list').classList.add('hidden');
-        document.getElementById('view-standings').classList.add('hidden');
-        document.getElementById('view-match-detail').classList.add('hidden');
-        document.getElementById('view-forum').classList.add('hidden');
-        document.getElementById('view-team').classList.add('hidden');
-        document.getElementById('date-nav').classList.add('hidden');
-        document.getElementById('view-lineup-builder').classList.remove('hidden');
-
-        // Hide sidebar on mobile to maximize space? Or keep it?
-        // Let's keep sidebar behavior consistent (hidden on mobile unless toggled)
-        document.getElementById('sidebar').classList.add('-translate-x-full');
-        document.getElementById('mobile-backdrop').classList.add('hidden');
-
-        initLineupBuilder();
+    navigateToLineupBuilder: () => {
+        navigate('/lineup-builder');
     },
     selectFormation: async (f) => {
         const { selectFormation } = await import('./views/lineupBuilder.js');
