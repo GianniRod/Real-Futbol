@@ -117,6 +117,11 @@ import {
 } from './views/suggestions.js';
 
 import {
+    openAnalyticsPanel,
+    closeAnalyticsPanel
+} from './views/analytics.js';
+
+import {
     setFeaturedMatch,
     clearFeaturedMatch,
     loadFeaturedMatch,
@@ -900,6 +905,10 @@ window.app = {
     openSuggestionModal,
     closeSuggestionModal,
     sendSuggestion,
+
+    // Analytics
+    openAnalyticsPanel,
+    closeAnalyticsPanel,
 
     // Navigation
     navigateToMatches,
