@@ -34,29 +34,27 @@ const getWeekKey = (date = new Date()) => {
 };
 
 /**
- * Registra una visita semanal en Firestore
- * Se llama desde auth.js al autenticar usuario
+ * Registra una visita semanal en el perfil del usuario
+ * Guarda un array de semanas visitadas en user_profiles
+ * @param {string} uid - UID del usuario
  */
-export const recordVisit = async () => {
+export const recordVisit = async (uid) => {
     try {
         const weekKey = getWeekKey();
-        const visitRef = doc(db, "site_visits", weekKey);
-        const visitSnap = await getDoc(visitRef);
+        const profileRef = doc(db, "user_profiles", uid);
+        const profileSnap = await getDoc(profileRef);
 
-        if (visitSnap.exists()) {
-            const currentCount = visitSnap.data().count || 0;
-            await setDoc(visitRef, {
-                count: currentCount + 1,
-                week: weekKey,
-                updatedAt: Date.now()
-            });
-        } else {
-            await setDoc(visitRef, {
-                count: 1,
-                week: weekKey,
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            });
+        if (profileSnap.exists()) {
+            const data = profileSnap.data();
+            const visitWeeks = data.visitWeeks || [];
+
+            // Solo agregar si no visitó esta semana ya
+            if (!visitWeeks.includes(weekKey)) {
+                visitWeeks.push(weekKey);
+                // Mantener solo las últimas 12 semanas
+                while (visitWeeks.length > 12) visitWeeks.shift();
+                await setDoc(profileRef, { visitWeeks }, { merge: true });
+            }
         }
     } catch (error) {
         console.error('Error recording visit:', error);
@@ -86,20 +84,25 @@ const countTotalUsers = async () => {
 };
 
 /**
- * Obtiene visitas semanales (últimas 8 semanas)
+ * Obtiene visitas semanales derivadas de user_profiles.visitWeeks
+ * Cuenta cuántos usuarios visitaron cada semana
  * @returns {Promise<Array<{week: string, count: number}>>}
  */
 const getWeeklyVisits = async () => {
     try {
-        const snapshot = await getDocs(collection(db, "site_visits"));
-        const visits = [];
+        const snapshot = await getDocs(collection(db, "user_profiles"));
+        const weekCounts = {};
+
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            visits.push({
-                week: docSnap.id,
-                count: data.count || 0
+            const visitWeeks = data.visitWeeks || [];
+            visitWeeks.forEach(week => {
+                weekCounts[week] = (weekCounts[week] || 0) + 1;
             });
         });
+
+        // Convertir a array
+        const visits = Object.entries(weekCounts).map(([week, count]) => ({ week, count }));
 
         // Ordenar por semana descendente y tomar últimas 8
         visits.sort((a, b) => b.week.localeCompare(a.week));
