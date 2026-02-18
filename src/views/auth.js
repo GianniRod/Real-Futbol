@@ -40,6 +40,7 @@ import {
 import { getUserRole, DEVELOPER_UID } from './moderation.js';
 import { getUserStats, getTopUsers } from './user_stats.js';
 import { ARGENTINE_TEAMS } from '../data/teams.js';
+import { recordVisit } from './analytics.js';
 
 // State
 let currentUser = null;
@@ -745,6 +746,15 @@ export const initAuth = () => {
             const profile = await getUserProfile(user.uid);
             currentUserProfile = profile;
 
+            // Actualizar lastActive y registrar visita semanal
+            try {
+                const profileRef = doc(db, "user_profiles", user.uid);
+                await setDoc(profileRef, { lastActive: Date.now() }, { merge: true });
+                await recordVisit();
+            } catch (e) {
+                console.warn('Could not update lastActive/visit:', e);
+            }
+
             // Detectar rol del usuario
             currentUserRole = await getUserRole(user.uid);
             isRoleLoaded = true;
@@ -784,6 +794,16 @@ export const initAuth = () => {
                 }
             }
 
+            // Mostrar/ocultar botón de analytics (solo developer)
+            const analyticsBtn = document.getElementById('analytics-btn');
+            if (analyticsBtn) {
+                if (currentUserRole === 'developer') {
+                    analyticsBtn.classList.remove('hidden');
+                } else {
+                    analyticsBtn.classList.add('hidden');
+                }
+            }
+
             if (modBadge) {
                 if (currentUserRole === 'moderator') {
                     modBadge.classList.remove('hidden');
@@ -814,9 +834,11 @@ export const initAuth = () => {
             // Ocultar botones de moderación
             const modBtn = document.getElementById('moderation-btn');
             const modBadge = document.getElementById('moderator-badge-btn');
+            const analyticsBtn = document.getElementById('analytics-btn');
 
             if (modBtn) modBtn.classList.add('hidden');
             if (modBadge) modBadge.classList.add('hidden');
+            if (analyticsBtn) analyticsBtn.classList.add('hidden');
 
             updateAuthUI(null, null);
         }
