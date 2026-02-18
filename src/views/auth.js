@@ -750,7 +750,7 @@ export const initAuth = () => {
             try {
                 const profileRef = doc(db, "user_profiles", user.uid);
                 await setDoc(profileRef, { lastActive: Date.now() }, { merge: true });
-                await recordVisit();
+                await recordVisit(user.uid);
             } catch (e) {
                 console.warn('Could not update lastActive/visit:', e);
             }
