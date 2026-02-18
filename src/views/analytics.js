@@ -137,6 +137,8 @@ const countActiveUsers = async () => {
 
 /**
  * Cuenta todos los comentarios en foros (global + partidos)
+ * Todos están en la colección forum_messages, diferenciados por campo context
+ * context = 'global' para foro global, context = 'match_{id}' para foros de partidos
  * @returns {Promise<{total: number, global: number, matches: number}>}
  */
 const countAllComments = async () => {
@@ -144,29 +146,19 @@ const countAllComments = async () => {
     let matchCount = 0;
 
     try {
-        // Contar mensajes del foro global (no deleted)
-        const globalSnapshot = await getDocs(collection(db, "forum_messages"));
-        globalSnapshot.forEach(docSnap => {
+        const snapshot = await getDocs(collection(db, "forum_messages"));
+        snapshot.forEach(docSnap => {
             const data = docSnap.data();
             if (!data.deleted) {
-                globalCount++;
+                if (data.context === 'global') {
+                    globalCount++;
+                } else {
+                    matchCount++;
+                }
             }
         });
     } catch (error) {
-        console.error('Error counting global messages:', error);
-    }
-
-    try {
-        // Contar mensajes de foros de partidos
-        const matchSnapshot = await getDocs(collection(db, "match_forum_messages"));
-        matchSnapshot.forEach(docSnap => {
-            const data = docSnap.data();
-            if (!data.deleted) {
-                matchCount++;
-            }
-        });
-    } catch (error) {
-        console.error('Error counting match messages:', error);
+        console.error('Error counting messages:', error);
     }
 
     return {
