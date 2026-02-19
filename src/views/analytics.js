@@ -6,13 +6,14 @@
  * Exports:
  * - openAnalyticsPanel(): Abre el panel de analytics
  * - closeAnalyticsPanel(): Cierra el panel
- * - recordVisit(): Registra una visita semanal
+ * - recordSession(): Registra una sesión (30 min de duración)
  */
 
 import {
     db,
     collection,
     getDocs,
+    addDoc,
     query,
     where,
     doc,
@@ -34,30 +35,34 @@ const getWeekKey = (date = new Date()) => {
 };
 
 /**
- * Registra una visita semanal en el perfil del usuario
- * Guarda un array de semanas visitadas en user_profiles
- * @param {string} uid - UID del usuario
+ * Registra una sesión de 30 minutos.
+ * No requiere autenticación - cualquier persona que entre genera una sesión.
+ * Usa localStorage para saber si la sesión actual sigue activa (30 min).
+ * Guarda cada sesión nueva como documento en la colección 'sessions' de Firestore.
  */
-export const recordVisit = async (uid) => {
+export const recordSession = async () => {
     try {
-        const weekKey = getWeekKey();
-        const profileRef = doc(db, "user_profiles", uid);
-        const profileSnap = await getDoc(profileRef);
+        const SESSION_DURATION = 30 * 60 * 1000; // 30 minutos en ms
+        const now = Date.now();
 
-        if (profileSnap.exists()) {
-            const data = profileSnap.data();
-            const visitWeeks = data.visitWeeks || [];
-
-            // Solo agregar si no visitó esta semana ya
-            if (!visitWeeks.includes(weekKey)) {
-                visitWeeks.push(weekKey);
-                // Mantener solo las últimas 12 semanas
-                while (visitWeeks.length > 12) visitWeeks.shift();
-                await setDoc(profileRef, { visitWeeks }, { merge: true });
-            }
+        // Verificar si hay una sesión activa en localStorage
+        const sessionExpiry = localStorage.getItem('rf_session_expiry');
+        if (sessionExpiry && now < parseInt(sessionExpiry)) {
+            // Sesión aún activa, no crear nueva
+            return;
         }
+
+        // Crear nueva sesión
+        const weekKey = getWeekKey();
+        await addDoc(collection(db, 'sessions'), {
+            weekKey,
+            timestamp: now
+        });
+
+        // Guardar expiración de sesión en localStorage
+        localStorage.setItem('rf_session_expiry', String(now + SESSION_DURATION));
     } catch (error) {
-        console.error('Error recording visit:', error);
+        console.error('Error recording session:', error);
     }
 };
 
@@ -84,31 +89,31 @@ const countTotalUsers = async () => {
 };
 
 /**
- * Obtiene visitas semanales derivadas de user_profiles.visitWeeks
- * Cuenta cuántos usuarios visitaron cada semana
+ * Obtiene sesiones semanales de la colección 'sessions'
+ * Cuenta cuántas sesiones hubo cada semana
  * @returns {Promise<Array<{week: string, count: number}>>}
  */
-const getWeeklyVisits = async () => {
+const getWeeklySessions = async () => {
     try {
-        const snapshot = await getDocs(collection(db, "user_profiles"));
+        const snapshot = await getDocs(collection(db, 'sessions'));
         const weekCounts = {};
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            const visitWeeks = data.visitWeeks || [];
-            visitWeeks.forEach(week => {
+            const week = data.weekKey;
+            if (week) {
                 weekCounts[week] = (weekCounts[week] || 0) + 1;
-            });
+            }
         });
 
         // Convertir a array
-        const visits = Object.entries(weekCounts).map(([week, count]) => ({ week, count }));
+        const sessions = Object.entries(weekCounts).map(([week, count]) => ({ week, count }));
 
         // Ordenar por semana descendente y tomar últimas 8
-        visits.sort((a, b) => b.week.localeCompare(a.week));
-        return visits.slice(0, 8).reverse(); // Más antiguas primero para el gráfico
+        sessions.sort((a, b) => b.week.localeCompare(a.week));
+        return sessions.slice(0, 8).reverse(); // Más antiguas primero para el gráfico
     } catch (error) {
-        console.error('Error getting weekly visits:', error);
+        console.error('Error getting weekly sessions:', error);
         return [];
     }
 };
@@ -169,18 +174,18 @@ const countAllComments = async () => {
 };
 
 /**
- * Genera el HTML del mini gráfico de barras para visitas semanales
- * @param {Array<{week: string, count: number}>} visits
+ * Genera el HTML del mini gráfico de barras para sesiones semanales
+ * @param {Array<{week: string, count: number}>} sessions
  * @returns {string}
  */
-const renderVisitsChart = (visits) => {
-    if (visits.length === 0) {
-        return '<div class="text-gray-500 text-xs text-center py-4">Sin datos de visitas</div>';
+const renderSessionsChart = (sessions) => {
+    if (sessions.length === 0) {
+        return '<div class="text-gray-500 text-xs text-center py-4">Sin datos de sesiones</div>';
     }
 
-    const maxCount = Math.max(...visits.map(v => v.count), 1);
+    const maxCount = Math.max(...sessions.map(v => v.count), 1);
 
-    const bars = visits.map(v => {
+    const bars = sessions.map(v => {
         const height = Math.max((v.count / maxCount) * 100, 4); // Mínimo 4% de altura
         const weekLabel = v.week.split('-W')[1] ? `S${v.week.split('-W')[1]}` : v.week;
         return `
@@ -218,9 +223,9 @@ export const openAnalyticsPanel = async () => {
     }
 
     // Cargar datos en paralelo
-    const [totalUsers, weeklyVisits, activeUsers, comments] = await Promise.all([
+    const [totalUsers, weeklySessions, activeUsers, comments] = await Promise.all([
         countTotalUsers(),
-        getWeeklyVisits(),
+        getWeeklySessions(),
         countActiveUsers(),
         countAllComments()
     ]);
@@ -244,7 +249,7 @@ export const openAnalyticsPanel = async () => {
                 <div class="text-[9px] text-gray-600 mt-1">Cuentan email y teléfono</div>
             </div>
 
-            <!-- Visitas Semanales -->
+            <!-- Sesiones Semanales -->
             <div class="bg-[#0a0a0a] border border-[#222] rounded-lg p-4">
                 <div class="flex items-center gap-3 mb-2">
                     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
@@ -253,11 +258,12 @@ export const openAnalyticsPanel = async () => {
                         </svg>
                     </div>
                     <div>
-                        <div class="text-2xl font-black text-white font-mono">${weeklyVisits.length > 0 ? weeklyVisits[weeklyVisits.length - 1].count : 0}</div>
-                        <div class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Visitas esta semana</div>
+                        <div class="text-2xl font-black text-white font-mono">${weeklySessions.length > 0 ? weeklySessions[weeklySessions.length - 1].count : 0}</div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Sesiones esta semana</div>
                     </div>
                 </div>
-                ${renderVisitsChart(weeklyVisits)}
+                ${renderSessionsChart(weeklySessions)}
+                <div class="text-[9px] text-gray-600 mt-1">Cada sesión dura 30 minutos</div>
             </div>
 
             <!-- Usuarios Activos -->
