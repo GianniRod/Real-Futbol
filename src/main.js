@@ -118,7 +118,8 @@ import {
 
 import {
     openAnalyticsPanel,
-    closeAnalyticsPanel
+    closeAnalyticsPanel,
+    recordSession
 } from './views/analytics.js';
 
 import {
@@ -688,6 +689,9 @@ const init = () => {
     // Inicializar autenticación
     initAuth();
 
+    // Registrar sesión (anónima, 30 min)
+    recordSession();
+
     // Inicializar matches (carga calendario y partidos)
     initMatches();
 
@@ -909,6 +913,7 @@ window.app = {
     // Analytics
     openAnalyticsPanel,
     closeAnalyticsPanel,
+    recordSession,
 
     // Navigation
     navigateToMatches,
