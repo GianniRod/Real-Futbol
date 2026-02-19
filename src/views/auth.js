@@ -40,7 +40,7 @@ import {
 import { getUserRole, DEVELOPER_UID } from './moderation.js';
 import { getUserStats, getTopUsers } from './user_stats.js';
 import { ARGENTINE_TEAMS } from '../data/teams.js';
-import { recordVisit } from './analytics.js';
+
 
 // State
 let currentUser = null;
@@ -750,9 +750,8 @@ export const initAuth = () => {
             try {
                 const profileRef = doc(db, "user_profiles", user.uid);
                 await setDoc(profileRef, { lastActive: Date.now() }, { merge: true });
-                await recordVisit(user.uid);
             } catch (e) {
-                console.warn('Could not update lastActive/visit:', e);
+                console.warn('Could not update lastActive:', e);
             }
 
             // Detectar rol del usuario
