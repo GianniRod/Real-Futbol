@@ -22,7 +22,8 @@ const state = {
     date: new Date(),
     matches: [],
     liveOnly: false,
-    isViewingToday: true
+    isViewingToday: true,
+    leagueOrder: [] // Custom league display order (array of league IDs)
 };
 
 // Helpers
@@ -34,6 +35,39 @@ const formatDate = (d) => {
 };
 
 const getDayName = (d) => d.toLocaleDateString('es-AR', { weekday: 'short' }).toUpperCase().replace('.', '');
+
+/**
+ * Guarda el orden de ligas en localStorage (por fecha)
+ */
+const saveLeagueOrder = () => {
+    const key = `leagueOrder_${formatDate(state.date)}`;
+    localStorage.setItem(key, JSON.stringify(state.leagueOrder));
+};
+
+/**
+ * Carga el orden de ligas desde localStorage (por fecha)
+ */
+const loadLeagueOrder = () => {
+    const key = `leagueOrder_${formatDate(state.date)}`;
+    const saved = localStorage.getItem(key);
+    state.leagueOrder = saved ? JSON.parse(saved) : [];
+};
+
+/**
+ * Mueve una liga una posición arriba o abajo
+ * @param {number} leagueId - ID de la liga
+ * @param {number} direction - -1 (arriba) o 1 (abajo)
+ */
+export const moveLeague = (leagueId, direction) => {
+    const idx = state.leagueOrder.indexOf(leagueId);
+    if (idx === -1) return;
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= state.leagueOrder.length) return;
+    // Swap
+    [state.leagueOrder[idx], state.leagueOrder[newIdx]] = [state.leagueOrder[newIdx], state.leagueOrder[idx]];
+    saveLeagueOrder();
+    renderMatches();
+};
 
 /**
  * Renderiza el calendario de 7 días
@@ -280,8 +314,34 @@ export const renderMatches = () => {
         groupsMap[m.league.id].matches.push(m);
     });
 
+    // Apply custom league order if available
+    loadLeagueOrder();
+    if (state.leagueOrder.length === 0) {
+        // Initialize order from current natural order
+        state.leagueOrder = groupsList.map(g => g.id);
+        saveLeagueOrder();
+    } else {
+        // Add any new leagues not in saved order
+        groupsList.forEach(g => {
+            if (!state.leagueOrder.includes(g.id)) {
+                state.leagueOrder.push(g.id);
+            }
+        });
+        // Sort groupsList by saved order
+        groupsList.sort((a, b) => {
+            const idxA = state.leagueOrder.indexOf(a.id);
+            const idxB = state.leagueOrder.indexOf(b.id);
+            return idxA - idxB;
+        });
+    }
+
     let html = '';
-    groupsList.forEach(g => {
+    groupsList.forEach((g, gIndex) => {
+        const isFirst = gIndex === 0;
+        const isLast = gIndex === groupsList.length - 1;
+        const upBtn = !isFirst ? `<button onclick="event.stopPropagation(); app.moveLeague(${g.id}, -1)" class="p-1 text-gray-600 hover:text-white transition-colors" title="Subir"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg></button>` : '';
+        const downBtn = !isLast ? `<button onclick="event.stopPropagation(); app.moveLeague(${g.id}, 1)" class="p-1 text-gray-600 hover:text-white transition-colors" title="Bajar"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg></button>` : '';
+
         html += `
             <div class="mb-6">
                 <div class="bg-[#0a0a0a] border border-[#222] rounded-lg overflow-hidden flex flex-col">
@@ -290,9 +350,12 @@ export const renderMatches = () => {
                             <img src="${g.logo}" class="w-5 h-5 object-contain group-hover:scale-110 transition-transform">
                             <h3 class="text-xs font-black text-white uppercase tracking-widest group-hover:text-gray-200 transition-colors">${g.name}</h3>
                         </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
+                        <div class="flex items-center gap-1">
+                            ${upBtn}${downBtn}
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </div>
                     </div>`;
 
         g.matches.forEach((m, index) => {
