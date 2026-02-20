@@ -162,6 +162,9 @@ export const loadMatches = async (silent = false) => {
 
         state.matches = matches;
 
+        // Load saved league order for this date
+        loadLeagueOrder();
+
         // Fetch aggregate scores for 2nd leg matches
         await loadAggregateScores(matches);
 
@@ -314,26 +317,27 @@ export const renderMatches = () => {
         groupsMap[m.league.id].matches.push(m);
     });
 
-    // Apply custom league order if available
-    loadLeagueOrder();
-    if (state.leagueOrder.length === 0) {
-        // Initialize order from current natural order
-        state.leagueOrder = groupsList.map(g => g.id);
-        saveLeagueOrder();
-    } else {
+    // Apply custom league order
+    if (state.leagueOrder.length > 0) {
         // Add any new leagues not in saved order
         groupsList.forEach(g => {
             if (!state.leagueOrder.includes(g.id)) {
                 state.leagueOrder.push(g.id);
             }
         });
+        // Remove leagues that are no longer present
+        state.leagueOrder = state.leagueOrder.filter(id => groupsMap[id]);
         // Sort groupsList by saved order
         groupsList.sort((a, b) => {
             const idxA = state.leagueOrder.indexOf(a.id);
             const idxB = state.leagueOrder.indexOf(b.id);
             return idxA - idxB;
         });
+    } else {
+        // Initialize order from current natural order
+        state.leagueOrder = groupsList.map(g => g.id);
     }
+    saveLeagueOrder();
 
     let html = '';
     groupsList.forEach((g, gIndex) => {
