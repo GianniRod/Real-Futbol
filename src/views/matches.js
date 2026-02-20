@@ -15,7 +15,7 @@
  */
 
 import { fetchAPI } from '../core/api.js';
-import { db, collection, where, query, getCountFromServer } from '../core/firebase.js';
+import { db, collection, where, query, getCountFromServer, doc, getDoc, setDoc } from '../core/firebase.js';
 
 // State
 const state = {
@@ -37,35 +37,50 @@ const formatDate = (d) => {
 const getDayName = (d) => d.toLocaleDateString('es-AR', { weekday: 'short' }).toUpperCase().replace('.', '');
 
 /**
- * Guarda el orden de ligas en localStorage (por fecha)
+ * Guarda el orden de ligas en Firebase (por fecha)
  */
-const saveLeagueOrder = () => {
-    const key = `leagueOrder_${formatDate(state.date)}`;
-    localStorage.setItem(key, JSON.stringify(state.leagueOrder));
+const saveLeagueOrder = async () => {
+    try {
+        const dateKey = formatDate(state.date);
+        const docRef = doc(db, 'settings', `leagueOrder_${dateKey}`);
+        await setDoc(docRef, { order: state.leagueOrder, updatedAt: new Date().toISOString() });
+    } catch (e) {
+        console.error('Error saving league order:', e);
+    }
 };
 
 /**
- * Carga el orden de ligas desde localStorage (por fecha)
+ * Carga el orden de ligas desde Firebase (por fecha)
  */
-const loadLeagueOrder = () => {
-    const key = `leagueOrder_${formatDate(state.date)}`;
-    const saved = localStorage.getItem(key);
-    state.leagueOrder = saved ? JSON.parse(saved) : [];
+const loadLeagueOrder = async () => {
+    try {
+        const dateKey = formatDate(state.date);
+        const docRef = doc(db, 'settings', `leagueOrder_${dateKey}`);
+        const snap = await getDoc(docRef);
+        if (snap.exists() && snap.data().order) {
+            state.leagueOrder = snap.data().order;
+        } else {
+            state.leagueOrder = [];
+        }
+    } catch (e) {
+        console.error('Error loading league order:', e);
+        state.leagueOrder = [];
+    }
 };
 
 /**
- * Mueve una liga una posición arriba o abajo
+ * Mueve una liga una posición arriba o abajo (solo developer)
  * @param {number} leagueId - ID de la liga
  * @param {number} direction - -1 (arriba) o 1 (abajo)
  */
-export const moveLeague = (leagueId, direction) => {
+export const moveLeague = async (leagueId, direction) => {
     const idx = state.leagueOrder.indexOf(leagueId);
     if (idx === -1) return;
     const newIdx = idx + direction;
     if (newIdx < 0 || newIdx >= state.leagueOrder.length) return;
     // Swap
     [state.leagueOrder[idx], state.leagueOrder[newIdx]] = [state.leagueOrder[newIdx], state.leagueOrder[idx]];
-    saveLeagueOrder();
+    await saveLeagueOrder();
     renderMatches();
 };
 
@@ -162,8 +177,8 @@ export const loadMatches = async (silent = false) => {
 
         state.matches = matches;
 
-        // Load saved league order for this date
-        loadLeagueOrder();
+        // Load saved league order for this date from Firebase
+        await loadLeagueOrder();
 
         // Fetch aggregate scores for 2nd leg matches
         await loadAggregateScores(matches);
@@ -293,7 +308,7 @@ const loadAggregateScores = async (matches) => {
 /**
  * Renderiza los partidos en el DOM
  */
-export const renderMatches = () => {
+export const renderMatches = async () => {
     const container = document.getElementById('view-match-list');
     let list = state.matches;
     if (state.liveOnly) {
@@ -337,14 +352,20 @@ export const renderMatches = () => {
         // Initialize order from current natural order
         state.leagueOrder = groupsList.map(g => g.id);
     }
-    saveLeagueOrder();
+
+    // Check if user is developer (for showing reorder arrows)
+    let isDev = false;
+    try {
+        const { getCurrentUserRole } = await import('./auth.js');
+        isDev = getCurrentUserRole() === 'developer';
+    } catch (e) { /* not logged in */ }
 
     let html = '';
     groupsList.forEach((g, gIndex) => {
         const isFirst = gIndex === 0;
         const isLast = gIndex === groupsList.length - 1;
-        const upBtn = !isFirst ? `<button onclick="event.stopPropagation(); app.moveLeague(${g.id}, -1)" class="p-1 text-gray-600 hover:text-white transition-colors" title="Subir"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg></button>` : '';
-        const downBtn = !isLast ? `<button onclick="event.stopPropagation(); app.moveLeague(${g.id}, 1)" class="p-1 text-gray-600 hover:text-white transition-colors" title="Bajar"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg></button>` : '';
+        const upBtn = (isDev && !isFirst) ? `<button onclick="event.stopPropagation(); app.moveLeague(${g.id}, -1)" class="p-1 text-gray-600 hover:text-white transition-colors" title="Subir"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg></button>` : '';
+        const downBtn = (isDev && !isLast) ? `<button onclick="event.stopPropagation(); app.moveLeague(${g.id}, 1)" class="p-1 text-gray-600 hover:text-white transition-colors" title="Bajar"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg></button>` : '';
 
         html += `
             <div class="mb-6">
