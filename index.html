@@ -535,13 +535,13 @@
             animation: slideUp 0.25s ease-out;
         }
 
-        /* Fix for Giant Match Lineup - Mobile Only constraint */
+        /* Fix for Giant Match Lineup - constraint */
         #tab-lineups .football-pitch {
-            max-width: 350px !important;
+            max-width: 400px !important;
             margin: 0 auto;
         }
 
-        /* Scale down players in match detail lineup */
+        /* Scale down players in match detail lineup by default */
         #tab-lineups .player-marker {
             width: 36px;
             height: 36px;
@@ -555,6 +555,31 @@
         #tab-lineups .player-name-label {
             font-size: 8px;
             bottom: -18px;
+        }
+
+        /* Mobile: taller pitch + smaller players for more spacing */
+        @media (max-width: 768px) {
+            #tab-lineups .football-pitch {
+                aspect-ratio: 46 / 115 !important;
+                width: 95% !important;
+            }
+
+            #tab-lineups .player-marker {
+                width: 34px !important;
+                height: 34px !important;
+            }
+
+            #tab-lineups .player-name-label {
+                font-size: 7px;
+                bottom: -16px;
+            }
+
+            #tab-lineups .player-rating-badge {
+                font-size: 6px;
+                padding: 1px 2px;
+                top: -6px;
+                right: -7px;
+            }
         }
 
         /* === HORIZONTAL PITCH (DESKTOP) === */
