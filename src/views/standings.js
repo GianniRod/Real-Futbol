@@ -29,7 +29,7 @@ const state = {
 // IDs de ligas europeas (para formato de temporada)
 const EUROPEAN_LEAGUES = [39, 140, 78, 135, 61, 2, 3, 143, 137]; // PL, LaLiga, Bundesliga, SerieA, Ligue1, UCL, UEL, CopaRey, CoppaItalia
 // IDs de Copas (para vista de Bracket)
-const CUP_LEAGUES = [130, 137, 143, 331]; // Copa Argentina, Coppa Italia, Copa del Rey, Recopa Sudamericana
+const CUP_LEAGUES = [130, 137, 143]; // Copa Argentina, Coppa Italia, Copa del Rey
 // IDs de Mundiales (Grupos + Eliminatorias)
 const WORLD_CUP_LEAGUES = [1]; // FIFA World Cup
 
