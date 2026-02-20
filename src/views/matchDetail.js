@@ -683,15 +683,15 @@ const renderLineups = (m) => {
                     const totalLines = Object.keys(lines).length;
 
                     if (side === 'away') {
-                        const availableSpace = 42;
+                        const availableSpace = 46;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        y = 4 + (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) y = 4;
+                        y = 2.5 + (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) y = 2.5;
                     } else {
-                        const availableSpace = 40;
+                        const availableSpace = 46;
                         const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        y = 93 - (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) y = 93;
+                        y = 97.5 - (lineIdx - 1) * spacing;
+                        if (lineIdx === 1) y = 97.5;
                     }
 
                     const segment = 100 / (count + 1);
