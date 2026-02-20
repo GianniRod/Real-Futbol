@@ -22,7 +22,8 @@ import {
     toggleLiveFilter,
     loadMessageCounts,
     toggleCalendar,
-    changeMonth
+    changeMonth,
+    moveLeague
 } from './views/matches.js';
 
 import {
@@ -766,6 +767,7 @@ window.app = {
     loadMessageCounts,
     toggleCalendar,
     changeMonth,
+    moveLeague,
 
     // Match Detail
     openDetail,
