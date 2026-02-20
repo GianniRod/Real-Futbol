@@ -356,7 +356,8 @@ export const renderMatches = async () => {
     // Check if user is developer (for showing reorder arrows)
     let isDev = false;
     try {
-        const { getCurrentUserRole } = await import('./auth.js');
+        const { getCurrentUserRole, whenRoleReady } = await import('./auth.js');
+        await whenRoleReady();
         isDev = getCurrentUserRole() === 'developer';
     } catch (e) { /* not logged in */ }
 
