@@ -1,1367 +1,2595 @@
-/**
- * Match Detail View Module
- * 
- * Propósito: Vista detallada de partido con tabs (timeline, lineups, stats, forum)
- * 
- * Exports:
- * - openDetail(params): Abre detalle de un partido desde router
- * - openMatchDetailWithTab(params): Abre con tab específico
- * - closeDetail(): Cierra vista de detalle
- * - switchTab(btn, targetId): Cambia entre tabs
- */
+<!DOCTYPE html>
+<html lang="es" class="dark">
 
-import { fetchAPI } from '../core/api.js';
-import { getMatches, updateMatchEvents } from './matches.js';
-import { initForum } from './forum.js';
-
-// State
-let selectedMatch = null;
-
-
-/**
- * Renderiza el timeline de eventos
- */
-const renderTimeline = (m) => {
-    const c = document.getElementById('tab-timeline');
-    let ev = [...(m.events || [])];
-
-    // Separar penales de tiempo regular
-    const isPenalty = (e) => e.comments === "Penalty Shootout";
-    const regularEvents = ev.filter(e => !isPenalty(e));
-    const penaltyEvents = ev.filter(e => isPenalty(e));
-
-    // Ordenar eventos regulares por tiempo (descendente para mostrar lo último arriba)
-    regularEvents.sort((a, b) => {
-        const tA = a.time.elapsed + (a.time.extra || 0);
-        const tB = b.time.elapsed + (b.time.extra || 0);
-        if (tA === tB) return 0;
-        return tA > tB ? -1 : 1;
-    });
-
-    let html = '';
-
-    if (regularEvents.length === 0 && penaltyEvents.length === 0) {
-        html = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Sin eventos</div>';
-    }
-
-    // Renderizar eventos regulares
-    html += regularEvents.map(e => {
-        const isHome = e.team.id === m.teams.home.id;
-        const sideClass = isHome ? 'flex-row' : 'flex-row-reverse';
-        const boxClass = isHome ? '' : 'flex-row-reverse text-right';
-
-        let content = '';
-        if (e.type === 'subst') {
-            content = `
-                <div class="flex flex-col gap-0.5">
-                    <span class="text-xs font-bold text-green-400 uppercase">Entra: ${e.assist.name}</span>
-                    <span class="text-[10px] font-bold text-red-400 uppercase opacity-70">Sale: ${e.player.name}</span>
-                </div>
-            `;
-        } else {
-            let eventLabel = e.detail;
-            let eventClass = 'bg-[#333] text-gray-400';
-
-            if (e.type === 'Goal') {
-                eventLabel = 'GOL';
-                eventClass = 'bg-white text-black';
-            } else if (e.type === 'Card') {
-                const isYellow = e.detail === 'Yellow Card';
-                const isRed = e.detail === 'Red Card';
-
-                if (isYellow || isRed) {
-                    eventClass = 'bg-[#222] text-gray-300 border border-[#333]';
-                    const colorClass = isYellow ? 'bg-yellow-400' : 'bg-red-600';
-                    const text = isYellow ? 'TARJETA AMARILLA' : 'TARJETA ROJA';
-                    eventLabel = `<div class="w-2 h-3 ${colorClass} rounded-[1px] mr-1.5"></div>${text}`;
-                }
-            }
-
-            content = `
-                <span class="text-sm font-bold text-white">${e.player.name}</span>
-                <span class="text-[9px] px-2 py-1 uppercase font-bold tracking-wider ${eventClass} flex items-center h-6 rounded">${eventLabel}</span>
-            `;
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description"
+        content="Resultados de fútbol en vivo, tablas de posiciones y foros en tiempo real para comentar cada partido. Seguí todo el fútbol actualizado al instante.">
+    <title>RealFutbol - Resultados de futbol en tiempo real.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" href="https://i.postimg.cc/1XhSs3Gv/RF-FUTURO.png?v=2" type="image/png">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2312798559341043"
+        crossorigin="anonymous"></script>
+    <!-- reCAPTCHA Enterprise -->
+    <script async defer
+        src="https://www.google.com/recaptcha/enterprise.js?render=6LeqflUsAAAAADT9Rs3soVcJly_C5E-8Yf50wk-G"></script>
+    <!-- html2canvas for Lineup Builder -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-main: #000000;
+            --bg-card: #0f0f0f;
+            --border: #333333;
+            --text-main: #ffffff;
+            --text-muted: #888888;
         }
 
-        return `
-            <div class="flex items-center gap-4 mb-4 ${sideClass}">
-                <div class="w-8 text-center text-xs font-bold text-gray-500 font-mono">${e.time.elapsed}'</div>
-                <div class="bg-[#111] border border-[#222] px-4 py-3 flex items-center gap-3 ${boxClass} min-w-[140px]">
-                    ${content}
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    // Renderizar Tanda de Penales (si existen)
-    if (penaltyEvents.length > 0) {
-        html += `<div class="my-8 flex items-center justify-center">
-            <div class="h-[1px] bg-[#222] flex-1"></div>
-            <span class="px-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Tanda de Penales</span>
-            <div class="h-[1px] bg-[#222] flex-1"></div>
-        </div>`;
-
-        // Calcular score acumulado
-        let homeScore = m.goals.home; // Goles antes de penales (120 min)
-        let awayScore = m.goals.away;
-
-        // Pero para "running score" de penales, usualmente se muestra solo el conteo de penales
-        // O el score total acumulado. El usuario pidió: "despues de ese penal cuanto va la serie de penales"
-        // Entonces iniciamos conteo de penales en 0-0
-        let penHome = 0;
-        let penAway = 0;
-
-        // Necesitamos ordenar penales cronológicamente para el running score
-        // API-Football no siempre da orden perfecto por tiempo, pero confiemos en el array o detalle
-        // Asumamos que vienen en orden o intentemos ordenar si tienen secuencia
-        // Generalmente vienen mezclados, hay que tener cuidado.
-        // Pero para simplificar, iteraremos y asumiremos el orden del array (ajustar si es necesario)
-        // O mejor: NO reordenamos penaltyEvents si ya venían mezclados, el sort inicial los puso por tiempo.
-        // Pero el sort inicial ponía lo mas NUEVO arriba. Para penales queremos orden CRONOLOGICO (1o al ultimo)?
-        // El usuario dijo "cronologia". Normalmente timeline es Lo Nuevo Arriba.
-        // Pero "tanda de penales" suele leerse mejor penal 1, penal 2... 
-        // Si el timeline general es DESC (min 90 arriba, min 1 abajo), penales debería seguir esa logica invertida?
-        // O ser un bloque aparte?
-        // El usuario pidió "separes la cronologia". Haremos un bloque distinto.
-        // Probemos mostrar penales en orden de tiro (ascendente).
-
-        // Re-ordenar penales Ascendente para calcular score
-        // El usuario reportó que estaba invertido.
-        // Si API devuelve en orden cronológico (0->N), y ev (que usamos para filtrar) estaba ordenado DESC (N->0),
-        // entonces penaltyEvents estaba DESC.
-        // Mi fix anterior hacía reverse() para volver a ASC.
-        // Sin embargo, usuario dice que estaba al revés.
-        // Vamos a confiar en la lógica: penaltyEvents viene de 'ev' (DESC). Entonces penaltyEvents[0] es el ULTIMO penal.
-        // reverse() debería poner penaltyEvents[0] (ULTIMO) al final. 
-        // Tal vez el sort inicial mezcló los penales si tienen mismo timestamp.
-
-        // CORRECCION: Usar array original m.events para obtener orden correcto de API
-        // API suele mandar index 0 = primer evento.
-        const originalPenalties = (m.events || []).filter(e => isPenalty(e));
-        // Asumimos originalPenalties[0] es el primer tiro.
-
-        const penAsc = [...originalPenalties]; // Ya debería estar en orden correcto
-
-        html += `<div class="space-y-3">`;
-
-        html += penAsc.map(e => {
-            const isHome = e.team.id === m.teams.home.id;
-
-            // Detección de Gol o Fallo
-            // API-Football:
-            // Goal + Penalty = Gol
-            // Missed Penalty = Fallo
-            // Saved Penalty = Fallo (atajado)
-            // A veces type='Goal' pero detail='Missed Penalty' -> Fallo
-            // A veces type='Var' -> Fallo
-
-            const detail = (e.detail || '').toLowerCase();
-            const type = (e.type || '').toLowerCase();
-            const comments = (e.comments || '').toLowerCase();
-
-            let isGoal = false;
-
-            if (type === 'goal' && detail !== 'missed penalty' && detail !== 'saved penalty') {
-                isGoal = true;
-            }
-
-            if (detail.includes('missed') || detail.includes('saved')) {
-                isGoal = false;
-            }
-
-            if (isGoal) {
-                if (isHome) penHome++; else penAway++;
-            }
-            // Si es errado, marcador no cambia.
-
-            const checkIcon = `<div class="w-5 h-5 rounded-full bg-green-900/40 border border-green-500/50 flex items-center justify-center text-green-500"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>`;
-            const crossIcon = `<div class="w-5 h-5 rounded-full bg-red-900/40 border border-red-500/50 flex items-center justify-center text-red-500"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></div>`;
-
-            const icon = isGoal ? checkIcon : crossIcon;
-            const scoreDisplay = `${penHome}-${penAway}`;
-
-            // Alineación
-            // Izquierda Home, Derecha Away
-            const rowClass = isHome ? 'flex-row' : 'flex-row-reverse';
-            const textClass = isHome ? 'text-left' : 'text-right';
-            const scoreClass = isHome ? 'ml-auto' : 'mr-auto'; // Score en el medio aprox
-
-            // Diseño solicitado: Nombre Simbolo Score
-            // Ej: Messi (V) 1-0 ... 
-
-            // Ajustamos layout para que parezca una lista balanceada
-            /*
-              Home Player (V) 1-0
-                              1-0 (X) Away Player
-            */
-
-            // Contenedor principal de la fila
-            return `
-            <div class="flex items-center relative py-1">
-                <div class="absolute left-1/2 -translate-x-1/2 text-xs font-mono font-bold text-gray-600">${scoreDisplay}</div>
-                
-                <div class="w-1/2 flex items-center gap-3 ${isHome ? 'justify-end pr-8' : 'hidden'}">
-                    <span class="text-sm font-bold text-white text-right">${e.player.name}</span>
-                    ${icon}
-                </div>
-                
-                <div class="w-1/2 flex items-center gap-3 ${!isHome ? 'justify-start pl-8' : 'hidden'} ml-auto">
-                     ${icon}
-                    <span class="text-sm font-bold text-white text-left">${e.player.name}</span>
-                </div>
-            </div>
-           `;
-        }).join('');
-
-        html += `</div>`;
-    }
-
-    c.innerHTML = html;
-
-    // Append Mobile-Only Match Info at the bottom of Timeline (Actually appending to innerHTML directly or modifying html string? Modifying html string BEFORE setting innerHTML is better, but I can also append to c.innerHTML if I want)
-    // Wait, the previous block ends with c.innerHTML = html;
-    // I should REPLACE "c.innerHTML = html;" with the logic to append to html AND THEN set innerHTML.
-
-    // Append Mobile-Only Match Info
-    const leagueLogo = m.league.logo;
-    const leagueName = m.league.name;
-    const leagueRound = m.league.round;
-    const referee = m.fixture.referee || 'Árbitro no asignado';
-    const venueName = m.fixture.venue.name || 'Estadio desconocido';
-    const venueCity = m.fixture.venue.city || '';
-    const whistleIcon = 'https://i.postimg.cc/LsXj3CWR/silbato.png';
-    const stadiumIcon = 'https://i.postimg.cc/mrVjjgxJ/4905563-2.png';
-
-    const createRow = (imgSrc, text, isRounded = false) => `
-        <div class="flex items-center gap-4">
-            <div class="w-8 flex justify-center">
-                <img src="${imgSrc}" class="w-6 h-6 object-contain ${isRounded ? '' : 'opacity-70'}">
-            </div>
-            <span class="text-base text-gray-300 font-medium">${text}</span>
-        </div>
-    `;
-
-    html += `
-        <div class="mt-8 pt-6 border-t border-[#222] lg:hidden space-y-4 pb-6 px-2">
-            ${createRow(leagueLogo, `${leagueName} - ${leagueRound}`, true)}
-            ${createRow(whistleIcon, referee)}
-            ${createRow(stadiumIcon, `${venueName}${venueCity ? `, ${venueCity}` : ''}`)}
-        </div>
-    `;
-
-    c.innerHTML = html;
-};
-
-/**
- * Obtiene el color del borde del rating según la calificación
- * @param {number} rating - Calificación del jugador
- * @returns {object} { bg, text, border } - Colores CSS
- */
-const getRatingColors = (rating) => {
-    if (rating >= 8.0) return { bg: '#87CEEB', text: '#000', border: '#87CEEB' }; // Celeste
-    if (rating >= 7.0) return { bg: '#4CAF50', text: '#fff', border: '#4CAF50' }; // Verde
-    if (rating >= 6.0) return { bg: '#FF9800', text: '#000', border: '#FF9800' }; // Naranja
-    return { bg: '#F44336', text: '#fff', border: '#F44336' }; // Rojo
-};
-
-/**
- * Shows a detailed player modal with match stats
- */
-const showPlayerModal = (player) => {
-    const modal = document.getElementById('player-modal');
-    const photo = player.photo || `https://media.api-sports.io/football/players/${player.id}.png`;
-    const s = player.stats || {};
-
-    // Position label
-    const posLabels = {
-        'G': 'Arquero', 'D': 'Defensor', 'M': 'Mediocampista', 'F': 'Delantero',
-        'Goalkeeper': 'Arquero', 'Defender': 'Defensor', 'Midfielder': 'Mediocampista', 'Attacker': 'Delantero'
-    };
-    const posLabel = posLabels[player.position] || player.position || '';
-
-    // Rating colors
-    const rating = player.rating;
-    let ratingBg = '#333', ratingText = '#aaa';
-    if (rating) {
-        if (rating >= 8) { ratingBg = '#16a34a'; ratingText = '#fff'; }
-        else if (rating >= 7) { ratingBg = '#65a30d'; ratingText = '#fff'; }
-        else if (rating >= 6) { ratingBg = '#ca8a04'; ratingText = '#fff'; }
-        else { ratingBg = '#dc2626'; ratingText = '#fff'; }
-    }
-
-    // Build stat items from available data
-    const statItems = [];
-    const addStat = (label, value) => {
-        if (value !== null && value !== undefined && value !== '-') {
-            statItems.push({ label, value });
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            -webkit-tap-highlight-color: transparent;
         }
-    };
 
-    addStat('Minutos', s.games?.minutes);
-    addStat('Goles', s.goals?.total);
-    addStat('Asistencias', s.goals?.assists);
-    addStat('Disparos', s.shots?.total);
-    addStat('Al arco', s.shots?.on);
-    if (s.passes?.total != null && s.passes?.accuracy != null) {
-        const total = parseInt(s.passes.total);
-        const acc = parseInt(s.passes.accuracy);
-        const completed = Math.round(total * acc / 100);
-        addStat('Pases acertados', `${completed}/${total} (${acc}%)`);
-    } else if (s.passes?.total != null) {
-        addStat('Pases', s.passes.total);
-    }
-    addStat('Pases clave', s.passes?.key);
-    addStat('Tackles', s.tackles?.total);
-    addStat('Intercepciones', s.tackles?.interceptions);
-    addStat('Duelos ganados', s.duels?.won);
-    addStat('Duelos total', s.duels?.total);
-    addStat('Dribles', s.dribbles?.success != null ? `${s.dribbles.success}/${s.dribbles.attempts}` : null);
-    addStat('Faltas cometidas', s.fouls?.committed);
-    addStat('Faltas recibidas', s.fouls?.drawn);
+        /* Tipografía Deportiva */
+        .font-sport {
+            font-family: 'Chakra Petch', sans-serif;
+        }
 
-    // For goalkeepers
-    if (player.position === 'G' || player.position === 'Goalkeeper') {
-        addStat('Atajadas', s.goals?.saves);
-        addStat('Goles recibidos', s.goals?.conceded);
-    }
+        /* Tarjetas Minimalistas B&W */
+        .match-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
 
-    const statsGrid = statItems.length > 0 ? `
-        <div class="grid grid-cols-3 gap-px bg-[#222] rounded-lg overflow-hidden mt-4">
-            ${statItems.map(si => `
-                <div class="bg-[#111] p-2.5 text-center">
-                    <div class="text-sm font-bold text-white font-mono">${si.value}</div>
-                    <div class="text-[8px] text-gray-500 uppercase tracking-wider mt-0.5">${si.label}</div>
-                </div>
-            `).join('')}
+        /* Hover efecto blanco */
+        .match-card.clickable:hover {
+            border-color: #ffffff;
+            background-color: #1a1a1a;
+            cursor: pointer;
+        }
+
+        .match-card.not-clickable {
+            opacity: 1;
+            cursor: default;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 2px;
+        }
+
+        /* Toggle Switch B&W & Red Live */
+        .toggle-checkbox:checked {
+            transform: translateX(20px);
+            border-color: #ef4444;
+            background-color: #ef4444;
+            box-shadow: 0 0 10px #ef4444;
+        }
+
+        .toggle-checkbox:checked+.toggle-label {
+            background-color: #fff;
+        }
+
+        .toggle-label {
+            background-color: #000;
+            border: 1px solid #444;
+        }
+
+        /* Cancha Táctica - Estilo Negro (Vertical por defecto para Lineup Builder) */
+        .football-pitch {
+            background-color: #151515;
+            border: 1px solid #333;
+            position: relative;
+            width: 100%;
+            /* Aspect Ratio 68 (ancho) / 105 (alto) ≈ 0.647 */
+            aspect-ratio: 68 / 105;
+            border-radius: 0 !important;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        /* Línea central horizontal (para cancha vertical) */
+        .center-line {
+            position: absolute;
+            background-color: #333;
+            top: 50%;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 1px;
+            transform: translateY(-50%);
+        }
+
+        /* Círculo central - Proporción real */
+        /* Radio 9.15m. Ancho 68m => Diametro 18.3m => 18.3/68 = ~27% width */
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 27%;
+            /* En vertical, el height relativo al container debe ser igual al width en px. 
+               Como aspect-ratio es 68/105, height% = width% * (68/105) 
+               27% * 0.647 = ~17.5% */
+            height: 0;
+            padding-bottom: 27%;
+            /* Make it square relative to width */
+            /* Wait, padding-bottom creates height based on width. Perfect for circle. */
+            border: 1px solid #333;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            background: transparent;
+            height: auto;
+            /* Override previous */
+        }
+
+        /* Areas */
+        /* Area grande: 40.3m ancho, 16.5m largo. 
+           Width: 40.3/68 = ~59%
+           Height: 16.5/105 = ~15.7% */
+        .penalty-box {
+            display: block;
+            position: absolute;
+            border: 1px solid #333;
+            width: 59%;
+            height: 15.7%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: transparent;
+        }
+
+        .penalty-box.top-box {
+            top: 0;
+            border-top: none;
+        }
+
+        .penalty-box.bottom-box {
+            bottom: 0;
+            border-bottom: none;
+        }
+
+        /* Area chica: 18.3m ancho, 5.5m largo
+           Width: 18.3/68 = ~27%
+           Height: 5.5/105 = ~5.2% */
+        .goal-box {
+            position: absolute;
+            border: 1px solid #333;
+            width: 27%;
+            height: 5.2%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .goal-box.top {
+            top: 0;
+            border-top: none;
+        }
+
+        .goal-box.bottom {
+            bottom: 0;
+            border-bottom: none;
+        }
+
+        /* Corner Arcs - 4 cuartos de círculo iguales (80% más grandes) */
+        .corner-arc {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            border: 1px solid #333;
+            border-radius: 50%;
+            background: transparent;
+        }
+
+        .corner-top-left {
+            top: -22px;
+            left: -22px;
+        }
+
+        .corner-top-right {
+            top: -22px;
+            right: -22px;
+        }
+
+        .corner-bottom-left {
+            bottom: -22px;
+            left: -22px;
+        }
+
+        .corner-bottom-right {
+            bottom: -22px;
+            right: -22px;
+        }
+
+        /* Marcadores Jugadores - Círculos con caras */
+        .player-marker {
+            position: absolute;
+            width: 55px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: transform 0.2s;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+        }
+
+        .player-marker:active {
+            transform: translate(-50%, -50%) scale(1.2);
+            z-index: 20;
+        }
+
+        /* Círculo con cara del jugador */
+        .player-face-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid #555;
+            overflow: hidden;
+            background-color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+        }
+
+        .player-face-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+
+        .player-face-fallback {
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Badge de rating */
+        .player-rating-badge {
+            position: absolute;
+            top: -8px;
+            right: -10px;
+            font-size: 8px;
+            font-weight: 800;
+            padding: 1px 4px;
+            border-radius: 6px;
+            z-index: 25;
+            white-space: nowrap;
+            line-height: 1.3;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Estrella del mejor jugador */
+        .player-star {
+            font-size: 8px;
+            line-height: 1;
+        }
+
+
+        /* Contenedor de íconos de eventos del jugador */
+        .player-events-container {
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .player-event-icon {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(17, 17, 17, 0.9);
+            border: 1px solid #444;
+        }
+
+        .player-event-sub-out-container {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            padding: 1px 4px 1px 1px;
+        }
+
+        .player-event-sub-out-container .sub-minute {
+            font-size: 8px;
+            font-weight: bold;
+            color: #EF4444;
+            font-family: monospace;
+        }
+
+        .player-event-sub-out {
+            background: transparent;
+            border: none;
+        }
+
+        /* Etiqueta nombre jugador */
+        .player-name-label {
+            position: absolute;
+            bottom: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            font-weight: bold;
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 1px 4px;
+            border-radius: 3px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.2;
+            z-index: 30;
+            border: 1px solid #333;
+            pointer-events: none;
+        }
+
+        /* Ajuste si hay eventos: bajar el nombre */
+        .player-marker:has(.player-events-container) .player-name-label {
+            bottom: -28px;
+        }
+
+        @media (max-width: 768px) {
+            .player-marker {
+                width: 42px;
+                height: 42px;
+            }
+
+            .player-rating-badge {
+                font-size: 7px;
+                padding: 1px 3px;
+                top: -7px;
+                right: -8px;
+            }
+
+            .player-name-label {
+                font-size: 10px;
+                bottom: -20px;
+            }
+
+            .player-marker:has(.player-events-container) .player-name-label {
+                bottom: -32px;
+            }
+
+            .player-event-icon {
+                width: 14px;
+                height: 14px;
+            }
+        }
+
+        /* Tabs */
+        .tab-btn {
+            color: #666;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            border-bottom-color: #fff;
+        }
+
+        /* Loader B&W */
+        .loader {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #333;
+            border-bottom-color: #fff;
+            border-radius: 50%;
+            display: inline-block;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Botón Flotante Fijo */
+        .btn-float-back {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 100;
+            background: #000;
+            border: 1px solid #444;
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        @media (min-width: 1024px) {
+            .btn-float-back {
+                position: absolute;
+                top: 24px;
+                left: 24px;
+            }
+        }
+
+        .btn-float-back:hover {
+            background-color: #222;
+            border-color: #fff;
+        }
+
+        .font-tnum {
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Live Pulse Blanco */
+        .live-dot {
+            height: 6px;
+            width: 6px;
+            background-color: #fff;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+            vertical-align: middle;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.4;
+                transform: scale(0.8);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+
+            100% {
+                opacity: 0.4;
+                transform: scale(0.8);
+            }
+        }
+
+        /* Override Select */
+        select {
+            background-color: #000;
+            color: white;
+            border-color: #333;
+        }
+
+        /* Botón Principal Blanco */
+        .btn-primary {
+            background-color: #ffffff;
+            color: #000000;
+            font-weight: bold;
+            border: 1px solid #fff;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #ccc;
+            border-color: #ccc;
+        }
+
+        .mobile-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 40;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Slide Up Animation */
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.25s ease-out;
+        }
+
+        /* Fix for Giant Match Lineup - Mobile Only constraint */
+        #tab-lineups .football-pitch {
+            max-width: 400px !important;
+            margin: 0 auto;
+        }
+
+        /* Scale down players in match detail lineup */
+        #tab-lineups .player-marker {
+            width: 34px;
+            height: 34px;
+        }
+
+        #tab-lineups .player-rating-badge {
+            font-size: 7px;
+            padding: 1px 3px;
+        }
+
+        #tab-lineups .player-name-label {
+            font-size: 8px;
+            bottom: -18px;
+        }
+
+        /* === HORIZONTAL PITCH (DESKTOP) === */
+        @media (min-width: 1024px) {
+            #tab-lineups .football-pitch.horizontal {
+                max-width: none !important;
+                width: 100%;
+                aspect-ratio: 105 / 68;
+                /* Landscape aspect ratio */
+            }
+
+            /* Rotate/Position Markings for Horizontal View */
+            .football-pitch.horizontal .center-line {
+                width: 1px;
+                height: 100%;
+                left: 50%;
+                top: 0;
+                transform: translateX(-50%);
+            }
+
+            /* Fix Center Circle Geometry for Horizontal */
+            .football-pitch.horizontal .center-circle {
+                width: 17.4%;
+                /* 18.3m / 105m */
+                height: 26.9%;
+                /* 18.3m / 68m */
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                padding-bottom: 0;
+                /* Remove vertical aspect ratio hack */
+                border-radius: 50%;
+            }
+
+            /* Larger Players on Desktop Match Detail */
+            #tab-lineups .football-pitch.horizontal .player-marker {
+                width: 60px;
+                height: 60px;
+            }
+
+            #tab-lineups .football-pitch.horizontal .player-name-label {
+                font-size: 11px;
+                bottom: -20px;
+                font-weight: 700;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            }
+
+            #tab-lineups .football-pitch.horizontal .player-rating-badge {
+                font-size: 10px;
+                padding: 2px 5px;
+            }
+
+            /* Penalty Areas (Large) */
+            .football-pitch.horizontal .penalty-box {
+                width: 15.7%;
+                height: 59%;
+                top: 50%;
+                transform: translateY(-50%);
+                border: 1px solid #444;
+                /* More visible border */
+            }
+
+            .football-pitch.horizontal .penalty-box.home-box {
+                /* Left Box (Home) */
+                left: 0;
+                right: auto;
+                border-left: none;
+                border-right: 1px solid #444;
+                border-top: 1px solid #444;
+                border-bottom: 1px solid #444;
+            }
+
+            .football-pitch.horizontal .penalty-box.away-box {
+                /* Right Box (Away) */
+                right: 0;
+                left: auto;
+                border-right: none;
+                border-left: 1px solid #444;
+                border-top: 1px solid #444;
+                border-bottom: 1px solid #444;
+            }
+
+            /* Goal Areas (Small) */
+            .football-pitch.horizontal .goal-box {
+                width: 5.2%;
+                height: 27%;
+                top: 50%;
+                transform: translateY(-50%);
+                border: 1px solid #444;
+            }
+
+            .football-pitch.horizontal .goal-box.home-box {
+                /* Left Box */
+                left: 0;
+                right: auto;
+                border-left: none;
+                border-right: 1px solid #444;
+                border-top: 1px solid #444;
+                border-bottom: 1px solid #444;
+            }
+
+            .football-pitch.horizontal .goal-box.away-box {
+                /* Right Box */
+                right: 0;
+                left: auto;
+                border-right: none;
+                border-left: 1px solid #444;
+                border-top: 1px solid #444;
+                border-bottom: 1px solid #444;
+            }
+
+            /* Corners */
+            .football-pitch.horizontal .corner-arc {
+                width: 60px;
+                height: 60px;
+            }
+
+            .football-pitch.horizontal .corner-top-left {
+                top: -30px;
+                left: -30px;
+            }
+
+            .football-pitch.horizontal .corner-top-right {
+                top: -30px;
+                right: -30px;
+                left: auto;
+            }
+
+            .football-pitch.horizontal .corner-bottom-left {
+                bottom: -30px;
+                left: -30px;
+            }
+
+            .football-pitch.horizontal .corner-bottom-right {
+                bottom: -30px;
+                right: -30px;
+            }
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- HEADER SIMÉTRICO -->
+    <header
+        class="h-12 lg:h-16 border-b border-[#222] bg-black flex items-center justify-between px-4 z-40 shrink-0 relative">
+        <!-- Izquierda: Logo -->
+        <div class="flex items-center cursor-pointer" onclick="app.navigateToMatches()">
+            <img src="https://i.postimg.cc/9FD6NhN2/REAL-FUTBOL-LARGO.png" alt="Real Futbol Logo"
+                class="h-8 lg:h-12 object-contain">
         </div>
-    ` : '<div class="text-center text-gray-600 text-xs mt-4 uppercase tracking-widest">Sin estadísticas disponibles</div>';
 
-    modal.innerHTML = `
-        <div class="bg-[#0a0a0a] border border-[#333] rounded-xl w-full max-w-sm overflow-hidden shadow-2xl">
-            <!-- Header -->
-            <div class="relative bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a] p-5 flex items-center gap-4">
-                <button onclick="document.getElementById('player-modal').classList.add('hidden')"
-                    class="absolute top-3 right-3 text-gray-500 hover:text-white transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+        <!-- Derecha: Auth + Menu -->
+        <div class="flex items-center justify-end gap-3">
+            <!-- Login Button (visible cuando NO está autenticado) -->
+            <div id="auth-login-container" class="hidden">
+                <button id="auth-login-btn" onclick="document.getElementById('login-modal').classList.remove('hidden')"
+                    class="px-4 py-2 bg-white text-black text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all">
+                    Iniciar Sesión
                 </button>
-                <div class="w-16 h-16 rounded-full overflow-hidden border-2 shrink-0" style="border-color:${ratingBg}; background:#222;">
-                    <img src="${photo}" class="w-full h-full object-cover" onerror="this.style.display='none'" />
-                </div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-white font-bold text-base uppercase tracking-tight leading-tight truncate">${player.name}</div>
-                    <div class="text-gray-500 text-[10px] uppercase tracking-widest mt-1">${player.number ? '#' + player.number + ' · ' : ''}${posLabel}</div>
-                    ${rating ? `<div class="mt-2 inline-block text-xs font-black px-2 py-0.5 rounded" style="background:${ratingBg};color:${ratingText}">${rating.toFixed(1)}</div>` : ''}
-                </div>
             </div>
-            <!-- Stats -->
-            <div class="px-4 pb-5">
-                ${statsGrid}
+
+            <!-- Botón de Moderación (solo visible para developer) -->
+            <button id="moderation-btn" onclick="app.openModerationPanel()"
+                class="hidden px-2 lg:px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-black text-xs font-black uppercase tracking-wider rounded hover:from-yellow-400 hover:to-orange-400 transition-all flex items-center gap-1.5 shadow-lg"
+                title="Panel de Moderación">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span class="hidden lg:inline">DESARROLLADOR</span>
+            </button>
+
+            <!-- Botón de Analytics (solo visible para developer) -->
+            <button id="analytics-btn" onclick="app.openAnalyticsPanel()"
+                class="hidden px-2 lg:px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-black uppercase tracking-wider rounded hover:from-blue-400 hover:to-purple-500 transition-all flex items-center gap-1.5 shadow-lg"
+                title="Estadísticas de la plataforma">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span class="hidden lg:inline">STATS</span>
+            </button>
+
+            <!-- Botón de Moderador (solo visible para moderadores, clickeable) -->
+            <button id="moderator-badge-btn" onclick="app.openModPanel()"
+                class="hidden px-2 lg:px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-black uppercase tracking-wider rounded cursor-pointer flex items-center gap-1.5 shadow-lg hover:from-green-400 hover:to-emerald-500 transition-colors"
+                title="Abrir Panel de Moderación">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span class="inline">MOD</span>
+            </button>
+
+            <!-- Suggestion Icon (visible para todos los usuarios autenticados) -->
+            <button id="suggestion-btn" onclick="app.openSuggestionModal()"
+                class="hidden p-1.5 lg:p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded-full transition-all"
+                title="Enviar sugerencia">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 lg:w-7 lg:h-7" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+            </button>
+
+            <!-- User Icon (visible cuando está autenticado) -->
+            <div id="auth-user-info" class="hidden">
+                <button onclick="app.showProfileModal()" id="auth-user-avatar"
+                    class="flex-shrink-0 hover:opacity-80 transition-opacity" title="Ver perfil"></button>
             </div>
+
+            <!-- Menu Toggle -->
+
         </div>
-    `;
-    modal.classList.remove('hidden');
-};
+    </header>
 
-/**
- * Renderiza las alineaciones y cancha táctica
- */
-const renderLineups = (m) => {
-    const pitch = document.getElementById('football-pitch');
-    pitch.querySelectorAll('.player-marker').forEach(el => el.remove());
-    const hList = document.getElementById('lineup-home-list');
-    const aList = document.getElementById('lineup-away-list');
+    <div class="flex flex-1 overflow-hidden relative">
 
-    if (!m.lineups || m.lineups.length === 0) {
-        hList.innerHTML = 'No disponible';
-        aList.innerHTML = 'No disponible';
-        return;
-    }
+        <div id="mobile-backdrop" class="mobile-backdrop hidden lg:hidden"></div>
 
-    const homeL = m.lineups[0];
-    const awayL = m.lineups[1];
-    const events = m.events || [];
-    const isFinished = ['FT', 'AET', 'PEN'].includes(m.fixture.status.short);
+        <!-- Sidebar B&W -->
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 w-full lg:w-72 bg-black border-r border-[#222] flex flex-col transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 z-40 h-[calc(100%-48px)] lg:h-full top-12 lg:top-0">
 
-    // Build player stats map from m.players if available
-    // m.players contains [{team: {id, name}, players: [{player: {id, name, photo}, statistics: [{games: {rating}, ...}]}]}]
-    const playerStatsMap = {};
-    let bestPlayerId = null;
-    let bestRating = -1;
-    if (m.players && m.players.length > 0) {
-        m.players.forEach(teamData => {
-            if (teamData.players) {
-                teamData.players.forEach(p => {
-                    const stats = p.statistics && p.statistics[0];
-                    const rating = stats && stats.games && stats.games.rating ? parseFloat(stats.games.rating) : null;
-                    playerStatsMap[String(p.player.id)] = {
-                        photo: p.player.photo || null,
-                        rating: rating,
-                        stats: stats || null,
-                        playerInfo: p.player || null
-                    };
-                    if (rating !== null && rating > bestRating) {
-                        bestRating = rating;
-                        bestPlayerId = String(p.player.id);
-                    }
-                });
-            }
-        });
-    }
+            <div class="overflow-y-auto flex-1 p-3 pb-24">
 
-    const idsMatch = (id1, id2) => String(id1) === String(id2);
+                <div class="bg-[#0a0a0a] border border-[#222] rounded-lg overflow-hidden flex flex-col">
+                    <div
+                        class="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-[#222] bg-[#111]">
+                        Competiciones</div>
 
-    // Helper to build a player face thumbnail for the list
-    const buildListFace = (playerId, size = 'w-7 h-7') => {
-        const pStats = playerStatsMap[String(playerId)] || {};
-        const photo = pStats.photo || `https://media.api-sports.io/football/players/${playerId}.png`;
-        const rating = pStats.rating;
-        let borderColor = '#555';
-        if (rating !== null && rating !== undefined) {
-            const colors = getRatingColors(rating);
-            borderColor = colors.border;
-        }
-        return `<div class="${size} rounded-full overflow-hidden border-2 shrink-0" style="border-color:${borderColor}; background:#222;"><img src="${photo}" class="w-full h-full object-cover" onerror="this.style.display='none'"/></div>`;
-    };
+                    <!-- Botones de Ligas (IDs Correctos API-Sports) -->
+                    <button onclick="app.navigate('/liga/128/liga-profesional'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/128.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Liga Argentina</span>
+                    </button>
 
-    const renderList = (lineup) => {
-        let html = '';
+                    <button onclick="app.navigate('/liga/1032/copa-de-la-liga'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/1032.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Copa de la Liga</span>
+                    </button>
 
-        // === SUSTITUTOS (players who actually entered the game) ===
-        const substitutesWhoEntered = [];
-        if (lineup.substitutes && lineup.substitutes.length > 0) {
-            lineup.substitutes.forEach(p => {
-                // Check both e.player and e.assist for the substitute coming in
-                // API-Football: e.player = OUT, e.assist = IN (in some versions it's reversed)
-                const subInEvent = events.find(e => {
-                    const et = (e.type || '').toLowerCase();
-                    if (et !== 'subst' && et !== 'substitution') return false;
-                    // Check if this sub is referenced in the event
-                    if (e.player && idsMatch(e.player.id, p.player.id)) return true;
-                    if (e.assist && idsMatch(e.assist.id, p.player.id)) return true;
-                    return false;
-                });
-                if (subInEvent) {
-                    substitutesWhoEntered.push({ player: p, event: subInEvent });
-                }
-            });
-        }
+                    <button onclick="app.navigate('/liga/129/primera-nacional'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/129.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Primera Nacional</span>
+                    </button>
 
-        if (substitutesWhoEntered.length > 0) {
-            html += `<div class="mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Sustitutos</div>`;
-            html += substitutesWhoEntered.map(({ player: p, event: subInEvent }) => {
-                const pStats = playerStatsMap[String(p.player.id)] || {};
-                const rating = pStats.rating;
-                let ratingHtml = '';
-                if (rating !== null && rating !== undefined) {
-                    const colors = getRatingColors(rating);
-                    ratingHtml = `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background:${colors.bg}; color:${colors.text}">${rating.toFixed(1).replace('.', ',')}</span>`;
-                }
-                const faceHtml = buildListFace(p.player.id);
-                const minute = subInEvent.time.elapsed;
-                const enteredIcon = `<div class="flex items-center gap-1.5 ml-auto shrink-0">
-                    <img src="https://i.postimg.cc/rsvxwJQj/Proyecto_nuevo_3.png" class="w-4 h-4 object-contain" alt="Ingresa" />
-                    <span class="text-green-400 text-[10px] font-bold font-mono">${minute}'</span>
-                </div>`;
-                return `<div class="flex items-center gap-2 border-b border-[#222] py-2 cursor-pointer hover:bg-[#111] transition-colors" data-player-id="${p.player.id}" data-player-name="${p.player.name}" data-player-pos="${p.player.pos || ''}">
-                    ${faceHtml}
-                    ${ratingHtml}
-                    <span class="text-gray-300 text-sm font-medium">${p.player.name}</span>
-                    ${enteredIcon}
-                </div>`;
-            }).join('');
-        }
+                    <button onclick="app.navigate('/liga/1/mundial-2026'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/1.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Mundial 2026</span>
+                    </button>
 
-        // === SUPLENTES (players who didn't enter — just face + name) ===
-        const benchOnly = (lineup.substitutes || []).filter(p => {
-            return !substitutesWhoEntered.some(s => idsMatch(s.player.player.id, p.player.id));
-        });
+                    <button onclick="app.navigate('/liga/130/copa-argentina'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/130.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Copa Argentina</span>
+                    </button>
 
-        if (benchOnly.length > 0) {
-            html += `<div class="mt-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Suplentes</div>`;
-            html += benchOnly.map(p => {
-                const faceHtml = buildListFace(p.player.id, 'w-6 h-6');
-                return `<div class="flex items-center gap-2 border-b border-[#222] py-1.5 cursor-pointer hover:bg-[#111] transition-colors" data-player-id="${p.player.id}" data-player-name="${p.player.name}" data-player-pos="${p.player.pos || ''}">
-                    ${faceHtml}
-                    <span class="text-gray-500 text-sm">${p.player.name}</span>
-                </div>`;
-            }).join('');
-        }
+                    <button onclick="app.navigate('/liga/71/brasileirao'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/71.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Brasileirão A</span>
+                    </button>
 
-        return html;
-    };
+                    <button onclick="app.navigate('/liga/39/premier-league'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/39.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Premier League</span>
+                    </button>
 
-    hList.innerHTML = renderList(homeL);
-    aList.innerHTML = renderList(awayL);
+                    <button onclick="app.navigate('/liga/140/la-liga'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/140.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">La Liga</span>
+                    </button>
 
-    // Add click handlers to list player rows
-    [hList, aList].forEach(list => {
-        list.querySelectorAll('[data-player-id]').forEach(row => {
-            row.addEventListener('click', () => {
-                const id = row.dataset.playerId;
-                const pData = playerStatsMap[String(id)] || {};
-                showPlayerModal({
-                    name: row.dataset.playerName,
-                    number: '',
-                    id: id,
-                    photo: pData.photo,
-                    rating: pData.rating,
-                    stats: pData.stats,
-                    position: row.dataset.playerPos || (pData.stats?.games?.position) || ''
-                });
-            });
-        });
-    });
+                    <button onclick="app.navigate('/liga/143/copa-del-rey'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/143.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Copa del Rey</span>
+                    </button>
 
-    const addPlayers = (lineup, side) => {
-        const players = lineup.startXI;
-        const formation = lineup.formation;
+                    <button onclick="app.navigate('/liga/78/bundesliga'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all border-b border-[#222]">
+                        <img src="https://media.api-sports.io/football/leagues/78.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Bundesliga</span>
+                    </button>
 
-        let lines = {};
-        let hasGrid = players.every(p => p.player.grid);
+                    <button onclick="app.navigate('/liga/137/coppa-italia'); app.openMobileTab('results')"
+                        class="league-item w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                        <img src="https://media.api-sports.io/football/leagues/137.png" class="w-5 h-5 object-contain">
+                        <span class="text-sm font-medium">Copa Italia</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
 
-        if (hasGrid) {
-            players.forEach(p => {
-                const parts = p.player.grid.split(':');
-                const lineIdx = parseInt(parts[0]);
-                if (!lines[lineIdx]) lines[lineIdx] = [];
-                lines[lineIdx].push(p);
-            });
-        } else {
-            let formationParts = formation ? formation.split('-').map(Number) : [4, 4, 2];
-            formationParts.unshift(1);
-            let playerIdx = 0;
-            formationParts.forEach((count, i) => {
-                const lineIdx = i + 1;
-                lines[lineIdx] = [];
-                for (let k = 0; k < count; k++) {
-                    if (playerIdx < players.length) {
-                        lines[lineIdx].push(players[playerIdx]);
-                        playerIdx++;
-                    }
-                }
-            });
-        }
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col relative w-full lg:w-auto overflow-hidden bg-black">
 
-        Object.keys(lines).forEach(lineKey => {
-            const lineIdx = parseInt(lineKey);
-            const linePlayers = lines[lineKey];
-            if (hasGrid) {
-                linePlayers.sort((a, b) => {
-                    const rowA = parseInt(a.player.grid.split(':')[1]);
-                    const rowB = parseInt(b.player.grid.split(':')[1]);
-                    return rowA - rowB;
-                });
-            }
 
-            const count = linePlayers.length;
-            linePlayers.forEach((p, index) => {
-                const el = document.createElement('div');
-                el.className = `player-marker ${side === 'home' ? 'home-player' : 'away-player'}`;
 
-                let displayNumber = p.player.number;
-                let displayName = p.player.name;
-                let isSubbed = false;
-                let subInName = '';
-                let currentPlayerId = p.player.id; // ID del jugador actual en posición
-
-                const subOutEvent = events.find(e => {
-                    const et = (e.type || '').toLowerCase();
-                    return (et === 'subst' || et === 'substitution') && e.assist && idsMatch(e.assist.id, p.player.id);
-                });
-
-                if (subOutEvent) {
-                    isSubbed = true;
-                    const subInPlayer = lineup.substitutes.find(s => idsMatch(s.player.id, subOutEvent.player.id));
-                    if (subInPlayer) {
-                        displayNumber = subInPlayer.player.number;
-                        subInName = subInPlayer.player.name;
-                        currentPlayerId = subInPlayer.player.id;
-                    } else {
-                        subInName = subOutEvent.player.name;
-                        displayNumber = "⇄";
-                        currentPlayerId = subOutEvent.player.id;
-                    }
-                }
-
-                // Get player stats (photo & rating)
-                const pStats = playerStatsMap[String(currentPlayerId)] || playerStatsMap[String(p.player.id)] || {};
-                const playerPhoto = pStats.photo || `https://media.api-sports.io/football/players/${currentPlayerId}.png`;
-                const playerRating = pStats.rating;
-                const isBestPlayer = isFinished && String(currentPlayerId) === bestPlayerId;
-
-                // Determine border color based on rating
-                let borderColor = '#555'; // Default gray when no rating
-                if (playerRating !== null && playerRating !== undefined) {
-                    const colors = getRatingColors(playerRating);
-                    borderColor = colors.border;
-                }
-
-                // Build player circle with face photo
-                el.innerHTML = `
-                    <div class="player-face-circle" style="border-color: ${borderColor}">
-                        <img src="${playerPhoto}" alt="${displayName}" 
-                             class="player-face-img" 
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                        />
-                        <div class="player-face-fallback" style="display:none;">${displayNumber}</div>
+            <!-- Date Navigation -->
+            <div id="date-nav" class="border-b border-[#222] p-3 z-30 bg-black/95 backdrop-blur shrink-0 relative">
+                <div class="flex items-center justify-center gap-6 mb-3 max-w-lg mx-auto">
+                    <button onclick="app.changeDate(-1)"
+                        class="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded transition-colors"><svg
+                            xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg></button>
+                    <div class="text-center cursor-pointer relative z-40" onclick="app.toggleCalendar()">
+                        <h2 id="current-month"
+                            class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">MES</h2>
+                        <div id="current-day-text" class="text-lg font-bold text-white leading-none font-sport">HOY
+                        </div>
                     </div>
-                `;
-
-                // Rating badge (top-right)
-                if (playerRating !== null && playerRating !== undefined) {
-                    const colors = getRatingColors(playerRating);
-                    const ratingBadge = document.createElement('div');
-                    ratingBadge.className = 'player-rating-badge';
-                    ratingBadge.style.backgroundColor = colors.bg;
-                    ratingBadge.style.color = colors.text;
-
-                    // Show star for best player when match is finished
-                    if (isBestPlayer) {
-                        ratingBadge.innerHTML = `${playerRating.toFixed(1).replace('.', ',')} <span class="player-star">★</span>`;
-                    } else {
-                        ratingBadge.textContent = playerRating.toFixed(1).replace('.', ',');
-                    }
-                    el.appendChild(ratingBadge);
-                }
-
-                // === EVENT ICONS around the player face ===
-                const checkId = isSubbed ? currentPlayerId : p.player.id;
-                const originalId = p.player.id;
-                const eventIcons = [];
-
-                // Goal → custom ball image
-                const goals = events.filter(e => e.type === 'Goal' && e.detail !== 'Own Goal' && e.player && (idsMatch(e.player.id, checkId) || idsMatch(e.player.id, originalId)));
-                goals.forEach(() => {
-                    eventIcons.push(`<div class="player-event-icon" title="Gol"><img src="https://i.postimg.cc/R0XtH9g4/Proyecto_nuevo_6.png" class="w-3 h-3 object-contain" /></div>`);
-                });
-
-                // Assist → custom boot image
-                const playerAssists = events.filter(e => e.type === 'Goal' && e.assist && (idsMatch(e.assist.id, checkId) || idsMatch(e.assist.id, originalId)));
-                playerAssists.forEach(() => {
-                    eventIcons.push(`<div class="player-event-icon" title="Asistencia"><img src="https://i.postimg.cc/QCR1db0b/Proyecto_nuevo_2.png" class="w-3 h-3 object-contain" /></div>`);
-                });
-
-                // Yellow Card
-                const yellows = events.filter(e => e.type === 'Card' && e.detail === 'Yellow Card' && e.player && (idsMatch(e.player.id, checkId) || idsMatch(e.player.id, originalId)));
-                yellows.forEach(() => {
-                    eventIcons.push(`<div class="player-event-icon" title="Tarjeta Amarilla"><div style="width:9px;height:12px;background:#FACC15;border-radius:1.5px;border:1px solid #a38a00;"></div></div>`);
-                });
-
-                // Red Card
-                const reds = events.filter(e => e.type === 'Card' && e.detail === 'Red Card' && e.player && (idsMatch(e.player.id, checkId) || idsMatch(e.player.id, originalId)));
-                reds.forEach(() => {
-                    eventIcons.push(`<div class="player-event-icon" title="Tarjeta Roja"><div style="width:9px;height:12px;background:#EF4444;border-radius:1.5px;border:1px solid #991b1b;"></div></div>`);
-                });
-
-                // Substituted out → custom sub-out image + visible minute
-                if (isSubbed && subOutEvent) {
-                    const subMinute = subOutEvent.time.elapsed;
-                    eventIcons.push(`<div class="player-event-sub-out-container" title="Sust. ${subMinute}'"><img src="https://i.postimg.cc/fy6mRKB5/Proyecto_nuevo_4.png" class="w-3.5 h-3.5 object-contain" /><span class="sub-minute">${subMinute}'</span></div>`);
-                }
-
-                if (eventIcons.length > 0) {
-                    const iconsContainer = document.createElement('div');
-                    iconsContainer.className = 'player-events-container';
-                    iconsContainer.innerHTML = eventIcons.join('');
-                    el.appendChild(iconsContainer);
-                }
-
-                let x, y;
-                const isMobile = window.innerWidth < 1024; // Use 1024px as breakpoint for desktop layout
-
-                // Add or remove horizontal class based on device
-                if (!isMobile) {
-                    pitch.classList.add('horizontal');
-                } else {
-                    pitch.classList.remove('horizontal');
-                }
-
-                if (isMobile) {
-                    // === MOBILE: VERTICAL PITCH ===
-                    const totalLines = Object.keys(lines).length;
-
-                    if (side === 'away') {
-                        const availableSpace = 42;
-                        const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        y = 4 + (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) y = 4;
-                    } else {
-                        const availableSpace = 40;
-                        const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        y = 93 - (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) y = 93;
-                    }
-
-                    const segment = 100 / (count + 1);
-                    x = segment * (index + 1);
-                    // Constrain x to keep players inside
-                    if (x < 3) x = 3;
-                    if (x > 97) x = 97;
-
-                } else {
-                    // === DESKTOP: HORIZONTAL PITCH ===
-                    const totalLines = Object.keys(lines).length;
-
-                    // Horizontal Spacing (X-axis)
-                    // Home: Left (0-50%), Away: Right (50-100%)
-
-                    if (side === 'home') {
-                        // Home GK (line 1) at Left (e.g. 5%) -> Forwards near center
-                        // Available space: Reduced to prevent collision (Home starts 3%, ends 45%)
-                        const availableSpace = 42;
-                        const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        x = 3 + (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) x = 3; // GK fixed near goal line
-                    } else {
-                        // Away GK (line 1) at Right (e.g. 95%) -> Forwards near center
-                        // Available space: Reduced to prevent collision (Away starts 97%, ends 55%)
-                        const availableSpace = 42;
-                        const spacing = availableSpace / Math.max(1, totalLines - 1);
-                        x = 97 - (lineIdx - 1) * spacing;
-                        if (lineIdx === 1) x = 97; // GK fixed near goal line
-                    }
-
-                    // Vertical Spacing (Y-axis) within the line
-                    const segment = 100 / (count + 1);
-                    y = segment * (index + 1);
-
-                    // Constrain Y to keep players inside vertical bounds
-                    if (y < 8) y = 8;
-                    if (y > 92) y = 92;
-                }
-
-                el.style.left = x + '%';
-                el.style.top = y + '%';
-
-                const nameEl = document.createElement('div');
-                nameEl.className = 'player-name-label';
-
-                // Función para formatear nombre como "L. Messi"
-                const formatPlayerName = (fullName) => {
-                    const parts = fullName.trim().split(' ');
-                    if (parts.length === 1) return parts[0];
-                    const firstName = parts[0];
-                    const lastName = parts[parts.length - 1];
-                    return `${firstName.charAt(0)}. ${lastName}`;
-                };
-
-                if (isSubbed) {
-                    const inNameFormatted = formatPlayerName(subInName);
-                    const outNameFormatted = formatPlayerName(displayName);
-                    nameEl.innerHTML = `<span class="text-white mb-0.5">${displayNumber} ${inNameFormatted}</span><span class="text-gray-400 opacity-50 text-[7px]">${outNameFormatted}</span>`;
-                } else {
-                    const formattedName = formatPlayerName(displayName);
-                    nameEl.innerHTML = `<span class="text-white">${displayNumber} ${formattedName}</span>`;
-                }
-                el.appendChild(nameEl);
-
-                el.onclick = () => {
-                    const pId = isSubbed ? currentPlayerId : p.player.id;
-                    const pData = playerStatsMap[String(pId)] || playerStatsMap[String(p.player.id)] || {};
-                    showPlayerModal({
-                        name: isSubbed ? subInName : p.player.name,
-                        number: isSubbed ? '' : (p.player.number || ''),
-                        id: pId,
-                        photo: pData.photo,
-                        rating: pData.rating,
-                        stats: pData.stats,
-                        position: p.player.pos || (pData.stats?.games?.position) || ''
-                    });
-                };
-
-                pitch.appendChild(el);
-            });
-        });
-    };
-
-    addPlayers(homeL, 'home');
-    addPlayers(awayL, 'away');
-};
-
-/**
- * Renderiza las estadísticas del partido
- */
-const renderStats = (m) => {
-    const c = document.getElementById('tab-stats');
-    if (!m.statistics || m.statistics.length === 0) {
-        c.innerHTML = 'No disponible';
-        return;
-    }
-
-    const statsTypes = [
-        { api: 'Ball Possession', es: 'Posesión' },
-        { api: 'Total Shots', es: 'Tiros Totales' },
-        { api: 'Shots on Goal', es: 'Tiros al Arco' },
-        { api: 'Corner Kicks', es: 'Tiros de Esquina' },
-        { api: 'Fouls', es: 'Faltas' },
-        { api: 'Yellow Cards', es: 'Tarjetas Amarillas' },
-        { api: 'Red Cards', es: 'Tarjetas Rojas' }
-    ];
-
-    const hStats = m.statistics[0].statistics;
-    const aStats = m.statistics[1].statistics;
-
-    c.innerHTML = statsTypes.map(stat => {
-        const hVal = hStats.find(s => s.type === stat.api)?.value || 0;
-        const aVal = aStats.find(s => s.type === stat.api)?.value || 0;
-        const hNum = parseInt(hVal);
-        const aNum = parseInt(aVal);
-        const total = hNum + aNum || 1;
-        const hPerc = (hNum / total) * 100;
-
-        return `
-            <div class="bg-[#111] p-4 border border-[#222]">
-                <div class="flex justify-between text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest">
-                    <span>${hVal}</span><span>${stat.es}</span><span>${aVal}</span>
+                    <button onclick="app.changeDate(1)"
+                        class="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded transition-colors"><svg
+                            xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg></button>
                 </div>
-                <div class="h-1 bg-[#333] flex overflow-hidden">
-                    <div class="h-full bg-white" style="width: ${hPerc}%"></div>
-                    <div class="h-full bg-[#555]" style="width: ${100 - hPerc}%"></div>
+                <div id="calendar-days" class="flex justify-between max-w-lg mx-auto gap-1"></div>
+
+                <!-- Calendar Dropdown -->
+                <div id="calendar-dropdown"
+                    class="hidden absolute left-1/2 -translate-x-1/2 mt-4 bg-[#111] border border-[#333] rounded-lg p-4 shadow-2xl z-50 w-72 top-16">
+                    <div class="flex justify-between items-center mb-4">
+                        <button onclick="app.changeMonth(-1)"
+                            class="p-1 hover:text-white text-gray-400 hover:bg-[#222] rounded transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <span id="cal-month-year"
+                            class="font-bold text-white text-sm uppercase tracking-widest font-sport">MES
+                            AÑO</span>
+                        <button onclick="app.changeMonth(1)"
+                            class="p-1 hover:text-white text-gray-400 hover:bg-[#222] rounded transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+                        <span class="text-gray-500 font-bold">D</span>
+                        <span class="text-gray-500 font-bold">L</span>
+                        <span class="text-gray-500 font-bold">M</span>
+                        <span class="text-gray-500 font-bold">M</span>
+                        <span class="text-gray-500 font-bold">J</span>
+                        <span class="text-gray-500 font-bold">V</span>
+                        <span class="text-gray-500 font-bold">S</span>
+                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center text-xs">
+                        <!-- Days grid populated by JS -->
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-[#333] text-center">
+                        <button onclick="app.resetDate(); app.toggleCalendar()"
+                            class="text-[10px] text-yellow-500 hover:text-yellow-400 uppercase tracking-widest font-bold">
+                            Volver a Hoy
+                        </button>
+                    </div>
                 </div>
-            </div>`;
-    }).join('');
-};
 
-/**
- * Renderiza el historial H2H (últimos 15 partidos)
- */
-const renderHeadToHead = async (m) => {
-    const c = document.getElementById('tab-h2h');
-    c.innerHTML = `<div class="flex justify-center py-10"><div class="loader"></div></div>`;
+                <!-- Live Toggle (Desktop only) -->
+                <div class="hidden lg:flex items-center justify-center gap-3 mt-4 pt-3 border-t border-[#222]">
+                    <span class="text-[10px] font-bold text-white uppercase tracking-widest">EN VIVO</span>
+                    <div class="relative inline-block w-10 h-5 align-middle select-none">
+                        <input type="checkbox" id="live-toggle" onchange="app.toggleLiveFilter()"
+                            class="toggle-checkbox absolute block w-3 h-3 mt-1 ml-1 rounded-full bg-white border-none appearance-none cursor-pointer transition-all duration-300 left-0" />
+                        <label for="live-toggle"
+                            class="toggle-label block overflow-hidden h-5 rounded-full bg-[#222] cursor-pointer border border-[#444]"></label>
+                    </div>
+                    <span id="live-count" class="text-[9px] font-mono text-red-500 font-bold hidden">(0)</span>
+                </div>
+            </div>
 
-    const team1Id = m.teams.home.id;
-    const team2Id = m.teams.away.id;
+            <div id="main-content"
+                class="flex-1 overflow-y-auto overflow-x-hidden p-4 relative scroll-smooth pb-20 lg:pb-4"
+                style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
 
-    try {
-        // Fetch H2H data (last 15 matches)
-        const data = await fetchAPI(`/fixtures/headtohead?h2h=${team1Id}-${team2Id}&last=15&timezone=America/Argentina/Buenos_Aires`);
-        const fixtures = data.response;
+                <!-- Match List -->
+                <div id="view-match-list" class="max-w-3xl mx-auto space-y-6 animate-fade-in pb-24"></div>
 
-        if (!fixtures || fixtures.length === 0) {
-            c.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Sin historial reciente</div>';
-            return;
-        }
-
-        c.innerHTML = fixtures.map(match => {
-            const date = new Date(match.fixture.date);
-            const dateStr = date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
-
-            const isHome = match.teams.home.id === team1Id;
-            const homeScore = match.goals.home;
-            const awayScore = match.goals.away;
-
-            // Determine opacity for losing score
-            // If home won, away score is 50% opacity. If away won, home score is 50% opacity.
-            // If draw, both normal.
-            let homeOpacity = 'opacity-100';
-            let awayOpacity = 'opacity-100';
-
-            if (homeScore > awayScore) {
-                awayOpacity = 'opacity-50';
-            } else if (awayScore > homeScore) {
-                homeOpacity = 'opacity-50';
-            }
-
-            return `
-                <div class="flex items-center justify-between px-4 py-3 bg-[#111] border-b border-[#222] hover:bg-[#1a1a1a] transition-colors cursor-pointer" onclick="app.navigate('/partido/${match.fixture.id}')">
-                    <div class="flex items-center gap-4 min-w-0 flex-1">
-                        <span class="text-[10px] font-mono text-gray-600 shrink-0">${dateStr}</span>
-                        
-                        <div class="flex items-center justify-center flex-1 gap-4">
-                            <!-- Team 1 (Home in this match) -->
-                            <div class="flex items-center justify-end gap-2 flex-1">
-                                <span class="text-[10px] font-bold text-gray-400 truncate hidden sm:block">${match.teams.home.name}</span>
-                                <img src="${match.teams.home.logo}" class="w-5 h-5 object-contain">
-                                <span class="text-lg font-bold text-white font-mono ${homeOpacity}">${homeScore}</span>
+                <!-- Standings View -->
+                <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-24">
+                    <div
+                        class="flex flex-col gap-4 mb-6 sticky top-0 z-20 bg-black/95 backdrop-blur py-2 border-b border-[#222]">
+                        <div class="flex items-center justify-between px-1">
+                            <div class="flex items-center gap-3">
+                                <button onclick="app.navigateToMatches()" class="lg:hidden p-1 text-white"><svg
+                                        xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                    </svg></button>
+                                <h2 id="standings-title"
+                                    class="text-xl font-bold text-white uppercase tracking-wider font-sport">Tabla</h2>
                             </div>
+                            <select id="season-selector" onchange="app.changeSeason(this.value)"
+                                class="bg-[#111] text-white text-sm border border-[#333] p-1 px-2 rounded focus:outline-none font-mono">
+                                <option value="2025">2025</option>
+                                <option value="2024" selected>2024</option>
+                                <option value="2023">2023</option>
+                            </select>
+                        </div>
+                        <!-- Tabs Zonas -->
+                        <div id="standings-tabs" class="flex overflow-x-auto gap-2 px-1 no-scrollbar hidden"></div>
+                    </div>
 
-                            <span class="text-gray-600 text-[10px]">-</span>
+                    <div id="standings-container" class="space-y-6"></div>
+                </div>
 
-                            <!-- Team 2 (Away in this match) -->
-                            <div class="flex items-center justify-start gap-2 flex-1">
-                                <span class="text-lg font-bold text-white font-mono ${awayOpacity}">${awayScore}</span>
-                                <img src="${match.teams.away.logo}" class="w-5 h-5 object-contain">
-                                <span class="text-[10px] font-bold text-gray-400 truncate hidden sm:block">${match.teams.away.name}</span>
+                <!-- Team Profile View -->
+                <div id="view-team" class="hidden max-w-4xl mx-auto animate-fade-in pb-24"></div>
+
+                <!-- Lineup Builder View -->
+                <div id="view-lineup-builder" class="hidden max-w-4xl mx-auto animate-fade-in pb-24 h-full"></div>
+
+                <!-- Forum View -->
+                <div id="view-forum" class="hidden max-w-4xl mx-auto animate-fade-in pb-24 h-full flex flex-col">
+                    <div
+                        class="flex items-center gap-3 mb-6 sticky top-0 z-20 bg-black/95 backdrop-blur py-2 border-b border-[#222]">
+                        <button onclick="app.navigateToMatches()" class="lg:hidden p-1 text-white"><svg
+                                xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg></button>
+                        <h2 class="text-xl font-bold text-white uppercase tracking-wider font-sport">Foro Global</h2>
+                        <button onclick="app.navigateToLineupBuilder()"
+                            class="ml-auto bg-gradient-to-r from-green-600 to-emerald-600 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full hover:from-green-500 hover:to-emerald-500 transition-all shadow-lg flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Arma tu 11
+                        </button>
+                    </div>
+
+                    <div id="forum-messages" class="flex-1 overflow-y-auto space-y-4 pr-1 mb-4 pb-8"
+                        style="min-height: 400px; max-height: calc(100vh - 400px);">
+                        <!-- Messages inserted here -->
+                        <div class="text-center text-gray-600 py-10 text-xs uppercase tracking-widest">Cargando
+                            mensajes...</div>
+                    </div>
+
+                    <!-- Login required message (when NOT authenticated) -->
+                    <div id="forum-login-required"
+                        class="bg-[#111] p-6 border border-[#222] rounded-lg sticky bottom-0 z-10 w-full hidden">
+                        <div class="flex flex-col items-center gap-3">
+                            <p class="text-gray-400 text-xs text-center">Debes iniciar sesión para participar en el foro
+                            </p>
+                            <button onclick="app.loginWithGoogle()"
+                                class="px-4 py-2.5 bg-white text-black text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
+                                    fill="currentColor">
+                                    <path
+                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                        fill="#4285F4" />
+                                    <path
+                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                        fill="#34A853" />
+                                    <path
+                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                        fill="#FBBC05" />
+                                    <path
+                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                        fill="#EA4335" />
+                                </svg>
+                                Iniciar Sesión para Escribir
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Forum input (when authenticated) -->
+                    <div id="forum-input-container"
+                        class="bg-[#111] p-4 border border-[#222] rounded-lg sticky bottom-0 z-10 w-full hidden">
+                        <div class="flex gap-2">
+                            <input type="text" id="forum-input" placeholder="Escribe un mensaje..."
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-white">
+                            <button onclick="app.sendMessage('forum-username', 'forum-input')"
+                                class="btn-primary px-6 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-gray-200 transition-colors">
+                                Enviar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Estado Muteado/Baneado (foro global) -->
+                    <div id="forum-muted-container"
+                        class="bg-[#111] p-4 border border-yellow-500/50 rounded-lg sticky bottom-0 z-10 w-full hidden">
+                        <div class="flex items-center justify-center gap-3 text-yellow-500">
+                            <span class="text-xl">🔇</span>
+                            <div class="text-center">
+                                <div class="font-bold text-sm">Estás silenciado</div>
+                                <div id="forum-mute-time" class="text-xs text-yellow-400">Tiempo restante: --</div>
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
-        }).join('');
 
-    } catch (e) {
-        console.error('Error fetching H2H:', e);
-        c.innerHTML = '<div class="text-center py-10 text-gray-600 text-xs uppercase tracking-widest">Error al cargar historial</div>';
-    }
-};
-
-/**
- * Abre el detalle de un partido desde el router
- * @param {Object|number} params - { id, tab } desde URL o ID directo
- */
-export const openDetail = async (params) => {
-    let id, initialTab;
-
-    // Manejar tanto params object como ID directo
-    if (typeof params === 'object' && params !== null) {
-        id = params.id;
-        initialTab = params.tab || 'timeline';
-    } else {
-        id = params;
-        initialTab = 'timeline';
-    }
-
-    const matches = getMatches();
-
-    let m = matches.find(x => String(x.fixture.id) === String(id));
-
-    // Si no está en el state local (ej: partido de otra fecha desde el calendario de standings),
-    // buscarlo directamente en la API
-    if (!m) {
-        try {
-            const data = await fetchAPI(`/fixtures?id=${id}`, true);
-            if (data.response && data.response.length > 0) {
-                m = data.response[0];
-            }
-        } catch (e) {
-            console.error('Error fetching match:', e);
-        }
-    }
-
-    if (!m) {
-        console.warn('Match not found:', id);
-        alert('Partido no encontrado. Intenta recargar la página.');
-        return;
-    }
-
-    selectedMatch = m;
-
-    const detailView = document.getElementById('view-match-detail');
-
-    // Resetear scroll del modal completamente antes de mostrarlo
-    detailView.scrollTo(0, 0);
-
-    // Mostrar el modal
-    detailView.classList.remove('hidden');
-
-    // Ocultar otras vistas para que no se solapen en Desktop
-    document.getElementById('view-match-list').classList.add('hidden');
-    document.getElementById('view-standings').classList.add('hidden');
-    document.getElementById('view-forum').classList.add('hidden');
-    const viewTeam = document.getElementById('view-team');
-    if (viewTeam) viewTeam.classList.add('hidden');
-    const viewLineup = document.getElementById('view-lineup-builder');
-    if (viewLineup) viewLineup.classList.add('hidden');
-
-    // Ocultar sidebar derecha (comunidad) para dar más espacio al detalle
-    const rightSidebar = document.getElementById('right-sidebar');
-    if (rightSidebar) {
-        rightSidebar.style.display = 'none';
-    }
-
-    // Ocultar fecha en mobile (en desktop ya está en sidebar/header o no molesta)
-    const dateNav = document.getElementById('date-nav');
-    if (dateNav) {
-        if (window.innerWidth < 1024) {
-            dateNav.style.display = 'none';
-        } else {
-            // En desktop ocultamos el date-nav porque el detalle ocupa su lugar
-            dateNav.classList.add('hidden');
-        }
-    }
-
-    // Ocultar header principal SOLO en móvil
-    const header = document.querySelector('header');
-    if (header && window.innerWidth < 1024) {
-        header.style.display = 'none';
-    }
-
-    // Ocultar bottom nav en móvil
-    const bottomNav = document.querySelector('nav.fixed.bottom-0');
-    if (bottomNav) {
-        bottomNav.style.display = 'none';
-    }
-
-    // Prevenir scroll del fondo SOLO en móvil
-    if (window.innerWidth < 1024) {
-        document.body.style.overflow = 'hidden';
-    }
-
-    // Asegurar que el modal inicia desde arriba
-    detailView.scrollTop = 0;
-
-    document.getElementById('detail-content-wrapper').classList.add('hidden');
-    document.getElementById('detail-loader').classList.remove('hidden');
-
-    document.getElementById('detail-home-logo').src = m.teams.home.logo;
-    document.getElementById('detail-away-logo').src = m.teams.away.logo;
-    const homeScore = m.goals.home ?? 0;
-    const awayScore = m.goals.away ?? 0;
-
-    // Check for penalties logic
-    const hasPenalties = m.score && m.score.penalty && (m.score.penalty.home !== null || m.score.penalty.away !== null);
-
-    // Populate Match Info Header (League, Ref, Stadium)
-    const infoContainer = document.getElementById('detail-match-info');
-    if (infoContainer) {
-        const leagueName = m.league.name;
-        const leagueLogo = m.league.logo;
-        const leagueRound = m.league.round; // e.g., "Regular Season - 1"
-        const referee = m.fixture.referee || 'Árbitro no asignado';
-        const venueName = m.fixture.venue.name || 'Estadio desconocido';
-        const venueCity = m.fixture.venue.city || '';
-
-        // Custom Whistle Icon
-        const whistleIcon = 'https://i.postimg.cc/LsXj3CWR/silbato.png';
-
-        // Stadium Icon from Profile
-        const stadiumIcon = 'https://i.postimg.cc/mrVjjgxJ/4905563-2.png';
-
-        infoContainer.innerHTML = `
-            <div class="flex items-center gap-6 text-xs text-gray-400 font-medium">
-                <div class="flex items-center gap-2">
-                    <img src="${leagueLogo}" class="w-4 h-4 object-contain opacity-80">
-                    <span class="uppercase tracking-wider hover:text-white transition-colors cursor-default">${leagueName} - ${leagueRound}</span>
-                </div>
-                
-                <div class="w-[1px] h-3 bg-[#333]"></div>
-
-                <div class="flex items-center gap-2">
-                    <img src="${whistleIcon}" class="h-3 w-auto object-contain opacity-60">
-                    <span>${referee}</span>
+                    <div id="forum-banned-container"
+                        class="bg-[#111] p-4 border border-red-500/50 rounded-lg sticky bottom-0 z-10 w-full hidden">
+                        <div class="text-center">
+                            <div class="flex items-center justify-center gap-2 text-red-500 mb-2">
+                                <span class="text-xl">⛔</span>
+                                <span class="font-bold text-sm">Tu cuenta ha sido suspendida</span>
+                            </div>
+                            <div class="text-xs text-gray-400">Si crees que esto fue un error, escríbenos a:</div>
+                            <a href="mailto:contacto@realfutbol.app"
+                                class="text-xs text-blue-400 hover:underline">contacto@realfutbol.app</a>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="w-[1px] h-3 bg-[#333]"></div>
 
-                <div class="flex items-center gap-2">
-                    <img src="${stadiumIcon}" class="h-3 w-auto object-contain opacity-50">
-                    <span>${venueName}${venueCity ? `, ${venueCity}` : ''}</span>
+                <!-- Footer -->
+                <footer class="mt-12 border-t border-[#222] py-8 px-4">
+                    <div class="max-w-3xl mx-auto">
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <img src="https://i.postimg.cc/9FD6NhN2/REAL-FUTBOL-LARGO.png" alt="RealFutbol"
+                                    class="h-6 object-contain opacity-40">
+                            </div>
+                            <div class="flex items-center gap-6">
+                                <button onclick="document.getElementById('about-us-modal').classList.remove('hidden')"
+                                    class="text-[10px] text-gray-600 hover:text-gray-400 uppercase tracking-widest font-bold transition-colors">Sobre
+                                    Nosotros</button>
+                                <a href="/politica-de-privacidad.html"
+                                    class="text-[10px] text-gray-600 hover:text-gray-400 uppercase tracking-widest font-bold transition-colors">Política
+                                    de Privacidad</a>
+                                <a href="/terminos-y-condiciones.html"
+                                    class="text-[10px] text-gray-600 hover:text-gray-400 uppercase tracking-widest font-bold transition-colors">Términos
+                                    y Condiciones</a>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <span class="text-[10px] text-gray-700 tracking-wider">© 2026 RealFutbol. Todos los derechos
+                                reservados.</span>
+                        </div>
+                    </div>
+                </footer>
+
+            </div>
+            <div id="view-match-detail"
+                class="hidden fixed inset-0 lg:static lg:w-full lg:h-full lg:z-0 bg-black z-[60] overflow-y-auto lg:overflow-y-auto animate-fade-in"
+                style="touch-action: pan-y; -webkit-overflow-scrolling: touch;">
+                <div class="max-w-[95%] mx-auto bg-[#050505] relative">
+
+                    <!-- Header Container (Back Button + Match Info) -->
+                    <div
+                        class="pointer-events-none lg:pointer-events-auto lg:absolute lg:top-6 lg:left-6 lg:z-50 lg:flex lg:items-center lg:gap-4 w-full lg:w-auto">
+                        <!-- Botón Volver (Fixed on Mobile, Static in Flex on Desktop) -->
+                        <button onclick="app.closeDetail()"
+                            class="btn-float-back hover:bg-[#222] transition-all pointer-events-auto lg:static lg:translate-x-0 lg:translate-y-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </button>
+
+                        <!-- Match Info (Desktop Only - Next to Back Button) -->
+                        <div id="detail-match-info" class="hidden lg:block pointer-events-auto"></div>
+                    </div>
+
+                    <div id="detail-loader" class="hidden py-40 text-center">
+                        <div class="loader"></div>
+                    </div>
+
+                    <div id="detail-content-wrapper" class="pt-4 pb-20">
+                        <!-- Scoreboard -->
+                        <!-- Scoreboard -->
+                        <!-- Scoreboard -->
+                        <div
+                            class="relative pt-12 lg:pt-20 px-6 pb-6 text-center border-b border-[#222] bg-[#0a0a0a] flex flex-col">
+
+
+                            <!-- Teams/Score Row -->
+                            <div
+                                class="flex justify-between items-center w-full mx-auto order-1 lg:order-2 mb-4 lg:mb-0">
+                                <div class="flex-1 flex flex-col items-center min-w-0">
+                                    <img id="detail-home-logo" src="" class="w-16 h-16 object-contain mb-3">
+                                    <h3 id="detail-home-name"
+                                        class="font-bold text-sm leading-tight text-white uppercase text-center w-full truncate">
+                                        Home</h3>
+                                </div>
+                                <div class="px-4 flex flex-col items-center">
+                                    <div id="detail-score-container"
+                                        class="text-4xl font-black text-white tracking-tighter flex items-center gap-2 score-font">
+                                        <span id="detail-home-score">-</span>
+                                        <span class="text-gray-600 text-2xl">:</span>
+                                        <span id="detail-away-score">-</span>
+                                    </div>
+                                    <div id="detail-status"
+                                        class="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                        VS</div>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center min-w-0">
+                                    <img id="detail-away-logo" src="" class="w-16 h-16 object-contain mb-3">
+                                    <h3 id="detail-away-name"
+                                        class="font-bold text-sm leading-tight text-white uppercase text-center w-full truncate">
+                                        Away</h3>
+                                </div>
+                            </div>
+
+                            <!-- Scorers Row -->
+                            <div class="flex justify-between items-start w-full mx-auto mt-0 order-3">
+                                <div id="detail-home-scorers-list"
+                                    class="flex-1 text-xs text-gray-500 font-mono space-y-0.5 flex flex-col items-center">
+                                </div>
+                                <div class="w-8"></div> <!-- Spacer -->
+                                <div id="detail-away-scorers-list"
+                                    class="flex-1 text-xs text-gray-500 font-mono space-y-0.5 flex flex-col items-center">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabs -->
+                        <div
+                            class="flex border-b border-[#222] sticky top-0 bg-black/95 backdrop-blur z-30 overflow-x-auto no-scrollbar">
+                            <button
+                                class="flex-1 py-3 px-4 text-xs font-bold text-white border-b-2 border-white tab-btn whitespace-nowrap uppercase"
+                                data-target="tab-timeline"
+                                onclick="app.switchTab(this, 'tab-timeline')">Cronología</button>
+                            <button
+                                class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
+                                data-target="tab-lineups"
+                                onclick="app.switchTab(this, 'tab-lineups')">Alineaciones</button>
+                            <button
+                                class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
+                                data-target="tab-stats" onclick="app.switchTab(this, 'tab-stats')">Estadísticas</button>
+                            <button
+                                class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
+                                data-target="tab-h2h" onclick="app.switchTab(this, 'tab-h2h')">H2H</button>
+                            <button
+                                class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 tab-btn whitespace-nowrap uppercase"
+                                data-target="tab-forum" onclick="app.switchTab(this, 'tab-forum')">Foro</button>
+                        </div>
+
+                        <div class="p-4 lg:p-8 space-y-6 min-h-[50vh]">
+                            <!-- Timeline View -->
+                            <div id="tab-timeline" class="tab-content block space-y-4 max-w-2xl mx-auto"></div>
+
+                            <!-- H2H View -->
+                            <div id="tab-h2h" class="tab-content hidden space-y-4 max-w-2xl mx-auto"></div>
+
+                            <!-- Forum View -->
+                            <div id="tab-forum" class="tab-content hidden h-[400px] flex flex-col max-w-2xl mx-auto">
+                                <div id="match-forum-messages"
+                                    class="flex-1 overflow-y-auto space-y-3 pr-1 mb-4 pb-8 border border-[#222] rounded p-3 bg-[#0a0a0a]">
+                                    <div class="text-center text-gray-600 py-10 text-xs uppercase tracking-widest">
+                                        Cargando charla del partido...</div>
+                                </div>
+                                <!-- Login required (when NOT authenticated) -->
+                                <div id="match-forum-login-required" class="hidden">
+                                    <div
+                                        class="flex flex-col items-center gap-3 p-4 bg-[#111] border border-[#222] rounded">
+                                        <p class="text-gray-400 text-xs text-center">Inicia sesión para comentar en
+                                            este partido</p>
+                                        <button onclick="app.loginWithGoogle()"
+                                            class="px-4 py-2 bg-white text-black text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
+                                                fill="currentColor">
+                                                <path
+                                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                                    fill="#4285F4" />
+                                                <path
+                                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                                    fill="#34A853" />
+                                                <path
+                                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                                    fill="#FBBC05" />
+                                                <path
+                                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                                    fill="#EA4335" />
+                                            </svg>
+                                            Iniciar Sesión
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Match forum input (when authenticated) -->
+                                <div id="match-forum-input-container" class="flex gap-2 hidden">
+                                    <input type="text" id="match-forum-input" placeholder="Comenta sobre el partido..."
+                                        class="flex-1 bg-[#111] border border-[#333] text-white text-sm p-2 rounded focus:outline-none focus:border-white">
+                                    <button onclick="app.sendMessage('match-forum-username', 'match-forum-input')"
+                                        class="btn-primary px-4 py-2 rounded text-xs uppercase font-bold tracking-widest hover:bg-gray-200 transition-colors">
+                                        Enviar
+                                    </button>
+                                </div>
+
+                                <!-- Estado Muteado/Baneado (foro partido) -->
+                                <div id="match-forum-muted-container"
+                                    class="hidden p-3 border border-yellow-500/50 rounded-lg bg-[#111]">
+                                    <div class="flex items-center justify-center gap-2 text-yellow-500">
+                                        <span>🔇</span>
+                                        <div class="text-center">
+                                            <div class="font-bold text-xs">Estás silenciado</div>
+                                            <div id="match-forum-mute-time" class="text-[10px] text-yellow-400">
+                                                Tiempo restante: --</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="match-forum-banned-container"
+                                    class="hidden p-3 border border-red-500/50 rounded-lg bg-[#111]">
+                                    <div class="text-center">
+                                        <div class="flex items-center justify-center gap-2 text-red-500 mb-1">
+                                            <span>⛔</span>
+                                            <span class="font-bold text-xs">Cuenta suspendida</span>
+                                        </div>
+                                        <a href="mailto:contacto@realfutbol.app"
+                                            class="text-[10px] text-blue-400 hover:underline">contacto@realfutbol.app</a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="tab-lineups" class="tab-content hidden w-full mx-auto">
+                                <div class="football-pitch mx-auto" id="football-pitch">
+                                    <div class="center-line"></div>
+                                    <div class="center-circle"></div>
+                                    <div class="penalty-box home-box"></div>
+                                    <div class="penalty-box away-box"></div>
+                                    <div class="goal-box home-box"></div>
+                                    <div class="goal-box away-box"></div>
+                                    <!-- Corner Arcs -->
+                                    <div class="corner-arc corner-top-left"></div>
+                                    <div class="corner-arc corner-top-right"></div>
+                                    <div class="corner-arc corner-bottom-left"></div>
+                                    <div class="corner-arc corner-bottom-right"></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 mt-6" id="lineup-lists-grid">
+                                    <div class="bg-[#111] p-4 rounded border border-[#222] overflow-y-auto"
+                                        style="max-height: 600px;">
+                                        <h4
+                                            class="text-white font-bold border-b border-[#333] pb-2 mb-2 text-xs uppercase tracking-wider">
+                                            Local</h4>
+                                        <div id="lineup-home-list" class="space-y-2 text-xs text-gray-400 font-mono">
+                                        </div>
+                                    </div>
+                                    <div class="bg-[#111] p-4 rounded border border-[#222] overflow-y-auto"
+                                        style="max-height: 600px;">
+                                        <h4
+                                            class="text-white font-bold border-b border-[#333] pb-2 mb-2 text-right text-xs uppercase tracking-wider">
+                                            Visitante</h4>
+                                        <div id="lineup-away-list"
+                                            class="space-y-2 text-xs text-gray-400 text-right font-mono"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stats View -->
+                            <div id="tab-stats" class="tab-content hidden space-y-4 w-full mx-auto"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        `;
-    }
 
-    // Headers
-    // Red cards
-    let homeRedCardsHTML = '';
-    let awayRedCardsHTML = '';
-    if (m.events && m.events.length > 0) {
-        const redCards = m.events.filter(e => e.type === 'Card' && e.detail === 'Red Card');
-        const hReds = redCards.filter(e => e.team.id === m.teams.home.id).length;
-        const aReds = redCards.filter(e => e.team.id === m.teams.away.id).length;
+        </main>
 
-        if (hReds > 0) homeRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(hReds) + '</div>';
-        if (aReds > 0) awayRedCardsHTML = '<div class="flex gap-1 justify-center mt-1">' + '<div class="w-3 h-4 bg-red-600 rounded-sm"></div>'.repeat(aReds) + '</div>';
-    }
+        <!-- Right Sidebar (Desktop only) -->
+        <aside id="right-sidebar"
+            class="hidden lg:flex w-72 bg-black border-l border-[#222] flex-col shrink-0 sticky top-0 h-screen overflow-y-auto">
+            <div class="flex-1 p-4 flex flex-col">
+                <div class="px-2 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Comunidad</div>
 
-    document.getElementById('detail-home-name').innerHTML = m.teams.home.name + homeRedCardsHTML;
-    document.getElementById('detail-away-name').innerHTML = m.teams.away.name + awayRedCardsHTML;
-    document.getElementById('detail-home-logo').src = m.teams.home.logo;
-    document.getElementById('detail-away-logo').src = m.teams.away.logo;
+                <!-- Twitter/X Profile Card -->
+                <a href="https://x.com/RealFutbolApp" target="_blank" rel="noopener noreferrer"
+                    class="block rounded-xl border border-[#222] bg-gradient-to-br from-[#0a0a0a] to-[#111] p-4 hover:border-[#555] hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-300 group">
+                    <div class="flex items-center gap-3 mb-3">
+                        <img src="https://i.postimg.cc/1XhSs3Gv/RF-FUTURO.png" alt="RealFutbolApp"
+                            class="w-11 h-11 rounded-full border-2 border-[#333] group-hover:border-white transition-colors duration-300">
+                        <div>
+                            <div class="text-white font-bold text-sm leading-tight flex items-center gap-1">Real Futbol
+                                App <img src="https://i.postimg.cc/KvLXrTXM/verified-badge-profile-icon-png.png"
+                                    alt="Verificado" class="w-4 h-4"></div>
+                            <div class="text-gray-500 text-xs font-mono">@RealFutbolApp</div>
+                        </div>
+                    </div>
+                    <div
+                        class="flex items-center justify-center gap-2 bg-white text-black font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-lg group-hover:bg-gray-200 transition-colors duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24"
+                            fill="currentColor">
+                            <path
+                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                        Seguinos en X
+                    </div>
+                </a>
 
-    // Score & Status Logic
-    // Score & Status Logic
-    const statusShort = m.fixture.status.short;
-    const isLive = ['1H', '2H', 'ET', 'P', 'LIVE', 'BT', 'INT'].includes(statusShort);
-    const isHT = statusShort === 'HT';
-    const isFin = ['FT', 'AET', 'PEN', 'AWD', 'WO'].includes(statusShort);
-    const notStarted = !isLive && !isHT && !isFin; // Catch-all for any other status (NS, TBD, PST, CANC, ABD, etc)
+                <!-- Featured Match (populated dynamically) -->
+                <div id="featured-match-container" class="mt-3"></div>
 
-    const scoreDiv = document.getElementById('detail-score-container');
-    const statusDiv = document.getElementById('detail-status');
+                <!-- Foro Global Card -->
+                <button onclick="app.navigateToForum()"
+                    class="w-full block rounded-xl border border-[#222] bg-gradient-to-br from-[#0a0a0a] to-[#111] p-4 hover:border-[#555] hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-300 group mt-3 text-left">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div
+                            class="w-11 h-11 rounded-full bg-[#1a1a1a] border-2 border-[#333] group-hover:border-white transition-colors duration-300 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-white font-bold text-sm leading-tight">Foro Global</div>
+                            <div class="text-gray-500 text-xs">Comentá con la comunidad</div>
+                        </div>
+                    </div>
+                    <div
+                        class="flex items-center justify-center gap-2 bg-white text-black font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-lg group-hover:bg-gray-200 transition-colors duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        Entrar al Foro
+                    </div>
+                </button>
 
-    if (notStarted) {
-        // Pre-match: Show ONLY time in the big score slot, no colon.
-        scoreDiv.classList.remove('hidden');
+                <!-- Arma tu 11 Card -->
+                <button onclick="app.navigateToLineupBuilder()"
+                    class="w-full block rounded-xl border border-[#222] bg-gradient-to-br from-[#0a0a0a] to-[#111] p-4 hover:border-[#555] hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-300 group mt-3 text-left">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div
+                            class="w-11 h-11 rounded-full bg-[#1a1a1a] border-2 border-[#333] group-hover:border-white transition-colors duration-300 flex items-center justify-center overflow-hidden p-2">
+                            <img src="assets/cancha.png" alt="Lineup Icon" class="w-full h-full object-contain">
+                        </div>
+                        <div>
+                            <div class="text-white font-bold text-sm leading-tight">Arma tu 11</div>
+                            <div class="text-gray-500 text-xs">Crea y comparte tu equipo ideal</div>
+                        </div>
+                    </div>
+                    <div
+                        class="flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-lg group-hover:from-green-500 group-hover:to-emerald-500 transition-all duration-200 shadow-lg shadow-green-900/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 5v14M5 12h14" />
+                        </svg>
+                        Crear Equipo
+                    </div>
+                </button>
 
-        let displayTime = '';
-        if (statusShort === 'TBD') {
-            displayTime = 'TBD';
-        } else if (['PST', 'CANC', 'ABD'].includes(statusShort)) {
-            displayTime = m.fixture.status.short; // Show PST/CANC code or long text if preferred
-        } else {
-            displayTime = new Date(m.fixture.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-        }
+                <!-- Donate -->
+                <button onclick="document.getElementById('donation-modal').classList.remove('hidden')"
+                    class="w-full block rounded-xl border border-[#222] bg-gradient-to-br from-[#0a0a0a] to-[#111] p-3 hover:border-[#555] hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-300 group mt-3 text-left">
+                    <div
+                        class="flex items-center justify-center gap-2 text-yellow-500 group-hover:text-yellow-400 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                            </path>
+                        </svg>
+                        <span class="text-xs font-bold uppercase tracking-wider">Donar</span>
+                    </div>
+                </button>
 
-        scoreDiv.innerHTML = `<span class="text-4xl text-white font-bold">${displayTime}</span>`;
+                <!-- About Us moved to Footer -->
+            </div>
+        </aside>
+    </div>
 
-        // Clear status div
-        statusDiv.innerHTML = '';
-    } else {
-        // Match started/finished: Restore standard scoreboard structure
-        scoreDiv.classList.remove('hidden');
+    <!-- Player Modal -->
+    <div id="player-modal"
+        class="fixed inset-0 bg-black/90 z-[70] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-none w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 id="modal-player-name" class="font-bold text-white text-lg font-mono uppercase">Jugador</h3>
+                <button onclick="document.getElementById('player-modal').classList.add('hidden')"
+                    class="text-white hover:text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg></button>
+            </div>
+            <div class="p-8 text-center">
+                <div
+                    class="w-16 h-16 bg-white rounded-full mx-auto mb-4 flex items-center justify-center text-black font-bold text-2xl">
+                    #</div>
+                <p class="text-gray-400 text-sm uppercase tracking-wider">Detalles no disponibles</p>
+            </div>
+        </div>
+    </div>
 
-        // Rebuild structure if it was overwritten by time
-        if (!scoreDiv.querySelector('#detail-home-score')) {
-            scoreDiv.innerHTML = `
-                <span id="detail-home-score">-</span>
-                <span class="text-gray-600 text-2xl">:</span>
-                <span id="detail-away-score">-</span>
-            `;
-        }
+    <!-- Bottom Navigation (Mobile Only) - Pill Style -->
+    <div class="fixed bottom-[3.5px] left-0 right-0 z-50 lg:hidden flex justify-center px-4 pb-safe">
+        <nav
+            class="bg-[#1a1a1a] border border-[#333] rounded-full flex justify-around items-center h-14 w-full max-w-md shadow-lg shadow-black/50">
+            <button id="btn-nav-results" onclick="app.navigateToMatches()"
+                class="flex flex-col items-center justify-center flex-1 h-full text-white transition-colors rounded-l-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span class="text-[8px] font-bold uppercase tracking-wider">Resultados</span>
+            </button>
+            <button id="btn-nav-live" onclick="app.toggleLiveFromMobile()"
+                class="flex flex-col items-center justify-center flex-1 h-full text-gray-400 hover:text-white active:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
+                </svg>
+                <span class="text-[8px] font-bold uppercase tracking-wider">En Vivo</span>
+            </button>
+            <button id="btn-nav-leagues" onclick="app.openMobileTab('leagues')"
+                class="flex flex-col items-center justify-center flex-1 h-full text-gray-400 hover:text-white active:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 22h16" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                </svg>
+                <span class="text-[8px] font-bold uppercase tracking-wider">Ligas</span>
+            </button>
+            <button id="btn-nav-forum" onclick="app.navigateToForum()"
+                class="flex flex-col items-center justify-center flex-1 h-full text-gray-400 hover:text-white active:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span class="text-[8px] font-bold uppercase tracking-wider">Foro</span>
+            </button>
+            <button id="btn-nav-menu"
+                onclick="document.getElementById('mobile-menu-drawer').classList.remove('hidden'); document.getElementById('mobile-menu-drawer').classList.add('flex')"
+                class="flex flex-col items-center justify-center flex-1 h-full text-gray-400 hover:text-white active:text-white transition-colors rounded-r-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+                <span class="text-[8px] font-bold uppercase tracking-wider">Menú</span>
+            </button>
+        </nav>
+    </div>
 
-        // Handle Penalties
-        const hasPenalties = m.score.penalty.home !== null && m.score.penalty.away !== null;
-        if (hasPenalties) {
-            document.getElementById('detail-home-score').innerHTML = `<span class="text-sm text-gray-400 font-normal mr-1">(${m.score.penalty.home})</span>${m.goals.home ?? 0}`;
-            document.getElementById('detail-away-score').innerHTML = `${m.goals.away ?? 0}<span class="text-sm text-gray-400 font-normal ml-1">(${m.score.penalty.away})</span>`;
-        } else {
-            document.getElementById('detail-home-score').innerText = m.goals.home ?? 0;
-            document.getElementById('detail-away-score').innerText = m.goals.away ?? 0;
-        }
+    <!-- Mobile Menu Drawer -->
+    <div id="mobile-menu-drawer" class="fixed inset-0 z-[70] hidden items-end justify-center lg:hidden"
+        onclick="if(event.target===this){this.classList.add('hidden');this.classList.remove('flex')}">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div
+            class="relative w-full max-w-md mx-4 mb-24 bg-[#111] border border-[#333] rounded-2xl overflow-hidden shadow-2xl animate-slide-up">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-[#222]">
+                <span class="text-sm font-bold text-white uppercase tracking-widest">Menú</span>
+                <button
+                    onclick="document.getElementById('mobile-menu-drawer').classList.add('hidden');document.getElementById('mobile-menu-drawer').classList.remove('flex')"
+                    class="p-1 text-gray-400 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <!-- Items -->
+            <div class="py-2 overflow-y-auto max-h-[80vh]">
+                <!-- Featured Match Mobile -->
+                <div id="featured-match-mobile-container" class="mx-4 mb-2"></div>
 
-        // Status Text
-        if (isLive) {
-            statusDiv.innerHTML = `<span class="text-red-500 animate-pulse">${m.fixture.status.elapsed}'</span>`;
-        } else if (isHT) {
-            statusDiv.innerText = 'ET';
-        } else if (isFin) {
-            statusDiv.innerText = 'FINALIZADO';
-        } else {
-            statusDiv.innerText = m.fixture.status.long;
-        }
+                <a href="https://x.com/RealFutbolApp" target="_blank" rel="noopener noreferrer"
+                    class="mx-4 my-2 block rounded-xl border border-[#222] bg-gradient-to-br from-[#0a0a0a] to-[#111] p-3.5 hover:border-[#555] transition-all duration-300 group">
+                    <div class="flex items-center gap-3 mb-2.5">
+                        <img src="https://i.postimg.cc/1XhSs3Gv/RF-FUTURO.png" alt="RealFutbolApp"
+                            class="w-10 h-10 rounded-full border-2 border-[#333] group-hover:border-white transition-colors duration-300">
+                        <div>
+                            <div class="text-white font-bold text-sm leading-tight flex items-center gap-1">Real Futbol
+                                <img src="https://i.postimg.cc/KvLXrTXM/verified-badge-profile-icon-png.png"
+                                    alt="Verificado" class="w-4 h-4">
+                            </div>
+                            <div class="text-gray-500 text-xs font-mono">@RealFutbolApp</div>
+                        </div>
+                    </div>
+                    <div
+                        class="flex items-center justify-center gap-2 bg-white text-black font-bold text-xs uppercase tracking-wider py-2 px-3 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24"
+                            fill="currentColor">
+                            <path
+                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                        Seguinos en Twitter
+                    </div>
+                </a>
+                <button
+                    onclick="document.getElementById('donation-modal').classList.remove('hidden');document.getElementById('mobile-menu-drawer').classList.add('hidden');document.getElementById('mobile-menu-drawer').classList.remove('flex')"
+                    class="w-full flex items-center gap-4 px-5 py-3.5 text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                        </path>
+                    </svg>
+                    <span class="text-sm font-bold uppercase tracking-wider">Apoyar el proyecto</span>
+                </button>
 
-        statusDiv.className = "mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest";
-        if (isLive) statusDiv.classList.add('text-red-500');
-    }
+                <!-- About Us moved to Footer -->
+                <div class="my-1 border-t border-[#222] mx-5"></div>
+                <a href="/politica-de-privacidad.html"
+                    class="flex items-center gap-4 px-5 py-3.5 text-gray-500 hover:bg-[#1a1a1a] hover:text-gray-300 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <span class="text-xs font-medium">Política de Privacidad</span>
+                </a>
+                <a href="/terminos-y-condiciones.html"
+                    class="flex items-center gap-4 px-5 py-3.5 text-gray-500 hover:bg-[#1a1a1a] hover:text-gray-300 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span class="text-xs font-medium">Términos y Condiciones</span>
+                </a>
+            </div>
+        </div>
+    </div>
 
-    // Make team logos and names clickable
-    const homeLogo = document.getElementById('detail-home-logo');
-    const awayLogo = document.getElementById('detail-away-logo');
-    const homeName = document.getElementById('detail-home-name');
-    const awayName = document.getElementById('detail-away-name');
+    <!-- Login Modal -->
+    <div id="login-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Bienvenido</h3>
+                <button onclick="document.getElementById('login-modal').classList.add('hidden')"
+                    class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-sm leading-relaxed text-center">
+                    Inicia sesión para acceder a todas las funcionalidades de RealFutbol: comenta en los partidos,
+                    participa en el foro global y más.
+                </p>
 
-    [homeLogo, homeName].forEach(el => {
-        el.style.cursor = 'pointer';
-        el.onclick = (e) => { e.stopPropagation(); app.navigate(`/equipo/${m.teams.home.id}`); };
-    });
-    [awayLogo, awayName].forEach(el => {
-        el.style.cursor = 'pointer';
-        el.onclick = (e) => { e.stopPropagation(); app.navigate(`/equipo/${m.teams.away.id}`); };
-    });
+                <button onclick="app.loginWithGoogle(); document.getElementById('login-modal').classList.add('hidden')"
+                    class="w-full px-4 py-3 bg-white text-black text-sm font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all flex items-center justify-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            fill="#4285F4" />
+                        <path
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            fill="#34A853" />
+                        <path
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                            fill="#FBBC05" />
+                        <path
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                            fill="#EA4335" />
+                    </svg>
+                    Iniciar con Google
+                </button>
 
-    // Goleadores - Render in the new row
-    const hList = document.getElementById('detail-home-scorers-list');
-    const aList = document.getElementById('detail-away-scorers-list');
-    if (hList) hList.innerHTML = '';
-    if (aList) aList.innerHTML = ''; // Bug in original code? Checking if aList exists but clearing hList? Fixed below.
+                <div class="text-center text-gray-600 text-xs">o</div>
 
-    if (m.events) {
-        const goals = m.events.filter(e => e.type === 'Goal');
-        goals.forEach(g => {
-            const isHome = g.team.id === m.teams.home.id;
-            const container = isHome ? hList : aList;
-            if (container) {
-                const min = g.time.elapsed + (g.time.extra ? `+${g.time.extra}` : '');
-                const player = g.player.name;
-                const div = document.createElement('div');
-                // Style for scorers: simplified
-                div.innerHTML = `${player} (${min}')`;
-                container.appendChild(div);
-            }
-        });
-    }
+                <button
+                    onclick="document.getElementById('login-modal').classList.add('hidden'); document.getElementById('phone-login-modal').classList.remove('hidden');"
+                    class="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] text-white text-sm font-bold uppercase tracking-wider rounded hover:bg-[#111] transition-all flex items-center justify-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    Iniciar con Teléfono
+                </button>
 
-    try {
-        const hasFullData = m.events && m.lineups && m.statistics;
+                <p class="text-gray-600 text-[10px] text-center">
+                    Al iniciar sesión, aceptas nuestros términos y condiciones
+                </p>
 
-        // Si el partido terminó y ya tenemos datos completos, no gastar un request
-        if (isFin && hasFullData) {
-            // Fetch player stats (photos & ratings) if not already loaded
-            if (!m.players) {
-                try {
-                    const playersData = await fetchAPI(`/fixtures/players?fixture=${id}`, true);
-                    if (playersData && playersData.response) {
-                        m.players = playersData.response;
-                    }
-                } catch (pe) {
-                    console.warn('Could not fetch player stats:', pe);
-                }
-            }
-            renderTimeline(m);
-            renderLineups(m);
-            renderStats(m);
-        } else {
-            const data = await fetchAPI(`/fixtures?id=${id}`, true);
-            const fullMatch = data.response[0];
+                <!-- Legal Links -->
+                <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-3 border-t border-[#222]">
+                    <a href="/terminos-y-condiciones" target="_blank" rel="noopener noreferrer"
+                        class="text-orange-500 hover:text-orange-400 text-xs font-semibold whitespace-nowrap transition-colors">
+                        Términos y Condiciones
+                    </a>
+                    <span class="text-gray-600 hidden sm:inline">•</span>
+                    <a href="/politica-de-privacidad" target="_blank" rel="noopener noreferrer"
+                        class="text-orange-500 hover:text-orange-400 text-xs font-semibold whitespace-nowrap transition-colors">
+                        Política de Privacidad
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            // Actualizar eventos en el state de matches para mostrar tarjetas rojas en la lista
-            if (fullMatch && fullMatch.events) {
-                // Also re-render scorers with fresh data
-                if (hList) hList.innerHTML = '';
-                if (aList) aList.innerHTML = '';
-                const freshGoals = fullMatch.events.filter(e => e.type === 'Goal');
-                freshGoals.forEach(g => {
-                    const isHome = g.team.id === fullMatch.teams.home.id;
-                    const container = isHome ? hList : aList;
-                    if (container) {
-                        const min = g.time.elapsed + (g.time.extra ? `+${g.time.extra}` : '');
-                        const player = g.player.name;
-                        const div = document.createElement('div');
-                        div.innerHTML = `${player} (${min}')`;
-                        container.appendChild(div);
-                    }
-                });
+    <!-- Phone Login Modal -->
+    <div id="phone-login-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Iniciar con Teléfono</h3>
+                <button
+                    onclick="document.getElementById('phone-login-modal').classList.add('hidden'); document.getElementById('login-modal').classList.remove('hidden');"
+                    class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-sm leading-relaxed text-center">
+                    Ingresa tu número de teléfono y recibirás un código de verificación por SMS.
+                </p>
 
-                updateMatchEvents(id, fullMatch.events);
-            }
+                <div class="space-y-3">
+                    <label class="text-gray-400 text-xs uppercase tracking-wider">Número de teléfono</label>
+                    <div class="flex gap-2">
+                        <select id="phone-country-code"
+                            class="bg-[#0a0a0a] border border-[#333] text-white p-3 rounded focus:outline-none focus:border-white w-24">
+                            <option value="+54">🇦🇷 +54</option>
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+52">🇲🇽 +52</option>
+                            <option value="+34">🇪🇸 +34</option>
+                            <option value="+55">🇧🇷 +55</option>
+                        </select>
+                        <input type="tel" id="phone-number-input" placeholder=""
+                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white p-3 rounded focus:outline-none focus:border-white">
+                    </div>
+                </div>
 
-            // Guardar datos completos en el objeto del match para futuras visitas
-            if (fullMatch) {
-                m.lineups = fullMatch.lineups || m.lineups;
-                m.statistics = fullMatch.statistics || m.statistics;
-                m.events = fullMatch.events || m.events; // Update events too
-            }
+                <div id="phone-login-error" class="hidden text-red-500 text-xs text-center"></div>
 
-            // Fetch player stats (photos & ratings)
-            try {
-                const playersData = await fetchAPI(`/fixtures/players?fixture=${id}`, true);
-                if (playersData && playersData.response) {
-                    fullMatch.players = playersData.response;
-                    m.players = playersData.response;
-                }
-            } catch (pe) {
-                console.warn('Could not fetch player stats:', pe);
-            }
+                <button onclick="app.handlePhoneLogin()"
+                    class="w-full px-4 py-3 bg-white text-black text-sm font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all">
+                    Enviar Código
+                </button>
 
-            renderTimeline(fullMatch);
-            renderLineups(fullMatch);
-            renderStats(fullMatch);
-        }
-    } catch (e) {
-        console.error(e);
-    }
+                <!-- reCAPTCHA container (invisible con App Check) -->
+                <div id="recaptcha-container"></div>
 
-    document.getElementById('detail-loader').classList.add('hidden');
-    document.getElementById('detail-content-wrapper').classList.remove('hidden');
+                <p class="text-gray-600 text-[10px] text-center">
+                    Se enviarán costos estándar de mensaje
+                </p>
+            </div>
+        </div>
+    </div>
 
-    // Asegurar que después de cargar, el scroll está arriba
-    setTimeout(() => {
-        detailView.scrollTo(0, 0);
-    }, 100);
+    <!-- Phone Verification Modal -->
+    <div id="phone-verification-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Verificar Código</h3>
+                <button onclick="app.closePhoneVerification()" class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-sm leading-relaxed text-center">
+                    Ingresa el código de 6 dígitos que enviamos a <span id="phone-display"
+                        class="text-white font-bold"></span>
+                </p>
 
-    // Determinar si el partido ha comenzado (para tabs)
-    const tabNotStarted = ['NS', 'TBD', 'PST', 'CANC', 'ABD'].includes(m.fixture.status.short);
+                <div class="space-y-3">
+                    <label class="text-gray-400 text-xs uppercase tracking-wider">Código de verificación</label>
+                    <input type="text" id="sms-code-input" placeholder="" maxlength="6"
+                        class="w-full bg-[#0a0a0a] border border-[#333] text-white text-center text-2xl tracking-widest p-3 rounded focus:outline-none focus:border-white font-mono">
+                </div>
 
-    // Ocultar/mostrar tabs según el estado del partido
-    const timelineTab = document.querySelector('.tab-btn[data-target="tab-timeline"]');
-    const lineupsTab = document.querySelector('.tab-btn[data-target="tab-lineups"]');
-    const statsTab = document.querySelector('.tab-btn[data-target="tab-stats"]');
-    const h2hTab = document.querySelector('.tab-btn[data-target="tab-h2h"]');
-    const forumTab = document.querySelector('.tab-btn[data-target="tab-forum"]');
+                <div id="phone-verification-error" class="hidden text-red-500 text-xs text-center"></div>
 
-    if (tabNotStarted) {
-        // Partido no iniciado: solo mostrar foro y H2H
-        if (timelineTab) timelineTab.style.display = 'none';
-        if (lineupsTab) lineupsTab.style.display = 'none';
-        if (statsTab) statsTab.style.display = 'none';
-        if (h2hTab) h2hTab.style.display = '';
+                <button onclick="app.handleSMSVerification()"
+                    class="w-full px-4 py-3 bg-white text-black text-sm font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all">
+                    Verificar Código
+                </button>
 
-        // Forzar ir al tab de foro si el partido no ha comenzado (por defecto, pero usuario puede cambiar a H2H)
-        if (forumTab && initialTab === 'timeline') {
-            forumTab.click();
-        } else if (initialTab !== 'timeline') {
-            // Si el usuario pidió un tab específico (ej: h2h), intentamos ir ahí
-            const tabId = initialTab.startsWith('tab-') ? initialTab : `tab-${initialTab}`;
-            const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
-            if (btn) btn.click();
-        }
-    } else {
-        // Partido iniciado o finalizado: mostrar todos los tabs
-        if (timelineTab) timelineTab.style.display = '';
-        if (lineupsTab) lineupsTab.style.display = '';
-        if (statsTab) statsTab.style.display = '';
-        if (h2hTab) h2hTab.style.display = '';
+                <button id="resend-sms-btn" onclick="app.handleResendSMS()" disabled
+                    class="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] text-gray-500 text-sm font-bold uppercase tracking-wider rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span id="resend-text">Reenviar en <span id="resend-countdown">40</span>s</span>
+                </button>
 
-        // Switch to requested tab
-        const tabId = initialTab.startsWith('tab-') ? initialTab : `tab-${initialTab}`;
-        const btn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
-        if (btn) {
-            btn.click();
-        }
-    }
-};
+                <button
+                    onclick="document.getElementById('phone-verification-modal').classList.add('hidden'); document.getElementById('phone-login-modal').classList.remove('hidden');"
+                    class="w-full text-gray-500 hover:text-white text-xs uppercase tracking-wider transition-colors">
+                    ← Cambiar número
+                </button>
+            </div>
+        </div>
+    </div>
 
-/**
- * Wrapper para compatibilidad - abre detalle con tab específico
- */
-export const openMatchDetailWithTab = (params) => {
-    openDetail(params);
-};
+    <!-- Logout Confirmation Modal -->
+    <div id="logout-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Cerrar Sesión</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-300 text-sm text-center leading-relaxed">¿Estás seguro de que quieres cerrar sesión?
+                </p>
 
-/**
-* Cierra la vista de detalle
-*/
-export const closeDetail = () => {
-    const detailView = document.getElementById('view-match-detail');
-    detailView.classList.add('hidden');
+                <div class="flex gap-3">
+                    <button onclick="app.cancelLogout()"
+                        class="flex-1 bg-[#222] text-white py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-[#333] transition-colors border border-[#444] rounded">
+                        Cancelar
+                    </button>
+                    <button onclick="app.confirmLogout()"
+                        class="flex-1 bg-white text-black py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors rounded">
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    // Restaurar scroll del body
-    document.body.style.overflow = '';
+    <!-- Ranking Modal -->
+    <div id="ranking-modal"
+        class="fixed inset-0 bg-black/90 z-[90] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div
+            class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl flex flex-col max-h-[80vh]">
+            <div class="bg-black p-4 flex justify-between items-center border-b border-[#222] flex-shrink-0">
+                <h3 class="font-bold text-white text-lg font-sport uppercase flex items-center gap-2">
+                    RANKING
+                </h3>
+                <button onclick="app.closeRankingModal()" class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="ranking-list" class="p-4 overflow-y-auto flex-1 space-y-1">
+                <!-- User list will be injected here -->
+            </div>
+            <div class="p-3 border-t border-[#333] bg-[#0a0a0a] text-center flex-shrink-0">
+                <p class="text-[10px] text-gray-500">
+                    ¡Comenta en los foros para subir en el ranking!
+                </p>
+            </div>
+        </div>
+    </div>
 
-    // Restaurar elementos ocultos al abrir el detalle
-    const dateNav = document.getElementById('date-nav');
-    if (dateNav) {
-        dateNav.style.display = '';
-        dateNav.classList.remove('hidden');
-    }
+    <!-- Username + Team Registration Modal -->
+    <div id="username-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-[#111] border border-[#333] rounded-lg w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222] flex-shrink-0">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Crea tu cuenta</h3>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <!-- Step 1: Username -->
+                <div id="registration-step-1">
+                    <p class="text-gray-400 text-xs text-center mb-4 leading-relaxed">Paso 1: Elegí tu nombre de usuario
+                        permanente</p>
 
-    // Restaurar header principal
-    const header = document.querySelector('header');
-    if (header) {
-        header.style.display = '';
-    }
+                    <div>
+                        <input type="text" id="username-input" placeholder="Tu nombre de usuario"
+                            class="w-full bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-white"
+                            maxlength="20">
+                        <div id="username-error" class="hidden text-red-500 text-xs mt-2 font-medium"></div>
+                    </div>
 
-    // Restaurar bottom nav
-    const bottomNav = document.querySelector('nav.fixed.bottom-0');
-    if (bottomNav) {
-        bottomNav.style.display = '';
-    }
+                    <button onclick="app.goToTeamSelection()"
+                        class="w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors mt-4">
+                        Siguiente →
+                    </button>
 
-    // Restaurar sidebar derecha (comunidad)
-    const rightSidebar = document.getElementById('right-sidebar');
-    if (rightSidebar) {
-        rightSidebar.style.display = '';
-    }
+                    <p class="text-gray-600 text-[10px] text-center mt-2">Podrás usar este nombre en todos los foros</p>
+                </div>
 
-    // Navegar de vuelta a matches
-    if (window.app && window.app.navigate) {
-        window.app.navigate('/');
-    }
-};
+                <!-- Step 2: Team Selection -->
+                <div id="registration-step-2" class="hidden">
+                    <p class="text-gray-400 text-xs text-center mb-3 leading-relaxed">Paso 2: Elegí tu equipo de fútbol
+                        <span class="text-yellow-500 font-bold">(para siempre)</span>
+                    </p>
 
-export const getSelectedMatch = () => selectedMatch;
+                    <!-- Search -->
+                    <input type="text" id="team-search-input" placeholder="Buscar equipo..."
+                        class="w-full bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-white mb-3"
+                        oninput="app.filterTeams()">
 
-export const switchTab = (btn, targetId) => {
-    // Update button states
-    document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('text-white', 'border-b-2', 'border-white');
-        b.classList.add('text-gray-500');
-    });
-    btn.classList.remove('text-gray-500');
-    btn.classList.add('text-white', 'border-b-2', 'border-white');
+                    <!-- Selected team indicator -->
+                    <div id="selected-team-indicator"
+                        class="hidden mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded flex items-center gap-2">
+                        <img id="selected-team-logo" src="" class="w-6 h-6 object-contain">
+                        <span id="selected-team-name" class="text-yellow-400 text-xs font-bold"></span>
+                        <span class="text-gray-500 text-[10px] ml-auto">✓ Seleccionado</span>
+                    </div>
 
-    // Update content visibility
-    document.querySelectorAll('.tab-content').forEach(c => {
-        c.classList.add('hidden');
-        c.classList.remove('block');
-    });
-    const target = document.getElementById(targetId);
-    if (target) {
-        target.classList.remove('hidden');
-        target.classList.add('block');
-    }
+                    <!-- Team Grid -->
+                    <div id="team-grid" class="grid grid-cols-4 gap-2 max-h-[40vh] overflow-y-auto pr-1">
+                        <!-- Populated dynamically -->
+                    </div>
 
-    if (targetId === 'tab-forum' && selectedMatch) {
-        // Assuming initForum is globally available or imported
-        // We need to check if it's imported. It seems standard.
-        if (window.initForum) window.initForum(`match_${selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
-        else if (typeof initForum === 'function') initForum(`match_${selectedMatch.fixture.id}`, 'match-forum-messages', 'match-forum-username');
-    }
+                    <div class="flex gap-2 mt-4">
+                        <button id="team-selection-back-btn" onclick="app.goBackToUsername()"
+                            class="flex-1 py-3 px-4 text-center text-sm font-bold uppercase tracking-widest bg-[#222] text-white rounded hover:bg-[#333] transition-colors">
+                            ← Volver
+                        </button>
+                        <button onclick="app.saveUsername()"
+                            class="flex-1 btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors">
+                            Guardar
+                        </button>
+                    </div>
 
-    if (targetId === 'tab-h2h' && selectedMatch) {
-        renderHeadToHead(selectedMatch);
-    }
-};
+                    <p class="text-gray-600 text-[10px] text-center mt-2">El escudo será tu foto de perfil en el foro
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profile-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Mi Perfil</h3>
+                <button onclick="app.closeProfileModal()" class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-6">
+                <!-- User Avatar + Name -->
+                <div class="flex flex-col items-center">
+                    <div id="profile-avatar" class="w-20 h-20 mb-3"></div>
+                    <h4 id="profile-username" class="text-white font-bold text-xl font-mono"></h4>
+
+                    <!-- Team (Read Only) -->
+                    <div id="profile-team-container" class="mt-2 flex items-center gap-2 p-2">
+                        <img id="profile-team-logo" src="" class="w-8 h-8 object-contain">
+                        <span id="profile-team-name" class="text-gray-300 font-bold text-sm"></span>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-[#0a0a0a] p-4 rounded border border-[#222] text-center">
+                        <div id="profile-comment-count" class="text-3xl font-black text-white font-mono mb-1">0</div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Comentarios</div>
+                    </div>
+                    <div class="bg-[#0a0a0a] p-4 rounded border border-[#222] text-center">
+                        <div id="profile-ranking" class="text-3xl font-black text-white font-mono mb-1">#0</div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Ranking</div>
+                    </div>
+                </div>
+
+                <!-- Link Phone Section (only for Google users without linked phone) -->
+                <div id="link-phone-section" class="hidden">
+                    <button onclick="app.openPhoneLinkingModal()"
+                        class="w-full bg-[#0a0a0a] border border-[#333] text-white py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-[#111] transition-colors rounded flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        Vincular Número de Teléfono
+                    </button>
+                </div>
+
+                <!-- Linked Phone Section (shown when phone is linked) -->
+                <div id="linked-phone-section" class="hidden">
+                    <div class="bg-[#0a0a0a] border border-green-500/30 p-3 rounded flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-500" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span id="linked-phone-number" class="text-green-500 text-sm font-mono"></span>
+                        </div>
+                        <span class="text-[10px] text-gray-500 uppercase">Vinculado</span>
+                    </div>
+                </div>
+
+                <!-- Logout Button -->
+                <button onclick="app.logout(); app.closeProfileModal()"
+                    class="w-full bg-[#222] text-white py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-[#333] transition-colors border border-[#444] rounded flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Cerrar Sesión
+                </button>
+
+                <!-- Legal Links -->
+                <div class="flex items-center justify-center gap-4 pt-4 border-t border-[#222]">
+                    <a href="/terminos-y-condiciones" target="_blank" rel="noopener noreferrer"
+                        class="text-orange-500 hover:text-orange-400 text-xs font-semibold transition-colors">
+                        Términos y Condiciones
+                    </a>
+                    <span class="text-gray-600">•</span>
+                    <a href="/politica-de-privacidad" target="_blank" rel="noopener noreferrer"
+                        class="text-orange-500 hover:text-orange-400 text-xs font-semibold transition-colors">
+                        Política de Privacidad
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Suggestion Modal -->
+    <div id="suggestion-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    Enviar Sugerencia
+                </h3>
+                <button onclick="app.closeSuggestionModal()" class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-sm leading-relaxed">
+                    ¿Tienes alguna idea para mejorar RealFutbol? ¡Nos encantaría escucharla!
+                </p>
+                <p class="text-gray-500 text-xs leading-relaxed">
+                    También puedes escribirnos a <a href="mailto:contacto@realfutbol.app"
+                        class="text-white hover:underline">contacto@realfutbol.app</a>
+                </p>
+
+                <div>
+                    <label class="text-white text-sm font-bold mb-2 block">Tu sugerencia</label>
+                    <textarea id="suggestion-input" placeholder="Escribe tu sugerencia aquí..." rows="6"
+                        class="w-full bg-[#0a0a0a] border border-[#333] text-white text-sm p-3 rounded focus:outline-none focus:border-white resize-none"
+                        maxlength="500"></textarea>
+                    <div class="flex justify-between items-center mt-2">
+                        <span id="suggestion-char-count" class="text-xs text-gray-600">0 / 500</span>
+                        <div id="suggestion-error" class="hidden text-red-500 text-xs font-medium"></div>
+                    </div>
+                </div>
+
+                <button onclick="app.sendSuggestion()"
+                    class="w-full bg-white text-black py-3 px-4 text-sm font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors rounded flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    Enviar Sugerencia
+                </button>
+
+                <p class="text-gray-600 text-[10px] text-center">
+                    Tu sugerencia será revisada por el equipo de desarrollo
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Donation Modal -->
+    <div id="donation-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase text-yellow-500">Apoyar el proyecto</h3>
+                <button onclick="document.getElementById('donation-modal').classList.add('hidden')"
+                    class="text-white hover:text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-xs text-center mb-4 leading-relaxed">Tu aporte nos ayuda a mantener los
+                    servidores y mejorar la aplicación cada día.</p>
+
+                <a href="https://mpago.la/2K2nHrX" target="_blank"
+                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
+                    Donar $1.000
+                </a>
+                <a href="https://mpago.la/2K2nHrX" target="_blank"
+                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
+                    Donar $2.500
+                </a>
+                <a href="https://mpago.la/31xAk5T" target="_blank"
+                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
+                    Donar $5.000
+                </a>
+                <a href="https://mpago.la/28LhXrY" target="_blank"
+                    class="block w-full btn-primary py-3 px-4 text-center text-sm font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-colors border border-[#333] bg-[#0a0a0a] text-white">
+                    Donar $10.000
+                </a>
+
+                <div class="pt-4 flex justify-center">
+                    <span class="text-[10px] text-gray-600 font-mono"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Panel Modal -->
+    <div id="analytics-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-[#111] border border-[#333] rounded-lg w-full max-w-lg overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+            <!-- Header -->
+            <div
+                class="bg-gradient-to-r from-blue-500 to-purple-600 p-4 flex justify-between items-center flex-shrink-0">
+                <h3 class="font-bold text-white text-lg font-sport uppercase flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Estadísticas
+                </h3>
+                <button onclick="app.closeAnalyticsPanel()" class="text-white hover:text-gray-300 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div id="analytics-content" class="p-5 overflow-y-auto flex-1 space-y-4">
+                <div class="flex items-center justify-center py-16">
+                    <div class="loader"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Moderation Panel Modal -->
+    <div id="moderation-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-[#111] border border-[#333] rounded-lg w-full max-w-lg overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+            <!-- Header -->
+            <div
+                class="bg-gradient-to-r from-yellow-500 to-orange-500 p-4 flex justify-between items-center flex-shrink-0">
+                <h3 class="font-bold text-black text-lg font-sport uppercase flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Panel de Moderación
+                </h3>
+                <button onclick="app.closeModerationPanel()" class="text-black hover:text-gray-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-[#333] flex-shrink-0">
+                <button onclick="app.switchModTab('team')" id="mod-tab-team"
+                    class="flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider text-white bg-[#1a1a1a] border-b-2 border-orange-500">
+                    Equipo
+                </button>
+                <button onclick="app.switchModTab('sanctions')" id="mod-tab-sanctions"
+                    class="flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-white transition-colors border-b-2 border-transparent">
+                    Sanciones
+                </button>
+                <button onclick="app.switchModTab('badges')" id="mod-tab-badges"
+                    class="flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-white transition-colors border-b-2 border-transparent">
+                    Insignias
+                </button>
+                <button onclick="app.switchModTab('featured')" id="mod-tab-featured"
+                    class="flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-white transition-colors border-b-2 border-transparent">
+                    Destacado
+                </button>
+                <button onclick="app.switchModTab('demo')" id="mod-tab-demo"
+                    class="flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-white transition-colors border-b-2 border-transparent">
+                    Demo
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-5 overflow-y-auto flex-1">
+                <!-- TAB: Equipo -->
+                <div id="mod-content-team" class="space-y-4">
+                    <!-- Agregar Moderador -->
+                    <div class="space-y-2">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider">Agregar Moderador</h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="add-mod-input" placeholder="UID del usuario"
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-orange-500 font-mono text-xs">
+                            <button onclick="app.handleAddModeratorForm()"
+                                class="bg-green-500 text-white px-4 py-2 rounded text-xs uppercase font-bold hover:bg-green-400 transition-colors">
+                                Agregar
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Lista de Moderadores -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Moderadores Actuales</h4>
+                        <div id="moderators-list" class="space-y-2 max-h-48 overflow-y-auto">
+                            <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Sanciones -->
+                <div id="mod-content-sanctions" class="space-y-4 hidden">
+                    <!-- Mutear -->
+                    <div class="space-y-2">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                            <span class="text-yellow-500">🔇</span> Mutear Usuario
+                        </h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="mute-username-input" placeholder="Username"
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-yellow-500">
+                            <select id="mute-duration-select"
+                                class="bg-[#0a0a0a] border border-[#333] text-white text-xs p-2.5 rounded w-24">
+                                <option value="60">1h</option>
+                                <option value="360">6h</option>
+                                <option value="1440">24h</option>
+                                <option value="10080">1 sem</option>
+                                <option value="43200">1 mes</option>
+                            </select>
+                            <button onclick="app.handleMuteForm()"
+                                class="bg-yellow-500 text-black px-3 py-2 rounded text-xs font-bold hover:bg-yellow-400">
+                                Mutear
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Lista Muteados -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios Muteados</h4>
+                        <div id="muted-users-list" class="space-y-2 max-h-24 overflow-y-auto">
+                            <div class="text-gray-500 text-xs text-center py-2">Cargando...</div>
+                        </div>
+                    </div>
+                    <!-- Banear -->
+                    <div class="space-y-2 border-t border-[#333] pt-4">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                            <span class="text-red-500">⛔</span> Banear Usuario
+                        </h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="ban-username-input" placeholder="Username"
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-red-500">
+                            <button onclick="app.handleBanForm()"
+                                class="bg-red-500 text-white px-4 py-2 rounded text-xs font-bold hover:bg-red-400">
+                                Banear
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Lista Baneados -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios Baneados</h4>
+                        <div id="banned-users-list" class="space-y-2 max-h-24 overflow-y-auto">
+                            <div class="text-gray-500 text-xs text-center py-2">Cargando...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Insignias -->
+                <div id="mod-content-badges" class="space-y-4 hidden">
+                    <!-- Agregar Primer Usuario -->
+                    <div class="space-y-2">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                            <span
+                                class="px-2 py-0.5 bg-gradient-to-r from-cyan-400 to-sky-500 text-black text-[9px] font-black uppercase rounded">PRIMER
+                                USUARIO</span>
+                        </h4>
+                        <p class="text-gray-400 text-xs">Otorga la insignia especial que aparece junto al nombre en el
+                            chat.</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="add-first-user-input" placeholder="UID del usuario"
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-cyan-500 font-mono text-xs">
+                            <button onclick="app.handleAddFirstUserForm()"
+                                class="bg-gradient-to-r from-cyan-400 to-sky-500 text-black px-4 py-2 rounded text-xs font-bold hover:from-cyan-300 hover:to-sky-400">
+                                Agregar
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Lista -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios con Insignia</h4>
+                        <div id="first-users-list" class="space-y-2 max-h-48 overflow-y-auto">
+                            <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Partido Destacado -->
+                <div id="mod-content-featured" class="space-y-4 hidden">
+                    <div class="space-y-2">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                            ⭐ Partido Destacado del Día
+                        </h4>
+                        <p class="text-gray-400 text-xs">Seleccioná un partido de hoy para mostrarlo en el sidebar
+                            derecho.</p>
+                    </div>
+                    <!-- Partido actualmente destacado -->
+                    <div id="featured-match-current" class="hidden">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider mb-2">Actualmente Destacado
+                        </h4>
+                        <div id="featured-match-current-info"
+                            class="bg-[#0a0a0a] border border-yellow-500/30 rounded p-3 flex items-center justify-between">
+                        </div>
+                    </div>
+                    <!-- Lista de partidos de hoy -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Partidos de Hoy</h4>
+                        <div id="featured-match-picker" class="space-y-1.5 max-h-60 overflow-y-auto">
+                            <div class="text-gray-500 text-xs text-center py-4">Cargando partidos...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Demo Accounts -->
+                <div id="mod-content-demo" class="space-y-4 hidden">
+                    <div class="space-y-2">
+                        <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                            <span class="text-blue-500">🎭</span> Cuentas Demo
+                        </h4>
+                        <p class="text-gray-400 text-xs">Crea usuarios ficticios para generar tráfico en el foro.</p>
+                    </div>
+
+                    <!-- Crear Demo User -->
+                    <div class="bg-[#1a1a1a] p-3 rounded border border-[#333] space-y-3">
+                        <div class="flex gap-2">
+                            <input type="text" id="demo-username-input" placeholder="Apodo (ej: JuanCarlos22)"
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2 rounded focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div class="flex gap-2">
+                            <select id="demo-team-select"
+                                class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-xs p-2 rounded focus:outline-none focus:border-blue-500">
+                                <option value="">Seleccionar Equipo...</option>
+                                <!-- Populated dynamically -->
+                            </select>
+                            <button onclick="app.handleCreateDemoUserForm()"
+                                class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold uppercase hover:bg-blue-500 transition-colors">
+                                Crear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Demo Users -->
+                    <div class="space-y-2">
+                        <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Cuentas Disponibles</h4>
+                        <div id="demo-users-list" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                            <div class="text-gray-500 text-xs text-center py-4">Cargando...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Moderator Panel Modal (GREEN - Only Sanctions) -->
+    <div id="mod-panel-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-[#111] border border-[#333] rounded-lg w-full max-w-md overflow-hidden shadow-2xl max-h-[85vh] flex flex-col">
+            <!-- Header Verde -->
+            <div
+                class="bg-gradient-to-r from-green-500 to-emerald-600 p-4 flex justify-between items-center flex-shrink-0">
+                <h3 class="font-bold text-white text-lg font-sport uppercase flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Panel de Moderador
+                </h3>
+                <button onclick="app.closeModPanel()" class="text-white hover:text-gray-200 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="p-5 overflow-y-auto flex-1 space-y-5">
+                <!-- Mutear -->
+                <div class="space-y-3">
+                    <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                        <span class="text-yellow-500">🔇</span> Mutear Usuario
+                    </h4>
+                    <p class="text-gray-400 text-xs">Silencia temporalmente a un usuario. No podrá enviar mensajes.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="mod-mute-username-input" placeholder="Nombre de usuario"
+                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-green-500">
+                        <select id="mod-mute-duration-select"
+                            class="bg-[#0a0a0a] border border-[#333] text-white text-xs p-2.5 rounded w-24">
+                            <option value="60">1h</option>
+                            <option value="360">6h</option>
+                            <option value="1440">24h</option>
+                            <option value="10080">1 sem</option>
+                            <option value="43200">1 mes</option>
+                        </select>
+                        <button onclick="app.handleModMuteForm()"
+                            class="bg-yellow-500 text-black px-3 py-2 rounded text-xs font-bold hover:bg-yellow-400">
+                            Mutear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista Muteados -->
+                <div class="space-y-2">
+                    <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios Muteados</h4>
+                    <div id="mod-muted-users-list" class="space-y-2 max-h-28 overflow-y-auto">
+                        <div class="text-gray-500 text-xs text-center py-2">Cargando...</div>
+                    </div>
+                </div>
+
+                <div class="border-t border-[#333]"></div>
+
+                <!-- Banear -->
+                <div class="space-y-3">
+                    <h4 class="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                        <span class="text-red-500">⛔</span> Banear Usuario
+                    </h4>
+                    <p class="text-gray-400 text-xs">Suspende permanentemente a un usuario. Usar con precaución.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="mod-ban-username-input" placeholder="Nombre de usuario"
+                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white text-sm p-2.5 rounded focus:outline-none focus:border-red-500">
+                        <button onclick="app.handleModBanForm()"
+                            class="bg-red-500 text-white px-4 py-2 rounded text-xs font-bold hover:bg-red-400">
+                            Banear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista Baneados -->
+                <div class="space-y-2">
+                    <h4 class="text-gray-400 font-bold text-xs uppercase tracking-wider">Usuarios Baneados</h4>
+                    <div id="mod-banned-users-list" class="space-y-2 max-h-28 overflow-y-auto">
+                        <div class="text-gray-500 text-xs text-center py-2">Cargando...</div>
+                    </div>
+                </div>
+
+                <div class="border-t border-[#333] pt-3">
+                    <p class="text-gray-600 text-[10px] text-center">
+                        Eres moderador. Si tienes dudas, consulta con el desarrollador.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phone Linking Modal -->
+    <div id="phone-linking-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Vincular Teléfono</h3>
+                <button onclick="app.closePhoneLinkingModal()" class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-sm leading-relaxed text-center">
+                    Vincula tu número de teléfono para mayor seguridad. Recibirás un código de verificación por SMS.
+                </p>
+
+                <div class="space-y-3">
+                    <label class="text-gray-400 text-xs uppercase tracking-wider">Número de teléfono</label>
+                    <div class="flex gap-2">
+                        <select id="link-phone-country-code"
+                            class="bg-[#0a0a0a] border border-[#333] text-white p-3 rounded focus:outline-none focus:border-white w-24">
+                            <option value="+54">🇦🇷 +54</option>
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+52">🇲🇽 +52</option>
+                            <option value="+34">🇪🇸 +34</option>
+                            <option value="+55">🇧🇷 +55</option>
+                        </select>
+                        <input type="tel" id="link-phone-number-input" placeholder=""
+                            class="flex-1 bg-[#0a0a0a] border border-[#333] text-white p-3 rounded focus:outline-none focus:border-white">
+                    </div>
+                </div>
+
+                <div id="link-phone-error" class="hidden text-red-500 text-xs text-center"></div>
+
+                <button onclick="app.handlePhoneLinking()"
+                    class="w-full px-4 py-3 bg-white text-black text-sm font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all">
+                    Enviar Código
+                </button>
+
+                <!-- reCAPTCHA container for linking -->
+                <div id="link-recaptcha-container"></div>
+
+                <p class="text-gray-600 text-[10px] text-center">
+                    Se enviarán costos estándar de mensaje
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phone Linking Verification Modal -->
+    <div id="phone-linking-verification-modal"
+        class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Verificar Código</h3>
+                <button onclick="app.closePhoneLinkingVerification()" class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-sm leading-relaxed text-center">
+                    Ingresa el código de 6 dígitos que enviamos a <span id="link-phone-display"
+                        class="text-white font-bold"></span>
+                </p>
+
+                <div class="space-y-3">
+                    <label class="text-gray-400 text-xs uppercase tracking-wider">Código de verificación</label>
+                    <input type="text" id="link-sms-code-input" placeholder="" maxlength="6"
+                        class="w-full bg-[#0a0a0a] border border-[#333] text-white text-center text-2xl tracking-widest p-3 rounded focus:outline-none focus:border-white font-mono">
+                </div>
+
+                <div id="link-verification-error" class="hidden text-red-500 text-xs text-center"></div>
+
+                <button onclick="app.handlePhoneLinkingVerification()"
+                    class="w-full px-4 py-3 bg-white text-black text-sm font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-all">
+                    Vincular Teléfono
+                </button>
+
+                <button onclick="app.closePhoneLinkingVerification(); app.openPhoneLinkingModal();"
+                    class="w-full text-gray-500 hover:text-white text-xs uppercase tracking-wider transition-colors">
+                    ← Cambiar número
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Us Modal -->
+    <div id="about-us-modal"
+        class="fixed inset-0 bg-black/90 z-[90] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#111] border border-[#333] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-black p-5 flex justify-between items-center border-b border-[#222]">
+                <h3 class="font-bold text-white text-lg font-sport uppercase">Sobre Nosotros</h3>
+                <button onclick="document.getElementById('about-us-modal').classList.add('hidden')"
+                    class="text-white hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 text-center">
+                <img src="https://i.postimg.cc/W1r2HSKQ/YLOYlu4H-400x400.jpg" alt="RealFutbol Logo"
+                    class="w-20 h-20 rounded-full mx-auto border-2 border-[#333]">
+
+                <h4 class="font-bold text-white text-xl font-sport">REAL FUTBOL</h4>
+                <p class="text-gray-400 text-sm leading-relaxed text-left">
+                    Real Futbol es tu compañero definitivo para vivir el fútbol como nunca antes.
+                    Seguí en tiempo real todos los partidos de las ligas y copas más importantes del mundo:
+                    Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Copa Libertadores, Copa Sudamericana,
+                    Liga Profesional Argentina y muchas más.
+                </p>
+                <p class="text-gray-400 text-sm leading-relaxed text-left mt-2">
+                    Consultá alineaciones, estadísticas detalladas de cada jugador,
+                    resultados en vivo y tablas de posiciones actualizadas al instante.
+                    Además, participá en nuestra comunidad de hinchas a través del foro,
+                    donde podés debatir, comentar y compartir tu pasión por el fútbol con gente de toda Argentina y el
+                    mundo.
+                </p>
+
+                <div class="border-t border-[#222] pt-4 mt-4">
+                    <p class="text-gray-600 text-[10px]">Desarrollado con ❤️</p>
+                </div>
+
+                <div class="flex justify-center gap-4 mt-4">
+                    <a href="https://x.com/RealFutbolApp" target="_blank"
+                        class="p-2 bg-[#1a1a1a] rounded-full text-white hover:bg-[#333] transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z">
+                            </path>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./src/main.js?v=2"></script>
+    <!-- Demo Mode Overlay -->
+    <div id="demo-mode-overlay" class="fixed bottom-4 right-4 z-[100] hidden">
+        <div class="bg-blue-600 text-white px-4 py-2 rounded shadow-lg flex items-center gap-3 border border-blue-400">
+            <div class="flex flex-col">
+                <span class="text-[9px] uppercase font-bold text-blue-200">Modo Demo</span>
+                <span id="demo-user-name" class="text-xs font-bold">Usuario</span>
+            </div>
+            <button onclick="app.exitDemoMode()"
+                class="bg-white text-blue-600 text-xs font-bold px-2 py-1 rounded hover:bg-gray-100 transition-colors uppercase">
+                Salir
+            </button>
+        </div>
+    </div>
+</body>
+
+</html>
