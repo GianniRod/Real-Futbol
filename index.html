@@ -7,6 +7,11 @@
     <meta name="description"
         content="Resultados de fútbol en vivo, tablas de posiciones y foros en tiempo real para comentar cada partido. Seguí todo el fútbol actualizado al instante.">
     <title>RealFutbol - Resultados de futbol en tiempo real.</title>
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="RealFutbol">
+    <meta name="keywords"
+        content="fútbol en vivo, resultados fútbol, tablas de posiciones, liga argentina, premier league, la liga, bundesliga, copa libertadores, mundial 2026, copa de la liga, primera nacional">
+    <link rel="canonical" href="https://realfutbol.app/">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,6 +27,26 @@
         src="https://www.google.com/recaptcha/enterprise.js?render=6LeqflUsAAAAADT9Rs3soVcJly_C5E-8Yf50wk-G"></script>
     <!-- html2canvas for Lineup Builder -->
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <!-- Structured Data for SEO/AdSense -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "RealFutbol",
+      "url": "https://realfutbol.app",
+      "description": "Resultados de fútbol en vivo, tablas de posiciones y foros en tiempo real para comentar cada partido. Seguí todo el fútbol actualizado al instante.",
+      "inLanguage": "es",
+      "publisher": {
+        "@type": "Organization",
+        "name": "RealFutbol",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://i.postimg.cc/1XhSs3Gv/RF-FUTURO.png"
+        },
+        "sameAs": ["https://x.com/RealFutbolApp"]
+      }
+    }
+    </script>
     <style>
         :root {
             --bg-main: #000000;
@@ -977,7 +1002,65 @@
                 style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
 
                 <!-- Match List -->
-                <div id="view-match-list" class="max-w-3xl mx-auto space-y-6 animate-fade-in pb-24"></div>
+                <div id="view-match-list" class="max-w-3xl mx-auto space-y-6 animate-fade-in pb-24">
+                    <!-- Static SEO content - visible until JS replaces it -->
+                    <div id="seo-static-content">
+                        <article class="match-card rounded-lg p-6">
+                            <h1 class="text-2xl font-bold text-white font-sport mb-4">
+                                Resultados de Fútbol en Vivo - RealFutbol
+                            </h1>
+                            <p class="text-gray-300 leading-relaxed mb-4">
+                                Bienvenido a RealFutbol, tu plataforma para seguir el fútbol en tiempo real.
+                                Consultá resultados en vivo, tablas de posiciones actualizadas, alineaciones,
+                                estadísticas detalladas de cada jugador y participá en nuestra comunidad de hinchas.
+                            </p>
+                            <h2 class="text-lg font-bold text-white font-sport mb-3">
+                                Competiciones Disponibles
+                            </h2>
+                            <p class="text-gray-300 leading-relaxed mb-4">
+                                Seguí en tiempo real las ligas y copas más importantes:
+                                Liga Profesional Argentina, Copa de la Liga, Primera Nacional,
+                                Mundial FIFA 2026, Copa Argentina, Brasileirão, Premier League,
+                                La Liga, Copa del Rey, Bundesliga, Serie A, Copa Italia y más.
+                            </p>
+                            <h2 class="text-lg font-bold text-white font-sport mb-3">
+                                Funcionalidades Principales
+                            </h2>
+                            <ul class="text-gray-300 space-y-2 mb-4 list-disc list-inside ml-4">
+                                <li><strong>Resultados en vivo:</strong> Seguí minuto a minuto todos los partidos con
+                                    actualizaciones automáticas.</li>
+                                <li><strong>Tablas de posiciones:</strong> Consultá las clasificaciones actualizadas de
+                                    cada liga y copa.</li>
+                                <li><strong>Alineaciones y estadísticas:</strong> Conocé las formaciones confirmadas y
+                                    el rendimiento individual de cada jugador.</li>
+                                <li><strong>Foro de comunidad:</strong> Comentá los partidos y debatí con otros hinchas
+                                    en tiempo real.</li>
+                                <li><strong>Armá tu 11:</strong> Creá y compartí tu formación ideal con nuestro
+                                    constructor de alineaciones.</li>
+                            </ul>
+                            <h2 class="text-lg font-bold text-white font-sport mb-3">
+                                ¿Cómo Funciona?
+                            </h2>
+                            <p class="text-gray-300 leading-relaxed mb-4">
+                                Navegá por las competiciones desde el menú lateral, seleccioná una fecha usando
+                                el calendario superior y explorá los partidos del día. Hacé click en cualquier
+                                partido para ver estadísticas detalladas, alineaciones y eventos en tiempo real.
+                                Activá el filtro "En Vivo" para ver solo los partidos que se están jugando en este
+                                momento.
+                            </p>
+                            <h2 class="text-lg font-bold text-white font-sport mb-3">
+                                Comunidad RealFutbol
+                            </h2>
+                            <p class="text-gray-300 leading-relaxed">
+                                Unite a nuestra comunidad de hinchas. Iniciá sesión con Google o tu número de teléfono
+                                para participar en el foro global, comentar partidos, y compartir tu pasión por el
+                                fútbol
+                                con fans de toda Argentina y el mundo. Nuestros moderadores garantizan un espacio
+                                respetuoso para todos.
+                            </p>
+                        </article>
+                    </div>
+                </div>
 
                 <!-- Standings View -->
                 <div id="view-standings" class="hidden max-w-4xl mx-auto animate-fade-in pb-24">
@@ -1120,9 +1203,9 @@
                                     class="h-6 object-contain opacity-40">
                             </div>
                             <div class="flex items-center gap-6">
-                                <button onclick="document.getElementById('about-us-modal').classList.remove('hidden')"
+                                <a href="/sobre-nosotros.html"
                                     class="text-[10px] text-gray-600 hover:text-gray-400 uppercase tracking-widest font-bold transition-colors">Sobre
-                                    Nosotros</button>
+                                    Nosotros</a>
                                 <a href="/politica-de-privacidad.html"
                                     class="text-[10px] text-gray-600 hover:text-gray-400 uppercase tracking-widest font-bold transition-colors">Política
                                     de Privacidad</a>
