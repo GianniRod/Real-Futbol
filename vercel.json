@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/sobre-nosotros",
+      "destination": "/sobre-nosotros.html"
+    },
+    {
       "source": "/terminos-y-condiciones",
       "destination": "/terminos-y-condiciones.html"
     },
