@@ -309,6 +309,10 @@ const loadAggregateScores = async (matches) => {
  * Renderiza los partidos en el DOM
  */
 export const renderMatches = async () => {
+    // Remove static SEO content (placeholder for crawlers)
+    const seoContent = document.getElementById('seo-static-content');
+    if (seoContent) seoContent.remove();
+
     const container = document.getElementById('view-match-list');
     let list = state.matches;
     if (state.liveOnly) {
